@@ -1,0 +1,673 @@
+#ifndef stm32f_h
+#define stm32f_h
+
+//-------------------------------------------------------------------
+void PUT32 ( unsigned int, unsigned int );
+void PUT16 ( unsigned int, unsigned int );
+void PUT8 ( unsigned int, unsigned int );
+unsigned int GET32 ( unsigned int );
+unsigned int GET16 ( unsigned int );
+
+#define MMIO32(addr)		(*(volatile unsigned int *)(addr))
+//-------------------------------------------------------------------
+#define RCCBASE   0x40023800
+#define RCC_CR    (RCCBASE+0x00)
+#define RCC_PLLCFGR (RCCBASE+0x04)
+#define RCC_CFGR  (RCCBASE+0x08)
+#define RCC_AHB1ENR (RCCBASE+0x30)
+#define RCC_AHB2ENR (RCCBASE+0x34)
+#define RCC_APB1ENR (RCCBASE+0x40)
+#define RCC_APB2ENR (RCCBASE+0x44)
+
+#define TIM5BASE  0x40000C00
+#define FLASH_ACR  0x40023C00
+
+#define GPIODBASE 0x40020C00
+#define GPIOABASE 0x40020000
+#define GPIOA_MODER (GPIOABASE+0x00)
+#define GPIOA_OTYPER (GPIOABASE+0x04)
+#define GPIOA_AFRL (GPIOABASE+0x20)
+
+#define USART2_BASE 0x40004400
+#define USART2_SR  (USART2_BASE+0x00)
+#define USART2_DR  (USART2_BASE+0x04)
+#define USART2_BRR (USART2_BASE+0x08)
+#define USART2_CR1 (USART2_BASE+0x0C)
+#define USART2_CR2 (USART2_BASE+0x10)
+#define USART2_CR3 (USART2_BASE+0x14)
+#define USART2_GTPR (USART2_BASE+0x18)
+
+#define RNG_BASE 0x50060800
+#define RNG_CR MMIO32(RNG_BASE+0x00)
+#define RNG_SR MMIO32(RNG_BASE+0x04)
+#define RNG_DR MMIO32(RNG_BASE+0x08)
+
+#define SYSCLCK 120000000
+
+#define PERIPH_BASE			0x40000000
+#define PERIPH_BASE_APB1		(PERIPH_BASE + 0x00000)
+#define PERIPH_BASE_APB2		(PERIPH_BASE + 0x10000)
+#define PERIPH_BASE_AHB1		(PERIPH_BASE + 0x20000)
+#define PERIPH_BASE_AHB2		0x50000000
+
+#define ADC1_BASE			(PERIPH_BASE_APB2 + 0x2000)
+#define ADC1				ADC1_BASE
+/* ADC control register 1 (ADC_CR1) */
+#define ADC_CR1(block)			MMIO32(block + 0x04)
+#define ADC1_CR1			ADC_CR1(ADC1)
+/* ADC control register 2 (ADC_CR2) */
+#define ADC_CR2(block)			MMIO32(block + 0x08)
+#define ADC1_CR2			ADC_CR2(ADC1)
+/* ADC sample time register 1 (ADC_SMPR1) */
+#define ADC_SMPR1(block)		MMIO32(block + 0x0c)
+#define ADC1_SMPR1			ADC_SMPR1(ADC1)
+/* ADC sample time register 2 (ADC_SMPR2) */
+#define ADC_SMPR2(block)		MMIO32(block + 0x10)
+#define ADC1_SMPR2			ADC_SMPR2(ADC1)
+#define ADC_CBASE			(ADC1 + 0x300)
+#define ADC_CCR			MMIO32(ADC_CBASE + 0x4)
+
+/* ALIGN: Data alignment. */
+#define ADC_CR2_ALIGN_RIGHT             (0 << 11)
+#define ADC_CR2_ALIGN_LEFT              (1 << 11)
+#define ADC_CR2_ALIGN			(1 << 11)
+/* DMA: Direct memory access mode. (ADC1 and ADC3 only!) */
+#define ADC_CR2_DMA			(1 << 8)
+/* DMA: DDS: DMA disable selection */
+#define ADC_CR2_DDS			(1 << 9)
+/* Note: Bits [7:4] are reserved and must be kept at reset value. */
+/* RSTCAL: Reset calibration. */
+#define ADC_CR2_RSTCAL			(1 << 3)
+/* CAL: A/D Calibration. */
+#define ADC_CR2_CAL			(1 << 2)
+/* CONT: Continous conversion. */
+#define ADC_CR2_CONT			(1 << 1)
+/* must be set individually - does not start conversion automatically else */
+#define ADC_CR2_ADON			(1 << 0)
+/* to enable temp sensor */
+#define ADC_CCR_TSVREFE			(1 << 23)
+/* SWSTART: */ /** Start conversion of regular channels. */
+#define ADC_CR2_SWSTART			(1 << 30)
+
+#define ADC_CR1_SCAN			(1 << 8)
+#define ADC_CR2_EXTTRIG			(1 << 28)
+
+#define ADC_SR_EOC			(1 << 1)
+
+#define ADC_SQR1_L_LSB			20
+
+#define ADC_SMPR_SMP_1DOT5CYC		0x0
+#define ADC_SMPR_SMP_7DOT5CYC		0x1
+#define ADC_SMPR_SMP_13DOT5CYC		0x2
+#define ADC_SMPR_SMP_28DOT5CYC		0x3
+#define ADC_SMPR_SMP_41DOT5CYC		0x4
+#define ADC_SMPR_SMP_55DOT5CYC		0x5
+#define ADC_SMPR_SMP_71DOT5CYC		0x6
+#define ADC_SMPR_SMP_239DOT5CYC		0x7
+
+#define ADC_CHANNEL16		0x10
+#define ADC_CHANNEL17		0x11
+
+/* ADC regular sequence register 1 (ADC_SQR1) */
+#define ADC_SQR1(block)			MMIO32(block + 0x2c)
+#define ADC1_SQR1			ADC_SQR1(ADC1)
+/* ADC regular sequence register 2 (ADC_SQR2) */
+#define ADC_SQR2(block)			MMIO32(block + 0x30)
+#define ADC1_SQR2			ADC_SQR2(ADC1)
+/* ADC regular sequence register 3 (ADC_SQR3) */
+#define ADC_SQR3(block)			MMIO32(block + 0x34)
+#define ADC1_SQR3			ADC_SQR3(ADC1)
+
+/* ADC status register (ADC_SR) */
+#define ADC_SR(block)			MMIO32(block + 0x00)
+#define ADC1_SR				ADC_SR(ADC1)
+
+/* ADC regular data register (ADC_DR) */
+#define ADC_DR(block)			MMIO32(block + 0x4c)
+#define ADC1_DR				ADC_DR(ADC1)
+
+#define DESIG_UNIQUE_ID_BASE		(0x1FFF7A10)
+#define DESIG_UNIQUE_ID0		MMIO32(DESIG_UNIQUE_ID_BASE)
+#define DESIG_UNIQUE_ID1		MMIO32(DESIG_UNIQUE_ID_BASE + 4)
+#define DESIG_UNIQUE_ID2		MMIO32(DESIG_UNIQUE_ID_BASE + 8)
+
+#define SYSTICK_BASE 0xe000e010
+#define SYSTICK_CTRL MMIO32(SYSTICK_BASE)
+#define SYSTICK_LOAD MMIO32(SYSTICK_BASE + 0x4)
+#define SYSTICK_VAL MMIO32(SYSTICK_BASE + 0x8)
+
+/* --- Convenience macros -------------------------------------------------- */
+
+#define DMA1_BASE			(PERIPH_BASE_AHB1 + 0x6000)
+#define DMA2_BASE			(PERIPH_BASE_AHB1 + 0x6400)
+
+/* DMA controller base addresses (for convenience) */
+#define DMA1				DMA1_BASE
+#define DMA2				DMA2_BASE
+
+/* DMA stream base addresses (for API parameters) */
+/** @defgroup dma_st_number DMA Stream Number
+@ingroup STM32F4xx_dma_defines
+
+@{*/
+#define DMA_STREAM0			0
+#define DMA_STREAM1			1
+#define DMA_STREAM2			2
+#define DMA_STREAM3			3
+#define DMA_STREAM4			4
+#define DMA_STREAM5			5
+#define DMA_STREAM6			6
+#define DMA_STREAM7			7
+/**@}*/
+
+#define DMA_STREAM(port, n)		((port) + 0x10 + (24 * (n)))
+#define DMA1_STREAM(n)			DMA_STREAM(DMA1, n)
+#define DMA2_STREAM(n)			DMA_STREAM(DMA2, n)
+
+#define DMA1_STREAM0			DMA1_STREAM(0)
+#define DMA1_STREAM1			DMA1_STREAM(1)
+#define DMA1_STREAM2			DMA1_STREAM(2)
+#define DMA1_STREAM3			DMA1_STREAM(3)
+#define DMA1_STREAM4			DMA1_STREAM(4)
+#define DMA1_STREAM5			DMA1_STREAM(5)
+#define DMA1_STREAM6			DMA1_STREAM(6)
+#define DMA1_STREAM7			DMA1_STREAM(7)
+
+#define DMA2_STREAM0			DMA2_STREAM(0)
+#define DMA2_STREAM1			DMA2_STREAM(1)
+#define DMA2_STREAM2			DMA2_STREAM(2)
+#define DMA2_STREAM3			DMA2_STREAM(3)
+#define DMA2_STREAM4			DMA2_STREAM(4)
+#define DMA2_STREAM5			DMA2_STREAM(5)
+#define DMA2_STREAM6			DMA2_STREAM(6)
+#define DMA2_STREAM7			DMA2_STREAM(7)
+
+/* --- DMA controller registers -------------------------------------------- */
+
+/* DMA low interrupt status register (DMAx_LISR) */
+#define DMA_LISR(port)			MMIO32(port + 0x00)
+#define DMA1_LISR			DMA_LISR(DMA1)
+#define DMA2_LISR			DMA_LISR(DMA2)
+
+/* DMA high interrupt status register (DMAx_HISR) */
+#define DMA_HISR(port)			MMIO32(port + 0x04)
+#define DMA1_HISR			DMA_HISR(DMA1)
+#define DMA2_HISR			DMA_HISR(DMA2)
+
+/* DMA low interrupt flag clear register (DMAx_LIFCR) */
+#define DMA_LIFCR(port)			MMIO32(port + 0x08)
+#define DMA1_LIFCR			DMA_LIFCR(DMA1)
+#define DMA2_LIFCR			DMA_LIFCR(DMA2)
+
+/* DMA high interrupt flag clear register (DMAx_HIFCR) */
+#define DMA_HIFCR(port)			MMIO32(port + 0x0C)
+#define DMA1_HIFCR			DMA_HIFCR(DMA1)
+#define DMA2_HIFCR			DMA_HIFCR(DMA2)
+
+/* --- DMA stream registers ------------------------------------------------ */
+
+/* DMA Stream x configuration register (DMA_SxCR) */
+#define DMA_SCR(port, n)		MMIO32(DMA_STREAM(port, n) + 0x00)
+#define DMA1_SCR(n)			DMA_SCR(DMA1, n)
+#define DMA2_SCR(n)			DMA_SCR(DMA2, n)
+
+#define DMA1_S0CR			DMA1_SCR(0)
+#define DMA1_S1CR			DMA1_SCR(1)
+#define DMA1_S2CR			DMA1_SCR(2)
+#define DMA1_S3CR			DMA1_SCR(3)
+#define DMA1_S4CR			DMA1_SCR(4)
+#define DMA1_S5CR			DMA1_SCR(5)
+#define DMA1_S6CR			DMA1_SCR(6)
+#define DMA1_S7CR			DMA1_SCR(7)
+
+#define DMA2_S0CR			DMA2_SCR(0)
+#define DMA2_S1CR			DMA2_SCR(1)
+#define DMA2_S2CR			DMA2_SCR(2)
+#define DMA2_S3CR			DMA2_SCR(3)
+#define DMA2_S4CR			DMA2_SCR(4)
+#define DMA2_S5CR			DMA2_SCR(5)
+#define DMA2_S6CR			DMA2_SCR(6)
+#define DMA2_S7CR			DMA2_SCR(7)
+
+/* DMA Stream x number of data register (DMA_SxNDTR) */
+#define DMA_SNDTR(port, n)		MMIO32(DMA_STREAM(port, n) + 0x04)
+#define DMA1_SNDTR(n)			DMA_SNDTR(DMA1, n)
+#define DMA2_SNDTR(n)			DMA_SNDTR(DMA2, n)
+
+#define DMA1_S0NDTR			DMA1_SNDTR(0)
+#define DMA1_S1NDTR			DMA1_SNDTR(1)
+#define DMA1_S2NDTR			DMA1_SNDTR(2)
+#define DMA1_S3NDTR			DMA1_SNDTR(3)
+#define DMA1_S4NDTR			DMA1_SNDTR(4)
+#define DMA1_S5NDTR			DMA1_SNDTR(5)
+#define DMA1_S6NDTR			DMA1_SNDTR(6)
+#define DMA1_S7NDTR			DMA1_SNDTR(7)
+
+#define DMA2_S0NDTR			DMA2_SNDTR(0)
+#define DMA2_S1NDTR			DMA2_SNDTR(1)
+#define DMA2_S2NDTR			DMA2_SNDTR(2)
+#define DMA2_S3NDTR			DMA2_SNDTR(3)
+#define DMA2_S4NDTR			DMA2_SNDTR(4)
+#define DMA2_S5NDTR			DMA2_SNDTR(5)
+#define DMA2_S6NDTR			DMA2_SNDTR(6)
+#define DMA2_S7NDTR			DMA2_SNDTR(7)
+
+/* DMA Stream x peripheral address register (DMA_SxPAR) */
+#define DMA_SPAR(port, n)		(*(volatile void **)\
+					 (DMA_STREAM(port, n) + 0x08))
+#define DMA1_SPAR(n)			DMA_SPAR(DMA1, n)
+#define DMA2_SPAR(n)			DMA_SPAR(DMA2, n)
+
+#define DMA1_S0PAR			DMA1_SPAR(0)
+#define DMA1_S1PAR			DMA1_SPAR(1)
+#define DMA1_S2PAR			DMA1_SPAR(2)
+#define DMA1_S3PAR			DMA1_SPAR(3)
+#define DMA1_S4PAR			DMA1_SPAR(4)
+#define DMA1_S5PAR			DMA1_SPAR(5)
+#define DMA1_S6PAR			DMA1_SPAR(6)
+#define DMA1_S7PAR			DMA1_SPAR(7)
+
+#define DMA2_S0PAR			DMA2_SPAR(0)
+#define DMA2_S1PAR			DMA2_SPAR(1)
+#define DMA2_S2PAR			DMA2_SPAR(2)
+#define DMA2_S3PAR			DMA2_SPAR(3)
+#define DMA2_S4PAR			DMA2_SPAR(4)
+#define DMA2_S5PAR			DMA2_SPAR(5)
+#define DMA2_S6PAR			DMA2_SPAR(6)
+#define DMA2_S7PAR			DMA2_SPAR(7)
+
+/* DMA Stream x memory address 0 register (DMA_SxM0AR) */
+#define DMA_SM0AR(port, n)		(*(volatile void **) \
+					 (DMA_STREAM(port, n) + 0x0c))
+#define DMA1_SM0AR(n)			DMA_SM0AR(DMA1, n)
+#define DMA2_SM0AR(n)			DMA_SM0AR(DMA2, n)
+
+#define DMA1_S0M0AR			DMA1_SM0AR(0)
+#define DMA1_S1M0AR			DMA1_SM0AR(1)
+#define DMA1_S2M0AR			DMA1_SM0AR(2)
+#define DMA1_S3M0AR			DMA1_SM0AR(3)
+#define DMA1_S4M0AR			DMA1_SM0AR(4)
+#define DMA1_S5M0AR			DMA1_SM0AR(5)
+#define DMA1_S6M0AR			DMA1_SM0AR(6)
+#define DMA1_S7M0AR			DMA1_SM0AR(7)
+
+#define DMA2_S0M0AR			DMA2_SM0AR(0)
+#define DMA2_S1M0AR			DMA2_SM0AR(1)
+#define DMA2_S2M0AR			DMA2_SM0AR(2)
+#define DMA2_S3M0AR			DMA2_SM0AR(3)
+#define DMA2_S4M0AR			DMA2_SM0AR(4)
+#define DMA2_S5M0AR			DMA2_SM0AR(5)
+#define DMA2_S6M0AR			DMA2_SM0AR(6)
+#define DMA2_S7M0AR			DMA2_SM0AR(7)
+
+/* DMA Stream x memory address 1 register (DMA_SxM1AR) */
+#define DMA_SM1AR(port, n)		(*(volatile void **)\
+					 (DMA_STREAM(port, n) + 0x10))
+#define DMA1_SM1AR(n)			DMA_SM1AR(DMA1, n)
+#define DMA2_SM1AR(n)			DMA_SM1AR(DMA2, n)
+
+#define DMA1_S0M1AR			DMA1_SM1AR(0)
+#define DMA1_S1M1AR			DMA1_SM1AR(1)
+#define DMA1_S2M1AR			DMA1_SM1AR(2)
+#define DMA1_S3M1AR			DMA1_SM1AR(3)
+#define DMA1_S4M1AR			DMA1_SM1AR(4)
+#define DMA1_S5M1AR			DMA1_SM1AR(5)
+#define DMA1_S6M1AR			DMA1_SM1AR(6)
+#define DMA1_S7M1AR			DMA1_SM1AR(7)
+
+#define DMA2_S0M1AR			DMA2_SM1AR(0)
+#define DMA2_S1M1AR			DMA2_SM1AR(1)
+#define DMA2_S2M1AR			DMA2_SM1AR(2)
+#define DMA2_S3M1AR			DMA2_SM1AR(3)
+#define DMA2_S4M1AR			DMA2_SM1AR(4)
+#define DMA2_S5M1AR			DMA2_SM1AR(5)
+#define DMA2_S6M1AR			DMA2_SM1AR(6)
+#define DMA2_S7M1AR			DMA2_SM1AR(7)
+
+/* DMA Stream x FIFO control register (DMA_SxFCR) */
+#define DMA_SFCR(port, n)		MMIO32(DMA_STREAM(port, n) + 0x14)
+#define DMA1_SFCR(n)			DMA_SFCR(DMA1, n)
+#define DMA2_SFCR(n)			DMA_SFCR(DMA2, n)
+
+#define DMA1_S0FCR			DMA1_SFCR(0)
+#define DMA1_S1FCR			DMA1_SFCR(1)
+#define DMA1_S2FCR			DMA1_SFCR(2)
+#define DMA1_S3FCR			DMA1_SFCR(3)
+#define DMA1_S4FCR			DMA1_SFCR(4)
+#define DMA1_S5FCR			DMA1_SFCR(5)
+#define DMA1_S6FCR			DMA1_SFCR(6)
+#define DMA1_S7FCR			DMA1_SFCR(7)
+
+#define DMA2_S0FCR			DMA2_SFCR(0)
+#define DMA2_S1FCR			DMA2_SFCR(1)
+#define DMA2_S2FCR			DMA2_SFCR(2)
+#define DMA2_S3FCR			DMA2_SFCR(3)
+#define DMA2_S4FCR			DMA2_SFCR(4)
+#define DMA2_S5FCR			DMA2_SFCR(5)
+#define DMA2_S6FCR			DMA2_SFCR(6)
+#define DMA2_S7FCR			DMA2_SFCR(7)
+
+/* --- DMA Interrupt Flag offset values ------------------------------------- */
+
+/* For API parameters. These are based on every interrupt flag and flag clear
+being at the same relative location */
+/** @defgroup dma_if_offset DMA Interrupt Flag Offsets within stream flag group.
+@ingroup dma_defines
+
+@{*/
+/** Transfer Complete Interrupt Flag */
+#define DMA_TCIF		    (1 << 5)
+/** Half Transfer Interrupt Flag */
+#define DMA_HTIF		    (1 << 4)
+/** Transfer Error Interrupt Flag */
+#define DMA_TEIF		    (1 << 3)
+/** Direct Mode Error Interrupt Flag */
+#define DMA_DMEIF		    (1 << 2)
+/** FIFO Error Interrupt Flag */
+#define DMA_FEIF		    (1 << 0)
+/**@}*/
+
+/* Offset within interrupt status register to start of stream interrupt flag
+ * field
+ */
+#define DMA_ISR_OFFSET(stream)	(6*(stream & 0x01)+16*((stream & 0x02) >> 1))
+#define DMA_ISR_FLAGS		(DMA_TCIF | DMA_HTIF | DMA_TEIF | DMA_DMEIF | \
+				 DMA_FEIF)
+#define DMA_ISR_MASK(stream)	(DMA_ISR_FLAGS << DMA_ISR_OFFSET(stream))
+
+/* --- DMA_LISR values ----------------------------------------------------- */
+
+#define DMA_LISR_FEIF0			(1 << 0)
+#define DMA_LISR_DMEIF0			(1 << 2)
+#define DMA_LISR_TEIF0			(1 << 3)
+#define DMA_LISR_HTIF0			(1 << 4)
+#define DMA_LISR_TCIF0			(1 << 5)
+
+#define DMA_LISR_FEIF1			(1 << 6)
+#define DMA_LISR_DMEIF1			(1 << 8)
+#define DMA_LISR_TEIF1			(1 << 9)
+#define DMA_LISR_HTIF1			(1 << 10)
+#define DMA_LISR_TCIF1			(1 << 11)
+
+#define DMA_LISR_FEIF2			(1 << 16)
+#define DMA_LISR_DMEIF2			(1 << 18)
+#define DMA_LISR_TEIF2			(1 << 19)
+#define DMA_LISR_HTIF2			(1 << 20)
+#define DMA_LISR_TCIF2			(1 << 21)
+
+#define DMA_LISR_FEIF3			(1 << 22)
+#define DMA_LISR_DMEIF3			(1 << 24)
+#define DMA_LISR_TEIF3			(1 << 25)
+#define DMA_LISR_HTIF3			(1 << 26)
+#define DMA_LISR_TCIF3			(1 << 27)
+
+/* --- DMA_HISR values ----------------------------------------------------- */
+
+#define DMA_HISR_FEIF4			(1 << 0)
+#define DMA_HISR_DMEIF4			(1 << 2)
+#define DMA_HISR_TEIF4			(1 << 3)
+#define DMA_HISR_HTIF4			(1 << 4)
+#define DMA_HISR_TCIF4			(1 << 5)
+
+#define DMA_HISR_FEIF5			(1 << 6)
+#define DMA_HISR_DMEIF5			(1 << 8)
+#define DMA_HISR_TEIF5			(1 << 9)
+#define DMA_HISR_HTIF5			(1 << 10)
+#define DMA_HISR_TCIF5			(1 << 11)
+
+#define DMA_HISR_FEIF6			(1 << 16)
+#define DMA_HISR_DMEIF6			(1 << 18)
+#define DMA_HISR_TEIF6			(1 << 19)
+#define DMA_HISR_HTIF6			(1 << 20)
+#define DMA_HISR_TCIF6			(1 << 21)
+
+#define DMA_HISR_FEIF7			(1 << 22)
+#define DMA_HISR_DMEIF7			(1 << 24)
+#define DMA_HISR_TEIF7			(1 << 25)
+#define DMA_HISR_HTIF7			(1 << 26)
+#define DMA_HISR_TCIF7			(1 << 27)
+
+/* --- DMA_LIFCR values ----------------------------------------------------- */
+
+#define DMA_LIFCR_CFEIF0		(1 << 0)
+#define DMA_LIFCR_CDMEIF0		(1 << 2)
+#define DMA_LIFCR_CTEIF0		(1 << 3)
+#define DMA_LIFCR_CHTIF0		(1 << 4)
+#define DMA_LIFCR_CTCIF0		(1 << 5)
+
+#define DMA_LIFCR_CFEIF1		(1 << 6)
+#define DMA_LIFCR_CDMEIF1		(1 << 8)
+#define DMA_LIFCR_CTEIF1		(1 << 9)
+#define DMA_LIFCR_CHTIF1		(1 << 10)
+#define DMA_LIFCR_CTCIF1		(1 << 11)
+
+#define DMA_LIFCR_CFEIF2		(1 << 16)
+#define DMA_LIFCR_CDMEIF2		(1 << 18)
+#define DMA_LIFCR_CTEIF2		(1 << 19)
+#define DMA_LIFCR_CHTIF2		(1 << 20)
+#define DMA_LIFCR_CTCIF2		(1 << 21)
+
+#define DMA_LIFCR_CFEIF3		(1 << 22)
+#define DMA_LIFCR_CDMEIF3		(1 << 24)
+#define DMA_LIFCR_CTEIF3		(1 << 25)
+#define DMA_LIFCR_CHTIF3		(1 << 26)
+#define DMA_LIFCR_CTCIF3		(1 << 27)
+
+/* --- DMA_HIFCR values ----------------------------------------------------- */
+
+#define DMA_HIFCR_CFEIF4		(1 << 0)
+#define DMA_HIFCR_CDMEIF4		(1 << 2)
+#define DMA_HIFCR_CTEIF4		(1 << 3)
+#define DMA_HIFCR_CHTIF4		(1 << 4)
+#define DMA_HIFCR_CTCIF4		(1 << 5)
+
+#define DMA_HIFCR_CFEIF5		(1 << 6)
+#define DMA_HIFCR_CDMEIF5		(1 << 8)
+#define DMA_HIFCR_CTEIF5		(1 << 9)
+#define DMA_HIFCR_CHTIF5		(1 << 10)
+#define DMA_HIFCR_CTCIF5		(1 << 11)
+
+#define DMA_HIFCR_CFEIF6		(1 << 16)
+#define DMA_HIFCR_CDMEIF6		(1 << 18)
+#define DMA_HIFCR_CTEIF6		(1 << 19)
+#define DMA_HIFCR_CHTIF6		(1 << 20)
+#define DMA_HIFCR_CTCIF6		(1 << 21)
+
+#define DMA_HIFCR_CFEIF7		(1 << 22)
+#define DMA_HIFCR_CDMEIF7		(1 << 24)
+#define DMA_HIFCR_CTEIF7		(1 << 25)
+#define DMA_HIFCR_CHTIF7		(1 << 26)
+#define DMA_HIFCR_CTCIF7		(1 << 27)
+
+/* --- DMA_SxCR values ----------------------------------------------------- */
+
+/* EN: Stream enable */
+#define DMA_SxCR_EN			(1 << 0)
+/* DMEIE: Direct Mode error interrupt enable */
+#define DMA_SxCR_DMEIE			(1 << 1)
+/* TEIE: Transfer error interrupt enable */
+#define DMA_SxCR_TEIE			(1 << 2)
+/* HTIE: Half transfer interrupt enable */
+#define DMA_SxCR_HTIE			(1 << 3)
+/* TCIE: Transfer complete interrupt enable */
+#define DMA_SxCR_TCIE			(1 << 4)
+/* PFCTRL: Peripheral Flow Controller */
+#define DMA_SxCR_PFCTRL			(1 << 5)
+
+/* DIR[7:6]: Data transfer direction */
+/** @defgroup dma_st_dir DMA Stream Data transfer direction
+@ingroup dma_defines
+
+@{*/
+#define DMA_SxCR_DIR_PERIPHERAL_TO_MEM	(0 << 6)
+#define DMA_SxCR_DIR_MEM_TO_PERIPHERAL	(1 << 6)
+#define DMA_SxCR_DIR_MEM_TO_MEM		(2 << 6)
+/**@}*/
+#define DMA_SxCR_DIR_SHIFT		6
+#define DMA_SxCR_DIR_MASK		(3 << 6)
+
+/* CIRC: Circular mode */
+#define DMA_SxCR_CIRC			(1 << 8)
+/* PINC: Peripheral increment mode */
+#define DMA_SxCR_PINC			(1 << 9)
+/* MINC: Memory increment mode */
+#define DMA_SxCR_MINC			(1 << 10)
+
+/* PSIZE[12:11]: Peripheral size */
+/** @defgroup dma_st_perwidth DMA Stream Peripheral Word Width
+@ingroup STM32F4xx_dma_defines
+
+@{*/
+#define DMA_SxCR_PSIZE_8BIT		(0 << 11)
+#define DMA_SxCR_PSIZE_16BIT		(1 << 11)
+#define DMA_SxCR_PSIZE_32BIT		(2 << 11)
+/**@}*/
+#define DMA_SxCR_PSIZE_SHIFT		11
+#define DMA_SxCR_PSIZE_MASK		(3 << 11)
+
+/* MSIZE[14:13]: Memory size */
+/** @defgroup dma_st_memwidth DMA Stream Memory Word Width
+@ingroup STM32F4xx_dma_defines
+
+@{*/
+#define DMA_SxCR_MSIZE_8BIT		(0 << 13)
+#define DMA_SxCR_MSIZE_16BIT		(1 << 13)
+#define DMA_SxCR_MSIZE_32BIT		(2 << 13)
+/**@}*/
+#define DMA_SxCR_MSIZE_SHIFT		13
+#define DMA_SxCR_MSIZE_MASK		(3 << 13)
+
+/* PINCOS: Peripheral increment offset size */
+#define DMA_SxCR_PINCOS			(1 << 15)
+
+/* PL[17:16]: Stream priority level */
+/** @defgroup dma_st_pri DMA Stream Priority Levels
+@ingroup dma_defines
+
+@{*/
+#define DMA_SxCR_PL_LOW			(0 << 16)
+#define DMA_SxCR_PL_MEDIUM		(1 << 16)
+#define DMA_SxCR_PL_HIGH		(2 << 16)
+#define DMA_SxCR_PL_VERY_HIGH		(3 << 16)
+/**@}*/
+#define DMA_SxCR_PL_SHIFT		16
+#define DMA_SxCR_PL_MASK		(3 << 16)
+
+/* DBM: Double buffered mode */
+#define DMA_SxCR_DBM			(1 << 18)
+/* CT: Current target (in double buffered mode) */
+#define DMA_SxCR_CT			(1 << 19)
+
+/* Bit 20 reserved */
+
+/* PBURST[13:12]: Peripheral Burst Configuration */
+/** @defgroup dma_pburst DMA Peripheral Burst Length
+@ingroup dma_defines
+
+@{*/
+#define DMA_SxCR_PBURST_SINGLE		(0 << 21)
+#define DMA_SxCR_PBURST_INCR4		(1 << 21)
+#define DMA_SxCR_PBURST_INCR8		(2 << 21)
+#define DMA_SxCR_PBURST_INCR16		(3 << 21)
+/**@}*/
+#define DMA_SxCR_PBURST_SHIFT		21
+#define DMA_SxCR_PBURST_MASK		(3 << 21)
+
+/* MBURST[13:12]: Memory Burst Configuration */
+/** @defgroup dma_mburst DMA Memory Burst Length
+@ingroup STM32F4xx_dma_defines
+
+@{*/
+#define DMA_SxCR_MBURST_SINGLE		(0 << 23)
+#define DMA_SxCR_MBURST_INCR4		(1 << 23)
+#define DMA_SxCR_MBURST_INCR8		(2 << 23)
+#define DMA_SxCR_MBURST_INCR16		(3 << 23)
+/**@}*/
+#define DMA_SxCR_MBURST_SHIFT		23
+#define DMA_SxCR_MBURST_MASK		(3 << 23)
+
+/* CHSEL[25:27]: Channel Select */
+/** @defgroup dma_ch_sel DMA Channel Select
+@ingroup dma_defines
+
+@{*/
+#define DMA_SxCR_CHSEL_0		(0 << DMA_SxCR_CHSEL_SHIFT)
+#define DMA_SxCR_CHSEL_1		(1 << DMA_SxCR_CHSEL_SHIFT)
+#define DMA_SxCR_CHSEL_2		(2 << DMA_SxCR_CHSEL_SHIFT)
+#define DMA_SxCR_CHSEL_3		(3 << DMA_SxCR_CHSEL_SHIFT)
+#define DMA_SxCR_CHSEL_4		(4 << DMA_SxCR_CHSEL_SHIFT)
+#define DMA_SxCR_CHSEL_5		(5 << DMA_SxCR_CHSEL_SHIFT)
+#define DMA_SxCR_CHSEL_6		(6 << DMA_SxCR_CHSEL_SHIFT)
+#define DMA_SxCR_CHSEL_7		(7 << DMA_SxCR_CHSEL_SHIFT)
+/**@}*/
+#define DMA_SxCR_CHSEL_SHIFT		25
+#define DMA_SxCR_CHSEL_MASK		(7 << 25)
+#define DMA_SxCR_CHSEL(n)		(n << DMA_SxCR_CHSEL_SHIFT)
+
+/* Reserved [31:28] */
+
+/* --- DMA_SxNDTR values --------------------------------------------------- */
+
+/* DMA_SxNDTR[15:0]: Number of data register. */
+
+/* --- DMA_SxPAR values ---------------------------------------------------- */
+
+/* DMA_SxPAR[31:0]: Peripheral address register. */
+
+/* --- DMA_SxM0AR values --------------------------------------------------- */
+
+/* DMA_SxM0AR[31:0]: Memory 0 address register. */
+
+/* --- DMA_SxM1AR values --------------------------------------------------- */
+
+/* DMA_SxM1AR[31:0]: Memory 1 address register. */
+
+/* --- DMA_SxFCR values ---------------------------------------------------- */
+
+/* FTH[1:0]: FIFO Threshold selection */
+/** @defgroup dma_fifo_thresh FIFO Threshold selection
+@ingroup STM32F4xx_dma_defines
+
+@{*/
+#define DMA_SxFCR_FTH_1_4_FULL		(0 << 0)
+#define DMA_SxFCR_FTH_2_4_FULL		(1 << 0)
+#define DMA_SxFCR_FTH_3_4_FULL		(2 << 0)
+#define DMA_SxFCR_FTH_4_4_FULL		(3 << 0)
+/**@}*/
+#define DMA_SxFCR_FTH_SHIFT		0
+#define DMA_SxFCR_FTH_MASK		(3 << 0)
+
+/* DMDIS: Direct Mode disable */
+#define DMA_SxFCR_DMDIS			(1 << 2)
+
+/* FS[5:3]: FIFO Status */
+/** @defgroup dma_fifo_status FIFO Status
+@ingroup STM32F4xx_dma_defines
+
+@{*/
+#define DMA_SxFCR_FS_LT_1_4_FULL	(0 << 0)
+#define DMA_SxFCR_FS_LT_2_4_FULL	(1 << 0)
+#define DMA_SxFCR_FS_LT_3_4_FULL	(2 << 0)
+#define DMA_SxFCR_FS_LT_4_4_FULL	(3 << 0)
+#define DMA_SxFCR_FS_FULL		(4 << 3)
+#define DMA_SxFCR_FS_EMPTY		(5 << 3)
+/**@}*/
+#define DMA_SxFCR_FS_SHIFT		3
+#define DMA_SxFCR_FS_MASK		(7 << 3)
+
+/* [6]: reserved */
+
+/* FEIE[7]: FIFO error interrupt enable */
+#define DMA_SxFCR_FEIE			(1 << 7)
+
+/* [31:8]: Reserved */
+
+#define DMA_Stream0_IT_MASK     (unsigned int)(DMA_LISR_FEIF0 | DMA_LISR_DMEIF0 | \
+                                           DMA_LISR_TEIF0 | DMA_LISR_HTIF0 | \
+                                           DMA_LISR_TCIF0)
+
+#define DWT_BASE        0xE0001000
+#define DWT_CONTROL		MMIO32(DWT_BASE)
+#define DWT_CYCCNT		MMIO32(DWT_BASE + 0x04)
+#define SCB_DEMCR			MMIO32(0xE000EDFC)
+#endif
