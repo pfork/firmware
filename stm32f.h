@@ -8,8 +8,31 @@ void PUT8 ( unsigned int, unsigned int );
 unsigned int GET32 ( unsigned int );
 unsigned int GET16 ( unsigned int );
 
-#define MMIO32(addr)		(*(volatile unsigned int *)(addr))
+#define gpio_set(port, pin) ((GPIO_Regs*) port)->BSRRL = pin
+#define gpio_reset(port, pin) ((GPIO_Regs*) port)->BSRRH = pin
+#define gpio_toggle(port, pin) ((GPIO_Regs*) port)->ODR ^= pin
+#define gpio_get(port, pin) (((GPIO_Regs*) port)->ODR & pin)
+
+#define spi_status(spi) spi->SR
+#define spi_status_txe(spi) (spi_status(spi) & SPI_I2S_FLAG_TXE)
+#define spi_status_rxne(spi) (spi_status(spi) & SPI_I2S_FLAG_RXNE)
+#define spi_read(spi) (spi)->DR
+#define spi_send(spi,val) (spi)->DR = val
+
+#define nrf24l0_SPIx ((SPI_Regs*) SPI1_BASE)
+
+# ifndef MMIO32
+#  define MMIO32(addr)		(*(volatile unsigned int *)(addr))
+# endif
+
 //-------------------------------------------------------------------
+#define PERIPH_BASE			0x40000000
+#define PERIPH_BASE_APB1		(PERIPH_BASE + 0x00000)
+#define PERIPH_BASE_APB2		(PERIPH_BASE + 0x10000)
+#define PERIPH_BASE_AHB1		(PERIPH_BASE + 0x20000)
+
+//#define PERIPH_BASE_AHB2		0x50000000
+
 #define RCCBASE   0x40023800
 #define RCC_CR    (RCCBASE+0x00)
 #define RCC_PLLCFGR (RCCBASE+0x04)
@@ -19,15 +42,165 @@ unsigned int GET16 ( unsigned int );
 #define RCC_APB1ENR (RCCBASE+0x40)
 #define RCC_APB2ENR (RCCBASE+0x44)
 
+#define RCC_AHB1Periph_GPIOA             ((unsigned int)0x00000001)
+#define RCC_AHB1Periph_GPIOB             ((unsigned int)0x00000002)
+#define RCC_AHB1Periph_GPIOC             ((unsigned int)0x00000004)
+#define RCC_AHB1Periph_GPIOD             ((unsigned int)0x00000008)
+#define RCC_AHB1Periph_GPIOE             ((unsigned int)0x00000010)
+#define RCC_AHB1Periph_GPIOF             ((unsigned int)0x00000020)
+#define RCC_AHB1Periph_GPIOG             ((unsigned int)0x00000040)
+#define RCC_AHB1Periph_GPIOH             ((unsigned int)0x00000080)
+#define RCC_AHB1Periph_GPIOI             ((unsigned int)0x00000100)
+#define RCC_APB2Periph_SPI1              ((unsigned int)0x00001000)
+#define RCC_APB1Periph_SPI2              ((unsigned int)0x00004000)
+#define RCC_APB1Periph_SPI3              ((unsigned int)0x00008000)
+#define RCC_AHB2ENR_OTGFSEN              ((unsigned int)(1<<7))
+
+//-------------------------------------------------------------------
 #define TIM5BASE  0x40000C00
 #define FLASH_ACR  0x40023C00
 
-#define GPIODBASE 0x40020C00
-#define GPIOABASE 0x40020000
-#define GPIOA_MODER (GPIOABASE+0x00)
-#define GPIOA_OTYPER (GPIOABASE+0x04)
-#define GPIOA_AFRL (GPIOABASE+0x20)
+//-------------------------------------------------------------------
 
+#define GPIOA_BASE (0x40020000)
+#define GPIOB_BASE (0x40020400)
+#define GPIOC_BASE (0x40020800)
+#define GPIOD_BASE (0x40020C00)
+#define GPIOE_BASE (0x40021000)
+#define GPIOF_BASE (0x40021400)
+#define GPIOG_BASE (0x40021800)
+#define GPIOH_BASE (0x40021C00)
+#define GPIOI_BASE (0x40022000)
+
+// needed for uart.c
+#define GPIOA_MODER (GPIOA_BASE+0x00)
+#define GPIOA_OTYPER (GPIOA_BASE+0x04)
+#define GPIOA_AFRL (GPIOA_BASE+0x20)
+
+typedef struct
+{
+  volatile unsigned int MODER;    /* GPIO port mode register,               Address offset: 0x00      */
+  volatile unsigned int OTYPER;   /* GPIO port output type register,        Address offset: 0x04      */
+  volatile unsigned int OSPEEDR;  /* GPIO port output speed register,       Address offset: 0x08      */
+  volatile unsigned int PUPDR;    /* GPIO port pull-up/pull-down register,  Address offset: 0x0C      */
+  volatile unsigned int IDR;      /* GPIO port input data register,         Address offset: 0x10      */
+  volatile unsigned int ODR;      /* GPIO port output data register,        Address offset: 0x14      */
+  volatile unsigned short BSRRL;  /* GPIO port bit set/reset low register,  Address offset: 0x18      */
+  volatile unsigned short BSRRH;  /* GPIO port bit set/reset high register, Address offset: 0x1A      */
+  volatile unsigned int LCKR;     /* GPIO port configuration lock register, Address offset: 0x1C      */
+  volatile unsigned int AFR[2];   /* GPIO alternate function registers,     Address offset: 0x24-0x28 */
+} GPIO_Regs;
+
+#define GPIO_Mode_IN    0x00  /* GPIO Input Mode */
+#define GPIO_Mode_OUT   0x01  /* GPIO Output Mode */
+#define GPIO_Mode_AF    0x02  /* GPIO Alternate function Mode */
+#define GPIO_Mode_AN    0x03  /* GPIO Analog Mode */
+
+#define GPIO_OType_PP  0x00
+#define GPIO_OType_OD  0x01
+
+#define GPIO_Speed_2MHz    0x00  /* Low speed */
+#define GPIO_Speed_25MHz   0x01  /* Medium speed */
+#define GPIO_Speed_50MHz   0x02  /* Fast speed */
+#define GPIO_Speed_100MHz  0x03  /* High speed on 30 pF (80 MHz Output max speed on 15 pF) */
+
+#define GPIO_PuPd_NOPULL  0x00
+#define GPIO_PuPd_UP      0x01
+#define GPIO_PuPd_DOWN    0x02
+
+#define Bit_RESET 0
+#define Bit_SET 1
+
+#define GPIO_Pin_0     ((unsigned short)0x0001)  /* Pin 0 selected */
+#define GPIO_Pin_1     ((unsigned short)0x0002)  /* Pin 1 selected */
+#define GPIO_Pin_2     ((unsigned short)0x0004)  /* Pin 2 selected */
+#define GPIO_Pin_3     ((unsigned short)0x0008)  /* Pin 3 selected */
+#define GPIO_Pin_4     ((unsigned short)0x0010)  /* Pin 4 selected */
+#define GPIO_Pin_5     ((unsigned short)0x0020)  /* Pin 5 selected */
+#define GPIO_Pin_6     ((unsigned short)0x0040)  /* Pin 6 selected */
+#define GPIO_Pin_7     ((unsigned short)0x0080)  /* Pin 7 selected */
+#define GPIO_Pin_8     ((unsigned short)0x0100)  /* Pin 8 selected */
+#define GPIO_Pin_9     ((unsigned short)0x0200)  /* Pin 9 selected */
+#define GPIO_Pin_10    ((unsigned short)0x0400)  /* Pin 10 selected */
+#define GPIO_Pin_11    ((unsigned short)0x0800)  /* Pin 11 selected */
+#define GPIO_Pin_12    ((unsigned short)0x1000)  /* Pin 12 selected */
+#define GPIO_Pin_13    ((unsigned short)0x2000)  /* Pin 13 selected */
+#define GPIO_Pin_14    ((unsigned short)0x4000)  /* Pin 14 selected */
+#define GPIO_Pin_15    ((unsigned short)0x8000)  /* Pin 15 selected */
+#define GPIO_Pin_All   ((unsigned short)0xFFFF)  /* All pins selected */
+
+#define GPIO_PinSource0   ((unsigned char)0x00)
+#define GPIO_PinSource1   ((unsigned char)0x01)
+#define GPIO_PinSource2   ((unsigned char)0x02)
+#define GPIO_PinSource3   ((unsigned char)0x03)
+#define GPIO_PinSource4   ((unsigned char)0x04)
+#define GPIO_PinSource5   ((unsigned char)0x05)
+#define GPIO_PinSource6   ((unsigned char)0x06)
+#define GPIO_PinSource7   ((unsigned char)0x07)
+#define GPIO_PinSource8   ((unsigned char)0x08)
+#define GPIO_PinSource9   ((unsigned char)0x09)
+#define GPIO_PinSource10  ((unsigned char)0x0A)
+#define GPIO_PinSource11  ((unsigned char)0x0B)
+#define GPIO_PinSource12  ((unsigned char)0x0C)
+#define GPIO_PinSource13  ((unsigned char)0x0D)
+#define GPIO_PinSource14  ((unsigned char)0x0E)
+#define GPIO_PinSource15  ((unsigned char)0x0F)
+
+#define GPIO_AF_RTC_50Hz      ((unsigned char)0x00)  /* RTC_50Hz Alternate Function mapping */
+#define GPIO_AF_MCO           ((unsigned char)0x00)  /* MCO (MCO1 and MCO2) Alternate Function mapping */
+#define GPIO_AF_TAMPER        ((unsigned char)0x00)  /* TAMPER (TAMPER_1 and TAMPER_2) Alternate Function mapping */
+#define GPIO_AF_SWJ           ((unsigned char)0x00)  /* SWJ (SWD and JTAG) Alternate Function mapping */
+#define GPIO_AF_TRACE         ((unsigned char)0x00)  /* TRACE Alternate Function mapping */
+
+#define GPIO_AF_TIM1          ((unsigned char)0x01)  /* TIM1 Alternate Function mapping */
+#define GPIO_AF_TIM2          ((unsigned char)0x01)  /* TIM2 Alternate Function mapping */
+
+#define GPIO_AF_TIM3          ((unsigned char)0x02)  /* TIM3 Alternate Function mapping */
+#define GPIO_AF_TIM4          ((unsigned char)0x02)  /* TIM4 Alternate Function mapping */
+#define GPIO_AF_TIM5          ((unsigned char)0x02)  /* TIM5 Alternate Function mapping */
+
+#define GPIO_AF_TIM8          ((unsigned char)0x03)  /* TIM8 Alternate Function mapping */
+#define GPIO_AF_TIM9          ((unsigned char)0x03)  /* TIM9 Alternate Function mapping */
+#define GPIO_AF_TIM10         ((unsigned char)0x03)  /* TIM10 Alternate Function mapping */
+#define GPIO_AF_TIM11         ((unsigned char)0x03)  /* TIM11 Alternate Function mapping */
+
+#define GPIO_AF_I2C1          ((unsigned char)0x04)  /* I2C1 Alternate Function mapping */
+#define GPIO_AF_I2C2          ((unsigned char)0x04)  /* I2C2 Alternate Function mapping */
+#define GPIO_AF_I2C3          ((unsigned char)0x04)  /* I2C3 Alternate Function mapping */
+
+#define GPIO_AF_SPI1          ((unsigned char)0x05)  /* SPI1 Alternate Function mapping */
+#define GPIO_AF_SPI2          ((unsigned char)0x05)  /* SPI2/I2S2 Alternate Function mapping */
+
+#define GPIO_AF_SPI3          ((unsigned char)0x06)  /* SPI3/I2S3 Alternate Function mapping */
+
+#define GPIO_AF_USART1        ((unsigned char)0x07)  /* USART1 Alternate Function mapping */
+#define GPIO_AF_USART2        ((unsigned char)0x07)  /* USART2 Alternate Function mapping */
+#define GPIO_AF_USART3        ((unsigned char)0x07)  /* USART3 Alternate Function mapping */
+
+#define GPIO_AF_UART4         ((unsigned char)0x08)  /* UART4 Alternate Function mapping */
+#define GPIO_AF_UART5         ((unsigned char)0x08)  /* UART5 Alternate Function mapping */
+#define GPIO_AF_USART6        ((unsigned char)0x08)  /* USART6 Alternate Function mapping */
+
+#define GPIO_AF_CAN1          ((unsigned char)0x09)  /* CAN1 Alternate Function mapping */
+#define GPIO_AF_CAN2          ((unsigned char)0x09)  /* CAN2 Alternate Function mapping */
+#define GPIO_AF_TIM12         ((unsigned char)0x09)  /* TIM12 Alternate Function mapping */
+#define GPIO_AF_TIM13         ((unsigned char)0x09)  /* TIM13 Alternate Function mapping */
+#define GPIO_AF_TIM14         ((unsigned char)0x09)  /* TIM14 Alternate Function mapping */
+
+#define GPIO_AF_OTG_FS         ((unsigned char)0xA)  /* OTG_FS Alternate Function mapping */
+#define GPIO_AF_OTG_HS         ((unsigned char)0xA)  /* OTG_HS Alternate Function mapping */
+
+#define GPIO_AF_ETH             ((unsigned char)0x0B)  /* ETHERNET Alternate Function mapping */
+
+#define GPIO_AF_FSMC            ((unsigned char)0xC)  /* FSMC Alternate Function mapping */
+#define GPIO_AF_OTG_HS_FS       ((unsigned char)0xC)  /* OTG HS configured in FS, Alternate Function mapping */
+#define GPIO_AF_SDIO            ((unsigned char)0xC)  /* SDIO Alternate Function mapping */
+
+#define GPIO_AF_DCMI          ((unsigned char)0x0D)  /* DCMI Alternate Function mapping */
+
+#define GPIO_AF_EVENTOUT      ((unsigned char)0x0F)  /* EVENTOUT Alternate Function mapping */
+
+//-------------------------------------------------------------------
 #define USART2_BASE 0x40004400
 #define USART2_SR  (USART2_BASE+0x00)
 #define USART2_DR  (USART2_BASE+0x04)
@@ -37,18 +210,15 @@ unsigned int GET16 ( unsigned int );
 #define USART2_CR3 (USART2_BASE+0x14)
 #define USART2_GTPR (USART2_BASE+0x18)
 
+//-------------------------------------------------------------------
 #define RNG_BASE 0x50060800
 #define RNG_CR MMIO32(RNG_BASE+0x00)
 #define RNG_SR MMIO32(RNG_BASE+0x04)
 #define RNG_DR MMIO32(RNG_BASE+0x08)
 
+//-------------------------------------------------------------------
 #define SYSCLCK 120000000
-
-#define PERIPH_BASE			0x40000000
-#define PERIPH_BASE_APB1		(PERIPH_BASE + 0x00000)
-#define PERIPH_BASE_APB2		(PERIPH_BASE + 0x10000)
-#define PERIPH_BASE_AHB1		(PERIPH_BASE + 0x20000)
-#define PERIPH_BASE_AHB2		0x50000000
+//-------------------------------------------------------------------
 
 #define ADC1_BASE			(PERIPH_BASE_APB2 + 0x2000)
 #define ADC1				ADC1_BASE
@@ -126,30 +296,26 @@ unsigned int GET16 ( unsigned int );
 #define ADC_DR(block)			MMIO32(block + 0x4c)
 #define ADC1_DR				ADC_DR(ADC1)
 
+//-------------------------------------------------------------------
 #define DESIG_UNIQUE_ID_BASE		(0x1FFF7A10)
 #define DESIG_UNIQUE_ID0		MMIO32(DESIG_UNIQUE_ID_BASE)
 #define DESIG_UNIQUE_ID1		MMIO32(DESIG_UNIQUE_ID_BASE + 4)
 #define DESIG_UNIQUE_ID2		MMIO32(DESIG_UNIQUE_ID_BASE + 8)
 
+//-------------------------------------------------------------------
 #define SYSTICK_BASE 0xe000e010
 #define SYSTICK_CTRL MMIO32(SYSTICK_BASE)
 #define SYSTICK_LOAD MMIO32(SYSTICK_BASE + 0x4)
 #define SYSTICK_VAL MMIO32(SYSTICK_BASE + 0x8)
 
-/* --- Convenience macros -------------------------------------------------- */
+//-------------------------------------------------------------------
 
 #define DMA1_BASE			(PERIPH_BASE_AHB1 + 0x6000)
 #define DMA2_BASE			(PERIPH_BASE_AHB1 + 0x6400)
 
-/* DMA controller base addresses (for convenience) */
 #define DMA1				DMA1_BASE
 #define DMA2				DMA2_BASE
 
-/* DMA stream base addresses (for API parameters) */
-/** @defgroup dma_st_number DMA Stream Number
-@ingroup STM32F4xx_dma_defines
-
-@{*/
 #define DMA_STREAM0			0
 #define DMA_STREAM1			1
 #define DMA_STREAM2			2
@@ -158,7 +324,6 @@ unsigned int GET16 ( unsigned int );
 #define DMA_STREAM5			5
 #define DMA_STREAM6			6
 #define DMA_STREAM7			7
-/**@}*/
 
 #define DMA_STREAM(port, n)		((port) + 0x10 + (24 * (n)))
 #define DMA1_STREAM(n)			DMA_STREAM(DMA1, n)
@@ -625,15 +790,10 @@ being at the same relative location */
 /* --- DMA_SxFCR values ---------------------------------------------------- */
 
 /* FTH[1:0]: FIFO Threshold selection */
-/** @defgroup dma_fifo_thresh FIFO Threshold selection
-@ingroup STM32F4xx_dma_defines
-
-@{*/
 #define DMA_SxFCR_FTH_1_4_FULL		(0 << 0)
 #define DMA_SxFCR_FTH_2_4_FULL		(1 << 0)
 #define DMA_SxFCR_FTH_3_4_FULL		(2 << 0)
 #define DMA_SxFCR_FTH_4_4_FULL		(3 << 0)
-/**@}*/
 #define DMA_SxFCR_FTH_SHIFT		0
 #define DMA_SxFCR_FTH_MASK		(3 << 0)
 
@@ -641,17 +801,12 @@ being at the same relative location */
 #define DMA_SxFCR_DMDIS			(1 << 2)
 
 /* FS[5:3]: FIFO Status */
-/** @defgroup dma_fifo_status FIFO Status
-@ingroup STM32F4xx_dma_defines
-
-@{*/
 #define DMA_SxFCR_FS_LT_1_4_FULL	(0 << 0)
 #define DMA_SxFCR_FS_LT_2_4_FULL	(1 << 0)
 #define DMA_SxFCR_FS_LT_3_4_FULL	(2 << 0)
 #define DMA_SxFCR_FS_LT_4_4_FULL	(3 << 0)
 #define DMA_SxFCR_FS_FULL		(4 << 3)
 #define DMA_SxFCR_FS_EMPTY		(5 << 3)
-/**@}*/
 #define DMA_SxFCR_FS_SHIFT		3
 #define DMA_SxFCR_FS_MASK		(7 << 3)
 
@@ -666,8 +821,159 @@ being at the same relative location */
                                            DMA_LISR_TEIF0 | DMA_LISR_HTIF0 | \
                                            DMA_LISR_TCIF0)
 
+/* ---------------------------------------------------- */
 #define DWT_BASE        0xE0001000
 #define DWT_CONTROL		MMIO32(DWT_BASE)
 #define DWT_CYCCNT		MMIO32(DWT_BASE + 0x04)
 #define SCB_DEMCR			MMIO32(0xE000EDFC)
+
+/* ---------------------------------------------------- */
+
+#define SPI1_BASE             (PERIPH_BASE_APB2 + 0x3000)
+#define SPI2_BASE             (PERIPH_BASE_APB1 + 0x3800)
+
+typedef struct
+{
+  volatile unsigned int CR1;
+  volatile unsigned int CR2;
+  volatile unsigned int SR;
+  volatile unsigned int DR;
+  volatile unsigned int CRCPR;
+  volatile unsigned int RXCRCR;
+  volatile unsigned int TXCRCR;
+  volatile unsigned int I2SCFGR;
+  volatile unsigned int I2SPR;
+} SPI_Regs;
+
+#define SPI_Direction_2Lines_FullDuplex ((unsigned short)0x0000)
+#define SPI_Direction_2Lines_RxOnly     ((unsigned short)0x0400)
+#define SPI_Direction_1Line_Rx          ((unsigned short)0x8000)
+#define SPI_Direction_1Line_Tx          ((unsigned short)0xC000)
+
+#define SPI_Mode_Master                 ((unsigned short)0x0104)
+#define SPI_Mode_Slave                  ((unsigned short)0x0000)
+
+#define SPI_DataSize_16b                ((unsigned short)0x0800)
+#define SPI_DataSize_8b                 ((unsigned short)0x0000)
+
+#define SPI_CPOL_Low                    ((unsigned short)0x0000)
+#define SPI_CPOL_High                   ((unsigned short)0x0002)
+
+#define SPI_CPHA_1Edge                  ((unsigned short)0x0000)
+#define SPI_CPHA_2Edge                  ((unsigned short)0x0001)
+
+#define SPI_NSS_Soft                    ((unsigned short)0x0200)
+#define SPI_NSS_Hard                    ((unsigned short)0x0000)
+
+#define SPI_BaudRatePrescaler_2         ((unsigned short)0x0000)
+#define SPI_BaudRatePrescaler_4         ((unsigned short)0x0008)
+#define SPI_BaudRatePrescaler_8         ((unsigned short)0x0010)
+#define SPI_BaudRatePrescaler_16        ((unsigned short)0x0018)
+#define SPI_BaudRatePrescaler_32        ((unsigned short)0x0020)
+#define SPI_BaudRatePrescaler_64        ((unsigned short)0x0028)
+#define SPI_BaudRatePrescaler_128       ((unsigned short)0x0030)
+#define SPI_BaudRatePrescaler_256       ((unsigned short)0x0038)
+
+#define SPI_FirstBit_MSB                ((unsigned short)0x0000)
+#define SPI_FirstBit_LSB                ((unsigned short)0x0080)
+
+#define SPI_I2S_DMAReq_Tx               ((unsigned short)0x0002)
+#define SPI_I2S_DMAReq_Rx               ((unsigned short)0x0001)
+
+#define SPI_NSSInternalSoft_Set         ((unsigned short)0x0100)
+#define SPI_NSSInternalSoft_Reset       ((unsigned short)0xFEFF)
+
+#define SPI_CRC_Tx                      ((unsigned char)0x00)
+#define SPI_CRC_Rx                      ((unsigned char)0x01)
+
+#define SPI_CR1_SPE                     ((unsigned short)0x0040)            /*!<SPI Enable */
+
+#define SPI_Direction_Rx                ((unsigned short)0xBFFF)
+#define SPI_Direction_Tx                ((unsigned short)0x4000)
+
+#define SPI_I2S_IT_TXE                  ((unsigned char)0x71)
+#define SPI_I2S_IT_RXNE                 ((unsigned char)0x60)
+#define SPI_I2S_IT_ERR                  ((unsigned char)0x50)
+#define I2S_IT_UDR                      ((unsigned char)0x53)
+#define SPI_I2S_IT_TIFRFE               ((unsigned char)0x58)
+
+#define SPI_I2S_IT_OVR                  ((unsigned char)0x56)
+#define SPI_IT_MODF                     ((unsigned char)0x55)
+#define SPI_IT_CRCERR                   ((unsigned char)0x54)
+
+#define SPI_I2S_FLAG_RXNE               ((unsigned short)0x0001)
+#define SPI_I2S_FLAG_TXE                ((unsigned short)0x0002)
+#define I2S_FLAG_CHSIDE                 ((unsigned short)0x0004)
+#define I2S_FLAG_UDR                    ((unsigned short)0x0008)
+#define SPI_FLAG_CRCERR                 ((unsigned short)0x0010)
+#define SPI_FLAG_MODF                   ((unsigned short)0x0020)
+#define SPI_I2S_FLAG_OVR                ((unsigned short)0x0040)
+#define SPI_I2S_FLAG_BSY                ((unsigned short)0x0080)
+#define SPI_I2S_FLAG_TIFRFE             ((unsigned short)0x0100)
+
+#define  SPI_I2SCFGR_I2SMOD             ((unsigned short)0x0800)            /*!<I2S mode selection */
+
+//-------------------------------------------------------------------
+
+#define NVIC_OTG_FS_IRQ 67
+
+#define PPBI_BASE                       0xE0000000
+#define SCS_BASE                        (PPBI_BASE + 0xE000)
+#define NVIC_BASE                       (SCS_BASE + 0x0100)
+
+/* ISER: Interrupt Set Enable Registers */
+/* Note: 8 32bit Registers */
+/* Note: Single register on CM0 */
+#define NVIC_ISER(iser_id)		MMIO32(NVIC_BASE + 0x00 + \
+						(iser_id * 4))
+
+/* NVIC_BASE + 0x020 (0xE000 E120 - 0xE000 E17F): Reserved */
+
+/* ICER: Interrupt Clear Enable Registers */
+/* Note: 8 32bit Registers */
+/* Note: Single register on CM0 */
+#define NVIC_ICER(icer_id)		MMIO32(NVIC_BASE + 0x80 + \
+						(icer_id * 4))
+
+/* NVIC_BASE + 0x0A0 (0xE000 E1A0 - 0xE000 E1FF): Reserved */
+
+/* ISPR: Interrupt Set Pending Registers */
+/* Note: 8 32bit Registers */
+/* Note: Single register on CM0 */
+#define NVIC_ISPR(ispr_id)		MMIO32(NVIC_BASE + 0x100 + \
+						(ispr_id * 4))
+
+/* NVIC_BASE + 0x120 (0xE000 E220 - 0xE000 E27F): Reserved */
+
+/* ICPR: Interrupt Clear Pending Registers */
+/* Note: 8 32bit Registers */
+/* Note: Single register on CM0 */
+#define NVIC_ICPR(icpr_id)		MMIO32(NVIC_BASE + 0x180 + \
+						(icpr_id * 4))
+
+/* NVIC_BASE + 0x1A0 (0xE000 E2A0 - 0xE00 E2FF): Reserved */
+
+/* Those defined only on ARMv7 and above */
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+/* IABR: Interrupt Active Bit Register */
+/* Note: 8 32bit Registers */
+#define NVIC_IABR(iabr_id)		MMIO32(NVIC_BASE + 0x200 + \
+						(iabr_id * 4))
+#endif
+
+/* NVIC_BASE + 0x220 (0xE000 E320 - 0xE000 E3FF): Reserved */
+
+/* IPR: Interrupt Priority Registers */
+/* Note: 240 8bit Registers */
+/* Note: 32 8bit Registers on CM0 */
+#define NVIC_IPR(ipr_id)		MMIO8(NVIC_BASE + 0x300 + \
+						ipr_id)
+
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+/* STIR: Software Trigger Interrupt Register */
+#define NVIC_STIR			MMIO32(STIR_BASE)
+#endif
+
+//-------------------------------------------------------------------
+
 #endif

@@ -1,3 +1,4 @@
+#include "cdcacm.h"
 #include "stm32f.h"
 #include "clock.h"
 #include "uart.h"
@@ -17,4 +18,5 @@ void init(void) {
   systick_init();
   haveged_init();
   randombytes_salsa20_random_init();
+  usb_init();
 }

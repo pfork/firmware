@@ -17,7 +17,6 @@
 #include <crypto_generichash.h>
 #include <utils.h>
 
-#include "uart.h"
 #include "rng.h"
 #include "systimer.h"
 #include "stm32f.h"
@@ -72,8 +71,10 @@ randombytes_salsa20_random_stir(void)
 
     memset(stream.rnd32, 0, sizeof stream.rnd32);
     stream.rnd32_outleft = (size_t) 0U;
-    if (get_rand(sizeof m0, m0) != (ssize_t) sizeof m0) {
-        while(1) { uart_string("get_rand short read"); }
+    if (get_entropy(sizeof m0, m0) != (ssize_t) sizeof m0) {
+        while(1) {
+          //uart_string("get_rand short read");
+        }
     }
 
     COMPILER_ASSERT(sizeof stream.key == crypto_auth_hmacsha512256_BYTES);
