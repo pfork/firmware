@@ -2,5 +2,5 @@
 #define adc_h
 void adc_init ( void );
 unsigned short read_temp( void );
-unsigned short read_volt( void );
+unsigned short read_vref( void );
 #endif

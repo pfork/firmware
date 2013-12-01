@@ -3,15 +3,15 @@ ARMGNU = /home/stef/tasks/cdong/stm32/gcc-arm-none-eabi-4_7-2013q3/bin/arm-none-
 COPS = -Wall -Werror -Os -nostdlib -nostartfiles -ffreestanding -march=armv7 -mfix-cortex-m3-ldrd -msoft-float -mthumb -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
 LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3_stm32f2.a
 
+mainobjs = uart.gcc.thumb.o rng.gcc.thumb.o adc.gcc.thumb.o \
+	clock.gcc.thumb.o systimer.gcc.thumb.o mixer.gcc.thumb.o \
+	randombytes_salsa20_random.gcc.thumb.o init.gcc.thumb.o \
+	cdcacm.gcc.thumb.o cmd.gcc.thumb.o
+
 all : main.gcc.thumb.bin
 
 upload: main.gcc.thumb.bin
 	dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D main.gcc.thumb.bin
-
-mainobjs = uart.gcc.thumb.o rng.gcc.thumb.o adc.gcc.thumb.o \
-	clock.gcc.thumb.o systimer.gcc.thumb.o haveged.gcc.thumb.o \
-	randombytes_salsa20_random.gcc.thumb.o init.gcc.thumb.o \
-	cdcacm.gcc.thumb.o cmd.gcc.thumb.o
 
 main.gcc.thumb.o : main.c
 	$(ARMGNU)-gcc $(COPS) -c main.c -o main.gcc.thumb.o

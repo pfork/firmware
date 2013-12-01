@@ -1,10 +1,6 @@
 #include <sys/types.h>
 #include "stm32f.h"
-#include "systimer.h"
-#include "haveged.h"
-#include "adc.h"
 
-#define rotate32(num,bits) ((num >> bits) | (num << (32 -bits)))
 unsigned int rng_last;
 
 //-------------------------------------------------------------------
@@ -45,28 +41,6 @@ unsigned int rand_read ( const size_t size, unsigned char* buf) {
 
   while(cnt<size) {
     ra = next_rand();
-    if (size - cnt >= 4) {
-      PUT32((unsigned int) buf+cnt, ra);
-      cnt+=4;
-      continue;
-    }
-    unsigned int s=0;
-    while(cnt<size) {
-      *(buf+cnt++)=*(((unsigned char*) &ra)+s++);
-    }
-  }
-  return cnt;
-}
-//-------------------------------------------------------------------
-unsigned int get_entropy ( const size_t size, unsigned char* buf)
-{
-  unsigned int ra;
-  unsigned int cnt = 0;
-  unsigned char extrabits;
-  extrabits = ((sysctr & 1) << 3) | ((read_temp() & 3) <<1) | (read_volt() & 1);
-  while(cnt<size) {
-    ra = next_rand() ^ Entropy[cnt/4];
-    ra = rotate32(ra ,extrabits);
     if (size - cnt >= 4) {
       PUT32((unsigned int) buf+cnt, ra);
       cnt+=4;

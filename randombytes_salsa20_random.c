@@ -17,7 +17,7 @@
 #include <crypto_generichash.h>
 #include <utils.h>
 
-#include "rng.h"
+#include "mixer.h"
 #include "systimer.h"
 #include "stm32f.h"
 
@@ -28,13 +28,14 @@
 #define COMPILER_ASSERT(X) (void) sizeof(char[(X) ? 1 : -1])
 
 typedef struct Salsa20Random_ {
-    unsigned char key[crypto_stream_salsa20_KEYBYTES];
-    unsigned char rnd32[SALSA20_RANDOM_BLOCK_SIZE];
-    unsigned char s[crypto_auth_hmacsha512256_KEYBYTES];
-    unsigned int  fresh;
-    uint64_t      nonce;
-    size_t        rnd32_outleft;
-    int           initialized;
+  unsigned char key[crypto_stream_salsa20_KEYBYTES];
+  unsigned char rnd32[SALSA20_RANDOM_BLOCK_SIZE];
+  unsigned char s[crypto_generichash_KEYBYTES];
+  unsigned int  fresh;
+  uint64_t      nonce;
+  size_t        rnd32_outleft;
+  int           initialized;
+  struct entropy_store* pool;
 } Salsa20Random;
 
 Salsa20Random stream = {
@@ -43,47 +44,72 @@ Salsa20Random stream = {
     .fresh = 0
 };
 
-void
-randombytes_salsa20_random_init(void)
-{
+void randombytes_salsa20_random_init(struct entropy_store* pool) {
     unsigned int dev_uuid[4];
     stream.nonce = sysctr;
+    stream.pool = pool;
 
     dev_uuid[0]=DESIG_UNIQUE_ID0;
     dev_uuid[1]=DESIG_UNIQUE_ID1;
     dev_uuid[2]=DESIG_UNIQUE_ID2;
     dev_uuid[3]=0;
-    crypto_generichash(stream.s, crypto_auth_hmacsha512256_KEYBYTES, (unsigned char *) dev_uuid, (uint64_t) 16, NULL, 0);
+    crypto_generichash(stream.s, crypto_generichash_KEYBYTES, (unsigned char *) dev_uuid, (uint64_t) 16, NULL, 0);
     stream.fresh = 0;
     stream.initialized = 1;
     //assert(stream.nonce != (uint64_t) 0U);
 }
 
-void
-randombytes_salsa20_random_stir(void)
-{
-    unsigned char  m0[crypto_auth_hmacsha512256_BYTES +
-                      2U * SHA512_BLOCK_SIZE - SHA512_MIN_PAD_SIZE];
-    unsigned char *k0 = m0 + crypto_auth_hmacsha512256_BYTES;
-    size_t         i;
-    size_t         sizeof_k0 = sizeof m0 - crypto_auth_hmacsha512256_BYTES;
+#define HASHSIZE (crypto_stream_salsa20_KEYBYTES >> 1)
+void randombytes_salsa20_random_stir(void) {
+  	int i;
+   unsigned int w[HASHSIZE];
 
+   // gather some entropy
+   seed_pool();
 
-    memset(stream.rnd32, 0, sizeof stream.rnd32);
-    stream.rnd32_outleft = (size_t) 0U;
-    if (get_entropy(sizeof m0, m0) != (ssize_t) sizeof m0) {
-        while(1) {
-          //uart_string("get_rand short read");
-        }
-    }
+   // zero out random pool
+   memset(stream.rnd32, 0, sizeof stream.rnd32);
+   stream.rnd32_outleft = (size_t) 0U;
 
-    COMPILER_ASSERT(sizeof stream.key == crypto_auth_hmacsha512256_BYTES);
-    crypto_auth_hmacsha512256(stream.key, k0, sizeof_k0, stream.s);
-    COMPILER_ASSERT(sizeof stream.key <= sizeof m0);
-    for (i = (size_t) 0U; i < sizeof stream.key; i++) {
-        stream.key[i] ^= m0[i];
-    }
-    sodium_memzero(m0, sizeof m0);
+	/* Generate a hash across the pool */
+   crypto_generichash((unsigned char *) w,
+                      HASHSIZE,
+                      (unsigned char *) stream.pool,
+                      (uint64_t) INPUT_POOL_WORDS,
+                      (unsigned char *) stream.s,
+                      (uint64_t) crypto_generichash_KEYBYTES);
+
+	/*
+	 * We mix the hash back into the pool to prevent backtracking
+	 * attacks (where the attacker knows the state of the pool
+	 * plus the current outputs, and attempts to find previous
+	 * ouputs), unless the hash function can be inverted. By
+	 * mixing at least a SHA1 worth of hash data back, we make
+	 * brute-forcing the feedback as hard as brute-forcing the
+	 * hash.
+	 */
+   mix_pool_bytes(stream.pool, w, HASHSIZE);
+
+	/*
+	 * To avoid duplicates, we extract a portion of the pool while
+	 * mixing, and hash one final time.
+	 */
+   crypto_generichash((unsigned char *) w,
+                      HASHSIZE,
+                      (unsigned char *) stream.pool,
+                      (uint64_t) INPUT_POOL_WORDS,
+                      (unsigned char *) stream.s,
+                      (uint64_t) crypto_generichash_KEYBYTES);
+
+	/*
+	 * In case the hash function has some recognizable output
+	 * pattern, we fold it in half. Thus, we always feed back
+	 * twice as much data as we output.
+	 */
+   for(i=0;i<HASHSIZE/2;i++)
+     stream.key[i] ^= w[i] ^ w[HASHSIZE-i];
+
+	sodium_memzero(w, sizeof(w));
 }
 
 static void
