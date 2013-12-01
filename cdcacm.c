@@ -22,8 +22,10 @@
 #include <libopencm3/usb/cdc.h>
 #include "stm32f.h"
 #include "randombytes_salsa20_random.h"
+#include "uart.h"
+#include "main.h"
 
-#define VERSION "0.1"
+usbd_device *usbd_dev = NULL;
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -167,9 +169,7 @@ static const char *usb_strings[] = {
 
 /* Buffer to be used for control requests. */
 uint8_t usbd_control_buffer[128];
-unsigned char usb_active = 0;
 
-#include "uart.h"
 static int cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *req, uint8_t **buf,
 		uint16_t *len, void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req)) {
   (void)complete;
@@ -188,25 +188,31 @@ static int cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *
   case USB_CDC_REQ_SET_LINE_CODING:
     if (*len < sizeof(struct usb_cdc_line_coding))
       return 0;
-    usb_active = 1; uart_putc('U');
+    uart_putc('U');
     return 1;
   }
   return 0;
 }
 
-#include "uart.h"
-//unsigned int state = 0;
-static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
-	(void)ep;
+void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
+  (void)ep;
 
-	char buf[64];
-	int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
-   uart_putc(buf[0]);
-   (void)len;
-   // ignore
+  char buf[64];
+  int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
+  if(len>0) {
+    switch(buf[0]) {
+    case 'r': {
+      if (state != RNG) {
+        state = RNG; uart_putc('R');
+      } else {
+        state = OFF; uart_putc('r');
+      }
+    }
+    }
+  }
 }
 
-static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
+void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 	(void)wValue;
 
 	usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
@@ -219,8 +225,6 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				cdcacm_control_request);
 }
-
-usbd_device *usbd_dev = NULL;
 
 void usb_init(void) {
    GPIO_Regs *greg;

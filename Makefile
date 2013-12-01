@@ -11,7 +11,7 @@ upload: main.gcc.thumb.bin
 mainobjs = uart.gcc.thumb.o rng.gcc.thumb.o adc.gcc.thumb.o \
 	clock.gcc.thumb.o systimer.gcc.thumb.o haveged.gcc.thumb.o \
 	randombytes_salsa20_random.gcc.thumb.o init.gcc.thumb.o \
-	cdcacm.gcc.thumb.o
+	cdcacm.gcc.thumb.o cmd.gcc.thumb.o
 
 main.gcc.thumb.o : main.c
 	$(ARMGNU)-gcc $(COPS) -c main.c -o main.gcc.thumb.o
