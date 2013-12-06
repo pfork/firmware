@@ -7,7 +7,8 @@ extern unsigned int state;
 
 enum State {
   OFF = 0,
-  RNG = 1
+  RNG,
+  TEST
 };
 
 #endif

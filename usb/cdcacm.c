@@ -23,6 +23,7 @@
 #include "stm32f.h"
 #include "randombytes_salsa20_random.h"
 #include "uart.h"
+#include "cmd.h"
 #include "main.h"
 
 usbd_device *usbd_dev = NULL;
@@ -194,24 +195,6 @@ static int cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *
   return 0;
 }
 
-void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
-  (void)ep;
-
-  char buf[64];
-  int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
-  if(len>0) {
-    switch(buf[0]) {
-    case 'r': {
-      if (state != RNG) {
-        state = RNG; uart_putc('R');
-      } else {
-        state = OFF; uart_putc('r');
-      }
-    }
-    }
-  }
-}
-
 void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 	(void)wValue;
 
@@ -253,4 +236,42 @@ void usb_init(void) {
 
 usbd_device* get_usbdev(void) {
   return usbd_dev;
+}
+
+void cdc_putc(unsigned char c ) {
+  while (usbd_ep_write_packet(usbd_dev, 0x82, (void*) &c, 1) == 0) ;
+}
+
+void cdc_put_block(unsigned char *c, unsigned char len ) {
+  if(len>64) len=64;
+  while (usbd_ep_write_packet(usbd_dev, 0x82, c, len) == 0) ;
+}
+
+//-------------------------------------------------------------------
+void cdc_hexstring ( unsigned int d, unsigned int cr ) {
+    //unsigned int ra;
+    unsigned int rb;
+    unsigned int rc;
+
+    rb=32;
+    while(1) {
+        rb-=4;
+        rc=(d>>rb)&0xF;
+        if(rc>9) rc+=0x37; else rc+=0x30;
+        cdc_putc(rc);
+        if(rb==0) break;
+    }
+    if(cr) {
+        cdc_putc(0x0D);
+        cdc_putc(0x0A);
+    } else {
+        cdc_putc(0x20);
+    }
+}
+//-------------------------------------------------------------------
+void cdc_string ( const char *s ) {
+  for(;*s;s++) {
+    if(*s==0x0A) cdc_putc(0x0D);
+    cdc_putc(*s);
+  }
 }

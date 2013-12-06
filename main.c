@@ -24,12 +24,16 @@ int main ( void ) {
     usbd_poll(usbd_dev);
     if(state == RNG) {
       stream_rnd();
-      if(cnt & (1 << 13)) uart_putc('>');
-    } else if (cnt++ & (1<<24) ) {
-      // stir occasionally
-      uart_putc('S');
-      randombytes_salsa20_random_stir();
+    }
+    if (cnt++ & (1<<(22 - (~~state)*7)) ) {
       cnt = 0;
+      if(state!=RNG) {
+        // stir occasionally
+        uart_putc('S');
+        randombytes_salsa20_random_stir();
+      } else {
+        uart_putc('>');
+      }
     }
     //Delay(1000);
   }
