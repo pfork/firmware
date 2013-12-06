@@ -30,42 +30,34 @@ int uart_init ( void )
     return(0);
 }
 //-------------------------------------------------------------------
-void uart_putc ( unsigned int x )
-{
+void uart_putc(unsigned int x ) {
     while (( GET32(USART2_SR) & (1<<7)) == 0) continue;
     PUT32(USART2_DR,x);
 }
 //-------------------------------------------------------------------
-void hexstring ( unsigned int d, unsigned int cr )
-{
+void hexstring ( unsigned int d, unsigned int cr ) {
     //unsigned int ra;
     unsigned int rb;
     unsigned int rc;
 
     rb=32;
-    while(1)
-    {
+    while(1) {
         rb-=4;
         rc=(d>>rb)&0xF;
         if(rc>9) rc+=0x37; else rc+=0x30;
         uart_putc(rc);
         if(rb==0) break;
     }
-    if(cr)
-    {
+    if(cr) {
         uart_putc(0x0D);
         uart_putc(0x0A);
-    }
-    else
-    {
+    } else {
         uart_putc(0x20);
     }
 }
 //-------------------------------------------------------------------
-void uart_string ( const char *s )
-{
-    for(;*s;s++)
-    {
+void uart_string ( const char *s ) {
+    for(;*s;s++) {
         if(*s==0x0A) uart_putc(0x0D);
         uart_putc(*s);
     }
