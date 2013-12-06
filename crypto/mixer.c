@@ -2,6 +2,9 @@
 #include "rng.h"
 #include "mixer.h"
 
+// ported from
+// https://github.com/torvalds/linux/blob/673fdfe3f0630b03f3854d0361b1232f2e5ef7fb/drivers/char/random.c
+
 static inline unsigned int rol32(unsigned int A, unsigned char n) {
   return ((A) << (n)) | ((A)>>(32-(n)));
 }
