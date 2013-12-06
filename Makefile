@@ -13,7 +13,7 @@ LDFLAGS = $(LIBS) -fno-common -Tmemmap -nostartfiles
 mainobjs = utils/utils.o main.o core/uart.o core/rng.o core/adc.o \
 	core/clock.o core/systimer.o crypto/mixer.o cmd.o core/init.o \
 	crypto/randombytes_salsa20_random.o usb/cdcacm.o \
-	utils/memcpy.o utils/memset.o
+	core/dma.o sdio/sdio.o sdio/sd.o utils/memcpy.o utils/memset.o
 
 all : main.bin
 
