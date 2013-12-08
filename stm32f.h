@@ -7,6 +7,7 @@ void PUT16 ( unsigned int, unsigned int );
 void PUT8 ( unsigned int, unsigned int );
 unsigned int GET32 ( unsigned int );
 unsigned int GET16 ( unsigned int );
+unsigned int ASM_DELAY ( unsigned int );
 
 # ifndef MMIO32
 #  define MMIO32(addr)		(*(volatile unsigned int *)(addr))
@@ -32,7 +33,7 @@ unsigned int GET16 ( unsigned int );
 #define gpio_set(port, pin) ((GPIO_Regs*) port)->BSRRL = pin
 #define gpio_reset(port, pin) ((GPIO_Regs*) port)->BSRRH = pin
 #define gpio_toggle(port, pin) ((GPIO_Regs*) port)->ODR ^= pin
-#define gpio_get(port, pin) (((GPIO_Regs*) port)->IDR & pin)
+#define gpio_get(port, pin) ((((GPIO_Regs*) port)->IDR) & pin)
 
 #define spi_status(spi) spi->SR
 #define spi_status_txe(spi) (spi_status(spi) & SPI_I2S_FLAG_TXE)
@@ -50,8 +51,6 @@ typedef enum {RESET = 0, SET = !RESET} FlagStatus, ITStatus;
 #define PERIPH_BASE_APB1		(PERIPH_BASE + 0x00000)
 #define PERIPH_BASE_APB2		(PERIPH_BASE + 0x10000)
 #define PERIPH_BASE_AHB1		(PERIPH_BASE + 0x20000)
-
-//#define PERIPH_BASE_AHB2		0x50000000
 
 #define RCCBASE   0x40023800
 #define RCC_CR    (RCCBASE+0x00)
