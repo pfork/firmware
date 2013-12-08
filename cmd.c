@@ -33,36 +33,34 @@ void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 #else
 void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
   (void)ep;
-
   char buf[64];
+  buf[0]=0;
   int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
+  if (state != OFF) return;
   if(len>0) {
     switch(buf[0]) {
     case 'r': {
-      if (state != RNG) {
-        state = RNG; cdc_putc('R');
-      } else {
-        state = OFF; cdc_putc('r');
-      }
+      state = RNG;
       break;
     }
     case 't': {
-      if (state != TEST) {
-        state = TEST; cdc_putc('T');
-      } else {
-        state = OFF; cdc_putc('t');
-      }
+      state = TIME;
+      break;
+    }
+    case 'd': {
+      state = DISK;
       break;
     }
     default: {
-      if (state == OFF) {
-        cdc_string("test console");
-        state = TEST; cdc_putc('T');
-      }
+#ifdef USE_CDC_UART
+      cdc_putc('?');
+#else
+      uart_putc('?');
+#endif
     }
     }
-    //echo stuff
-    cdc_putc(buf[0]);
   }
+  //echo stuff
+  //cdc_putc(buf[0]);
 }
 #endif
