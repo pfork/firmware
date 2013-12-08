@@ -11,7 +11,7 @@ void enable_key(unsigned int base, unsigned int port) {
 }
 
 char key_pressed(unsigned int port, unsigned int key) {
-  unsigned int keyState, keyState2;
+  unsigned int keyState;
   keyState = 0;
 
   keyState = gpio_get(port, key);
