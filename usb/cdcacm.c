@@ -224,31 +224,35 @@ void usb_init(void) {
 
 	usbd_dev = usbd_init(&otgfs_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
-
-   //// enable IRQ
-   //NVIC_ISER(NVIC_OTG_FS_IRQ);
 }
 
-//void otg_fs_isr(void) {
-//  //usbd_poll();
-//  if (usbd_dev) usbd_poll(usbd_dev);
-//}
+void otg_fs_isr(void) {
+  if (usbd_dev) usbd_poll(usbd_dev);
+}
 
 usbd_device* get_usbdev(void) {
   return usbd_dev;
 }
 
-void cdc_putc(unsigned char c ) {
+#ifdef USE_CDC_UART
+void cdc_putc(const unsigned char c) {
   while (usbd_ep_write_packet(usbd_dev, 0x82, (void*) &c, 1) == 0) ;
 }
 
-void cdc_put_block(unsigned char *c, unsigned char len ) {
-  if(len>64) len=64;
-  while (usbd_ep_write_packet(usbd_dev, 0x82, c, len) == 0) ;
+void cdc_puts(const char *c) {
+  char *p = (char*) c;
+  unsigned int i=0;
+  while(p[i]) {
+    for(;p[i] && i<64;i++);
+    if(i==0) break;
+    while (usbd_ep_write_packet(usbd_dev, 0x82, (void*) p, i) == 0) ;
+    p+=i;
+    i=0;
+  }
 }
 
 //-------------------------------------------------------------------
-void cdc_hexstring ( unsigned int d, unsigned int cr ) {
+void cdc_hexstring(unsigned int d, unsigned int cr) {
     //unsigned int ra;
     unsigned int rb;
     unsigned int rc;
@@ -269,9 +273,10 @@ void cdc_hexstring ( unsigned int d, unsigned int cr ) {
     }
 }
 //-------------------------------------------------------------------
-void cdc_string ( const char *s ) {
+void cdc_string(const char *s) {
   for(;*s;s++) {
     if(*s==0x0A) cdc_putc(0x0D);
     cdc_putc(*s);
   }
 }
+#endif // USE_CDC_UART
