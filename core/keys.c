@@ -1,5 +1,5 @@
-#include "keys.h"
 #include "stm32f.h"
+#include "keys.h"
 
 void enable_key(unsigned int base, unsigned int port) {
   GPIO_Regs * greg;
@@ -11,6 +11,7 @@ void enable_key(unsigned int base, unsigned int port) {
 }
 
 char key_pressed(unsigned int port, unsigned int key) {
+  // handles debouncing naively
   unsigned int keyState;
   keyState = 0;
 
@@ -22,22 +23,16 @@ char key_pressed(unsigned int port, unsigned int key) {
   return -1;
 }
 
-/* unsigned int keyrepeat = 0; */
-
 unsigned char key_handler(void) {
+  // checks all keys, returns a char with a mask of keys pressed
   unsigned char keymask = 0;
-  /* if(keyrepeat>0) { */
-  /*   keyrepeat--; */
-  /* } else { */
-    if(key_pressed(JOYSTICK_0) == 0)     keymask = 1;
-    if(key_pressed(JOYSTICK_1) == 0)     keymask |= 1 << 1;
-    if(key_pressed(JOYSTICK_2) == 0)     keymask |= 1 << 2;
-    if(key_pressed(JOYSTICK_3) == 0)     keymask |= 1 << 3;
-    if(key_pressed(JOYSTICK_PRESS) == 0) keymask |= 1 << 4;
-    if(key_pressed(USER_KEY) == 0)       keymask |= 1 << 5;
-    if(key_pressed(WAKEUP_KEY) == 0)     keymask |= 1 << 6;
-    //if(keymask>0) keyrepeat = 200;
-  /* } */
+  if(key_pressed(JOYSTICK_0) == 0)     keymask = 1;
+  if(key_pressed(JOYSTICK_1) == 0)     keymask |= 1 << 1;
+  if(key_pressed(JOYSTICK_2) == 0)     keymask |= 1 << 2;
+  if(key_pressed(JOYSTICK_3) == 0)     keymask |= 1 << 3;
+  if(key_pressed(JOYSTICK_PRESS) == 0) keymask |= 1 << 4;
+  if(key_pressed(USER_KEY) == 0)       keymask |= 1 << 5;
+  if(key_pressed(WAKEUP_KEY) == 0)     keymask |= 1 << 6;
   return keymask;
 }
 
