@@ -12,12 +12,11 @@ void enable_key(unsigned int base, unsigned int port) {
 
 char key_pressed(unsigned int port, unsigned int key) {
   unsigned int keyState, keyState2;
-  keyState = keyState2 = 0;
+  keyState = 0;
 
   keyState = gpio_get(port, key);
   ASM_DELAY(1);
-  keyState2 = (gpio_get(port, key));
-  if(keyState == keyState2) {
+  if(keyState == (gpio_get(port, key))) {
     return !!keyState;
   }
   return -1;
