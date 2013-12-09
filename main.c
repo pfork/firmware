@@ -21,7 +21,6 @@ int main ( void ) {
   usbd_dev = get_usbdev();
 
   while(1) {
-    usbd_poll(usbd_dev);
     if(state == RNG) {
       stream_rnd();
     }
