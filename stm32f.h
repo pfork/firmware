@@ -1072,6 +1072,11 @@ typedef struct {
 
 //-------------------------------------------------------------------
 
+#define NVIC_DMA2_STREAM0_IRQ 56
+#define NVIC_DMA2_STREAM1_IRQ 57
+#define NVIC_DMA2_STREAM2_IRQ 58
+#define NVIC_DMA2_STREAM3_IRQ 59
+#define NVIC_DMA2_STREAM4_IRQ 60
 #define NVIC_OTG_FS_IRQ 67
 
 #define PPBI_BASE                       0xE0000000

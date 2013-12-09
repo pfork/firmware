@@ -8,7 +8,12 @@ extern unsigned int state;
 enum State {
   OFF = 0,
   RNG,
+#ifndef LITE
   TEST
+#else
+  TIME,
+  DISK
+#endif
 };
 
 #endif

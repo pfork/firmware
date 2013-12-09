@@ -20,6 +20,7 @@
 #define SD_SDIO_DMA_STREAM3	           3
 #define SD_SDIO_DMA_PORT                 DMA2
 #define SD_SDIO_DMA_CLK                  RCC_AHB1Periph_DMA2
+#define SD_SDIO_DMA_IRQn               NVIC_DMA2_STREAM3_IRQ
 //#define SD_SDIO_DMA_STREAM6              6
 
 #define SD_SDIO_DMA_STREAM            DMA_STREAM3

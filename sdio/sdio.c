@@ -820,15 +820,17 @@ void SD_LowLevel_Init(void) {
                  (GPIO_Mode_AF << (9 << 1)) |
                  (GPIO_Mode_AF << (10 << 1)) |
                  (GPIO_Mode_AF << (11 << 1));
-  greg->OTYPER |= (GPIO_OType_PP << (8 << 1)) |
-                  (GPIO_OType_PP << (9 << 1)) |
-                  (GPIO_OType_PP << (10 << 1)) |
-                  (GPIO_OType_PP << (11 << 1));
+  // todo
+  greg->OTYPER |= (GPIO_OType_PP << 8) |
+                  (GPIO_OType_PP << 9) |
+                  (GPIO_OType_PP << 10) |
+                  (GPIO_OType_PP << 11);
   greg->PUPDR |= (GPIO_PuPd_UP << (8 << 1)) |
                  (GPIO_PuPd_UP << (9 << 1)) |
                  (GPIO_PuPd_UP << (10 << 1)) |
                  (GPIO_PuPd_UP << (11 << 1)) |
                  (GPIO_PuPd_UP << (12 << 1));
+  // todo
   greg->OSPEEDR |= (GPIO_Speed_25MHz << (8 << 1)) |
                    (GPIO_Speed_25MHz << (9 << 1)) |
                    (GPIO_Speed_25MHz << (10 << 1)) |
@@ -838,15 +840,19 @@ void SD_LowLevel_Init(void) {
   greg = (GPIO_Regs *) GPIOD_BASE;
   greg->AFR[0] |= (GPIO_AF_SDIO << (2 << 2));
   greg->MODER |= (GPIO_Mode_AF << (2 << 1));
-  greg->OTYPER |= (GPIO_OType_PP << (2 << 1));
+  //todo
+  greg->OTYPER |= (GPIO_OType_PP << 2);
   greg->PUPDR |= (GPIO_PuPd_UP << (2 << 1));
+  //todo
   greg->OSPEEDR |= (GPIO_Speed_25MHz << (2 << 1));
 
   /* Configure PC.12 pin: CLK pin */
   greg = (GPIO_Regs *) GPIOC_BASE;
   greg->MODER |= (GPIO_Mode_AF << (12 << 1));
-  greg->OTYPER |= (GPIO_OType_PP << (12 << 1));
+  //todo
+  greg->OTYPER |= (GPIO_OType_PP << 12);
   greg->PUPDR |= (GPIO_PuPd_NOPULL << (12 << 1));
+  //todo
   greg->OSPEEDR |= (GPIO_Speed_25MHz << (12 << 1));
 
   /*!< Configure SD_SPI_DETECT_PIN pin: SD Card detect pin */

@@ -74,7 +74,7 @@
   *   - The SD_ReadBlock() function read only one block (512-byte). This
   *     function can transfer the data using DMA controller or using
   *     polling mode. To select between DMA or polling mode refer to
-  *     "SD_DMA_MODE" or "SD_POLLING_MODE" inside the stm322xg_eval_sdio_sd.h
+  *     "SD_DMA_MODE" or "SD_POLLING_MODE" inside the sd.h
   *     file and uncomment the corresponding line. By default the SD DMA
   *     mode is selected
   *   - The SD_ReadMultiBlocks() function read only mutli blocks (multiple
@@ -845,23 +845,13 @@ SD_Error SD_GetCardInfo(SD_CardInfo *cardinfo) {
   return(errorstatus);
 }
 
-/**
-  * @brief  Enables wide bus opeartion for the requeseted card if supported by
-  *         card.
-  * @param  WideMode: Specifies the SD card wide bus mode.
-  *   This parameter can be one of the following values:
-  *     @arg SDIO_BusWide_8b: 8-bit data transfer (Only for MMC)
-  *     @arg SDIO_BusWide_4b: 4-bit data transfer
-  *     @arg SDIO_BusWide_1b: 1-bit data transfer
-  * @retval SD_Error: SD Card Error code.
-  */
 SD_Error SD_GetCardStatus(SD_CardStatus *cardstatus) {
   SD_Error errorstatus = SD_OK;
   unsigned char tmp = 0;
 
   errorstatus = SD_SendSDStatus((unsigned int *)SDSTATUS_Tab);
 
-  if (errorstatus  != SD_OK) {
+  if (errorstatus != SD_OK) {
     return(errorstatus);
   }
 
@@ -1016,7 +1006,7 @@ SD_Error SD_SelectDeselect(unsigned int addr) {
   * @param  BlockSize: the SD card Data block size. The Block size should be 512.
   * @retval SD_Error: SD Card Error code.
   */
-SD_Error SD_ReadBlock(unsigned char *readbuff, unsigned int ReadAddr, unsigned short BlockSize) {
+SD_Error SD_ReadBlock(unsigned int *readbuff, unsigned int ReadAddr, unsigned short BlockSize) {
   SD_Error errorstatus = SD_OK;
 #if defined (SD_POLLING_MODE)
   unsigned int count = 0, *tempbuff = (unsigned int *)readbuff;
@@ -1111,7 +1101,7 @@ SD_Error SD_ReadBlock(unsigned char *readbuff, unsigned int ReadAddr, unsigned s
 #elif defined (SD_DMA_MODE)
     SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
     SDIO_DMACmd(ENABLE);
-    SD_LowLevel_DMA_RxConfig((unsigned int *)readbuff, BlockSize);
+    SD_LowLevel_DMA_RxConfig(readbuff, BlockSize);
 #endif
 
   return(errorstatus);
@@ -1183,7 +1173,7 @@ SD_Error SD_ReadMultiBlocks(unsigned char *readbuff, unsigned int ReadAddr, unsi
 
   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
   SDIO_DMACmd(ENABLE);
-  SD_LowLevel_DMA_RxConfig((unsigned int *)readbuff, (NumberOfBlocks * BlockSize));
+  SD_LowLevel_DMA_RxConfig((unsigned int*) readbuff, (NumberOfBlocks * BlockSize));
 
   return(errorstatus);
 }
@@ -1246,7 +1236,7 @@ SD_Error SD_WaitReadOperation(void) {
   * @param  BlockSize: the SD card Data block size. The Block size should be 512.
   * @retval SD_Error: SD Card Error code.
   */
-SD_Error SD_WriteBlock(unsigned char *writebuff, unsigned int WriteAddr, unsigned short BlockSize) {
+SD_Error SD_WriteBlock(unsigned int *writebuff, unsigned int WriteAddr, unsigned short BlockSize) {
   SD_Error errorstatus = SD_OK;
 
 #if defined (SD_POLLING_MODE)
@@ -1342,7 +1332,7 @@ SD_Error SD_WriteBlock(unsigned char *writebuff, unsigned int WriteAddr, unsigne
   }
 #elif defined (SD_DMA_MODE)
   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
-  SD_LowLevel_DMA_TxConfig((unsigned int *)writebuff, BlockSize);
+  SD_LowLevel_DMA_TxConfig(writebuff, BlockSize);
   SDIO_DMACmd(ENABLE);
 #endif
 
@@ -1435,7 +1425,7 @@ SD_Error SD_WriteMultiBlocks(unsigned char *writebuff, unsigned int WriteAddr, u
 
   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
   SDIO_DMACmd(ENABLE);
-  SD_LowLevel_DMA_TxConfig((unsigned int *)writebuff, (NumberOfBlocks * BlockSize));
+  SD_LowLevel_DMA_TxConfig((unsigned int*) writebuff, (NumberOfBlocks * BlockSize));
 
   return(errorstatus);
 }
