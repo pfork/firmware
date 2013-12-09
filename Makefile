@@ -5,7 +5,7 @@ OC=$(PREFIX)-objcopy
 OD=$(PREFIX)-objdump
 AS=$(PREFIX)-as
 
-INCLUDES = -I. -Icore/ -Iusb/ -Isdio/ -Icrypto/ -Iutils/ -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
+INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Icrypto/ -Iutils/ -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
 LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3_stm32f2.a
 CFLAGS = -mno-unaligned-access -g -Wall -Werror -Os -mfix-cortex-m3-ldrd -msoft-float -mthumb -Wno-strict-aliasing -march=armv7 $(INCLUDES) -DUSE_CDC_UART
 LDFLAGS = -mthumb -march=armv7 -fno-common -Tmemmap -nostartfiles
@@ -21,6 +21,11 @@ mainobjs = utils/utils.o main.o core/uart.o core/rng.o core/adc.o \
 liteobjs = utils/utils.o lite.o cmd-lite.o core/uart.o core/rng.o core/adc.o \
 	core/clock.o core/systimer.o core/init.o usb/cdcacm.o core/irq.o \
 	core/dma.o sdio/sdio.o sdio/sd.o core/led.o core/keys.o core/delay.o \
+	core/startup.o \
+	usb/msc/usb_bsp.o usb/msc/usb_dcd.o usb/msc/usbd_core.o usb/msc/usbd_ioreq.o \
+   usb/msc/usbd_msc_core.o usb/msc/usbd_msc_scsi.o usb/msc/usbd_storage_msd.o \
+	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
+	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o
 
 all : main.bin
 

@@ -226,7 +226,7 @@ void usb_init(void) {
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
 }
 
-void otg_fs_isr(void) {
+void OTG_FS_IRQHandler(void) {
   if (usbd_dev) usbd_poll(usbd_dev);
 }
 

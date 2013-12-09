@@ -11,6 +11,6 @@ void cdc_puts(const char *c);
 void cdc_hexstring(const unsigned int d, const unsigned int cr);
 void cdc_string(const char *s);
 
-void otg_fs_isr(void);
+void OTG_FS_IRQHandler(void);
 
 #endif

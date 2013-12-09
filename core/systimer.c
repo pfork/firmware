@@ -5,7 +5,7 @@ void systick_handler(void);
 volatile unsigned long long sysctr;
 volatile unsigned int TimingDelay ;
 
-void sys_tick_handler(void) {
+void SysTick_Handler(void) {
   sysctr++;
   if ( TimingDelay != 0x00)
     TimingDelay --;

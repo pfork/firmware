@@ -1,11 +1,11 @@
 #include "sd.h"
 #include "sdio.h"
 
-void sdio_isr(void) {
+void SDIO_IRQHandler(void) {
   /* Process All SDIO Interrupt Sources */
   SD_ProcessIRQSrc();
 }
-void dma2_stream3_isr(void) {
+void DMA2_Stream3_IRQHandler(void) {
   /* Process All SDIO DMA Interrupt Sources */
   SD_ProcessDMAIRQ();
 }
