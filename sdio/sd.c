@@ -206,6 +206,7 @@
 
 #include "sdio.h"
 #include "sd.h"
+#include "led.h"
 
 /**
   * @brief  SDIO Static flags, TimeOut, FIFO Address
@@ -1017,6 +1018,7 @@ SD_Error SD_ReadBlock(unsigned char *readbuff, unsigned int ReadAddr, unsigned s
   StopCondition = 0;
 
   SDIO->DCTRL = 0x0;
+  set_read_led;
 
   if (CardType == SDIO_HIGH_CAPACITY_SD_CARD) {
     BlockSize = 512;
@@ -1129,6 +1131,7 @@ SD_Error SD_ReadMultiBlocks(unsigned char *readbuff, unsigned int ReadAddr, unsi
   StopCondition = 1;
 
   SDIO->DCTRL = 0x0;
+  set_read_led;
 
   if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
     BlockSize = 512;
@@ -1249,7 +1252,7 @@ SD_Error SD_WriteBlock(unsigned char *writebuff, unsigned int WriteAddr, unsigne
   StopCondition = 0;
 
   SDIO->DCTRL = 0x0;
-
+  set_write_led;
 
   if (CardType == SDIO_HIGH_CAPACITY_SD_CARD) {
     BlockSize = 512;
@@ -1362,6 +1365,8 @@ SD_Error SD_WriteMultiBlocks(unsigned char *writebuff, unsigned int WriteAddr, u
   StopCondition = 1;
 
   SDIO->DCTRL = 0x0;
+
+  set_write_led;
 
   if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
     BlockSize = 512;
@@ -1515,6 +1520,7 @@ SD_Error SD_Erase(unsigned int startaddr, unsigned int endaddr) {
   volatile unsigned int maxdelay = 0;
   unsigned char cardstate = 0;
 
+  set_write_led;
   /*!< Check if the card coomnd class supports erase command */
   if (((CSD_Tab[1] >> 20) & SD_CCCC_ERASE) == 0) {
     return SD_REQUEST_NOT_APPLICABLE;
@@ -1585,6 +1591,7 @@ SD_Error SD_Erase(unsigned int startaddr, unsigned int endaddr) {
     delay--;
   }
 
+  reset_write_led;
   return(errorstatus);
 }
 
@@ -1747,6 +1754,8 @@ SD_Error SD_ProcessIRQSrc(void) {
     TransferError = SD_START_BIT_ERR;
   }
 
+  reset_write_led;
+  reset_read_led;
   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND |
                 SDIO_IT_TXFIFOHE | SDIO_IT_RXFIFOHF | SDIO_IT_TXUNDERR |
                 SDIO_IT_RXOVERR | SDIO_IT_STBITERR, DISABLE);

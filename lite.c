@@ -54,7 +54,7 @@ void disk(void) {
       while(SD_GetStatus() != SD_TRANSFER_OK);
 
       //PartitionTable *pt = (void*) &sector_buf[0x1BE];
-      PartitionTable *pt = ((PartitionTable*) &sector_buf[0x1BE/4]);
+      PartitionTable *pt = ((PartitionTable*) &sector_buf[0x1BE]);
       for(i=0; i<4; i++) {
         cdc_string("\n\rpartition type: ");
         cdc_hexstring(pt[i].partition_type,0);
@@ -72,7 +72,6 @@ int main ( void ) {
   init();
 
   toggle_status1_led;
-  toggle_write_led;
   while(1) {
     switch(state) {
     case RNG: { rng(); break; }
@@ -84,9 +83,7 @@ int main ( void ) {
     if(kmask!=0) cdc_hexstring(kmask,1);
     toggle_status1_led;
     toggle_status2_led;
-    toggle_write_led;
-    toggle_read_led;
-    Delay(25);
+    Delay(100);
   }
   return(0);
 }
