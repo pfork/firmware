@@ -67,11 +67,21 @@ void disk(void) {
   }
 }
 
+extern unsigned int ledperiod[2];
+extern unsigned int ledcounter[2];
+
 int main ( void ) {
   unsigned char kmask;
   init();
 
-  toggle_status1_led;
+  ledperiod[0] = 2000;
+  ledperiod[1] = 20;
+
+  ledcounter[0] = 200;
+  ledcounter[1] = 200;
+  set_status1_led;
+  set_status2_led;
+
   while(1) {
     switch(state) {
     case RNG: { rng(); break; }
@@ -81,9 +91,7 @@ int main ( void ) {
     state = OFF;
     kmask = key_handler();
     if(kmask!=0) cdc_hexstring(kmask,1);
-    toggle_status1_led;
-    toggle_status2_led;
-    Delay(100);
+    led_handler();
   }
   return(0);
 }

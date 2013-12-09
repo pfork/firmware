@@ -1,4 +1,5 @@
 #include "stm32f.h"
+#include "led.h"
 
 void led_init(void) {
   GPIO_Regs * greg;
@@ -24,4 +25,23 @@ void led_init(void) {
                     (GPIO_Speed_100MHz << (14 << 1)) |
                     (GPIO_Speed_100MHz << (13 << 1)) |
                     (GPIO_Speed_100MHz << (12 << 1)));
+}
+
+void handle_led(const unsigned int port, const unsigned int pin, volatile unsigned int* ctr, const unsigned int period) {
+  if(period>0) {
+    if(*ctr>0) {
+      *ctr=(*ctr)-1;
+    } else {
+      gpio_toggle(port, pin);
+      *ctr=period;
+    }
+  }
+}
+
+
+volatile unsigned int ledperiod[2];
+volatile unsigned int ledcounter[2];
+void led_handler(void) {
+  handle_led(LED_BASE, GPIO_Pin_13, &ledcounter[0], ledperiod[0]); // status 1
+  handle_led(LED_BASE, GPIO_Pin_12, &ledcounter[1], ledperiod[1]); // status 2
 }

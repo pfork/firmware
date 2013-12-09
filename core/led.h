@@ -21,5 +21,6 @@
 #define toggle_status2_led gpio_toggle(LED_BASE, GPIO_Pin_12)
 
 void led_init(void);
+void led_handler(void);
 
 #endif // led_h
