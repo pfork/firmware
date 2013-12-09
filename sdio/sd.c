@@ -1006,7 +1006,7 @@ SD_Error SD_SelectDeselect(unsigned int addr) {
   * @param  BlockSize: the SD card Data block size. The Block size should be 512.
   * @retval SD_Error: SD Card Error code.
   */
-SD_Error SD_ReadBlock(unsigned int *readbuff, unsigned int ReadAddr, unsigned short BlockSize) {
+SD_Error SD_ReadBlock(unsigned char *readbuff, unsigned int ReadAddr, unsigned short BlockSize) {
   SD_Error errorstatus = SD_OK;
 #if defined (SD_POLLING_MODE)
   unsigned int count = 0, *tempbuff = (unsigned int *)readbuff;
@@ -1101,7 +1101,7 @@ SD_Error SD_ReadBlock(unsigned int *readbuff, unsigned int ReadAddr, unsigned sh
 #elif defined (SD_DMA_MODE)
     SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
     SDIO_DMACmd(ENABLE);
-    SD_LowLevel_DMA_RxConfig(readbuff, BlockSize);
+    SD_LowLevel_DMA_RxConfig((unsigned int *)readbuff, BlockSize);
 #endif
 
   return(errorstatus);
@@ -1173,7 +1173,7 @@ SD_Error SD_ReadMultiBlocks(unsigned char *readbuff, unsigned int ReadAddr, unsi
 
   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
   SDIO_DMACmd(ENABLE);
-  SD_LowLevel_DMA_RxConfig((unsigned int*) readbuff, (NumberOfBlocks * BlockSize));
+  SD_LowLevel_DMA_RxConfig((unsigned int *)readbuff, (NumberOfBlocks * BlockSize));
 
   return(errorstatus);
 }
@@ -1236,7 +1236,7 @@ SD_Error SD_WaitReadOperation(void) {
   * @param  BlockSize: the SD card Data block size. The Block size should be 512.
   * @retval SD_Error: SD Card Error code.
   */
-SD_Error SD_WriteBlock(unsigned int *writebuff, unsigned int WriteAddr, unsigned short BlockSize) {
+SD_Error SD_WriteBlock(unsigned char *writebuff, unsigned int WriteAddr, unsigned short BlockSize) {
   SD_Error errorstatus = SD_OK;
 
 #if defined (SD_POLLING_MODE)
@@ -1332,7 +1332,7 @@ SD_Error SD_WriteBlock(unsigned int *writebuff, unsigned int WriteAddr, unsigned
   }
 #elif defined (SD_DMA_MODE)
   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
-  SD_LowLevel_DMA_TxConfig(writebuff, BlockSize);
+  SD_LowLevel_DMA_TxConfig((unsigned int *)writebuff, BlockSize);
   SDIO_DMACmd(ENABLE);
 #endif
 
@@ -1425,7 +1425,7 @@ SD_Error SD_WriteMultiBlocks(unsigned char *writebuff, unsigned int WriteAddr, u
 
   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
   SDIO_DMACmd(ENABLE);
-  SD_LowLevel_DMA_TxConfig((unsigned int*) writebuff, (NumberOfBlocks * BlockSize));
+  SD_LowLevel_DMA_TxConfig((unsigned int *)writebuff, (NumberOfBlocks * BlockSize));
 
   return(errorstatus);
 }

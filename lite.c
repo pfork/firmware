@@ -29,9 +29,9 @@ void rng(void) {
 
 void disk(void) {
   SD_CardInfo cardinfo;
-  unsigned int sector_buf[512/sizeof(unsigned int)];
+  unsigned char sector_buf[512];
   int i;
-  for(i=0;i<(512/sizeof(unsigned int));i++) sector_buf[i]=0;
+  for(i=0;i<512;i++) sector_buf[i]=0;
 
   if(SD_GetCardInfo(&cardinfo) != SD_OK) {
     cdc_string("\n\rerr: getstatus error");
@@ -47,7 +47,7 @@ void disk(void) {
       cdc_string("SDHC");
 
     // read partition table
-    if(SD_ReadMultiBlocks((unsigned char*) sector_buf, 0x0, 512, 1) != SD_OK) {
+    if(SD_ReadMultiBlocks(sector_buf, 0x0, 512, 1) != SD_OK) {
       cdc_string("\n\rerr: readblock error");
     } else {
       SD_WaitReadOperation();
