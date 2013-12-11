@@ -1,5 +1,22 @@
+#include <libopencm3/usb/usbd.h>
 #include "sd.h"
 #include "sdio.h"
+#include "usb_core.h"
+#include "usbd_core.h"
+#include "main.h"
+
+extern USB_OTG_CORE_HANDLE USB_OTG_dev;
+extern usbd_device *usbd_dev;
+extern unsigned int USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev);
+extern unsigned int state;
+
+void OTG_FS_IRQHandler(void) {
+  if (state == RNG) {
+    usbd_poll(usbd_dev);
+  } else if(state == DISK) {
+    USBD_OTG_ISR_Handler(&USB_OTG_dev);
+  }
+}
 
 void SDIO_IRQHandler(void) {
   /* Process All SDIO Interrupt Sources */
