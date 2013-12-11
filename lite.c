@@ -1,4 +1,4 @@
-#include "cdcacm.h"
+#include "usb_crypto.h"
 #include "init.h"
 #include "uart.h"
 #include "main.h"
@@ -25,9 +25,9 @@ void set_usb_mode(unsigned int newstate) {
 }
 
 void rng(void) {
-  cdc_start();
+  usb_start();
   set_usb_mode(RNG);
-  //cdc_string("\n\rMode: rng");
+  //usb_string("\n\rMode: rng");
 }
 
 void disk(void) {
@@ -47,7 +47,7 @@ int main ( void ) {
 
   while(1) {
     kmask = key_handler();
-    //if(kmask!=0) cdc_hexstring(kmask,1);
+    //if(kmask!=0) usb_hexstring(kmask,1);
     if(kmask & (1<<6) && recent_key==0) {
       recent_key = 100;
       switch(state) {

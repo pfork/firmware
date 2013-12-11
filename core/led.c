@@ -4,7 +4,7 @@
 
 LED_CFG leds[4] = {
   { // status 1 for usb status
-    .mode = FADEBLINK,
+    .mode = OFF,
     .port = LED_BASE,
     .pin = GPIO_Pin_13,
     .period = 0,
@@ -18,8 +18,8 @@ LED_CFG leds[4] = {
     .pin = GPIO_Pin_12,
     .period = 3000,
     .counter = 0,
-    .fadedir = 2,
-    .fadeidx = 0,
+    .fadedir = 5,
+    .fadeidx = 3000,
   },
   { // used for read led
     .mode = OFF,

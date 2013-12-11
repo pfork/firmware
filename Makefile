@@ -15,11 +15,11 @@ LITE_LDFLAGS = -mthumb -march=armv7 -fno-common -Tmemmap -nostartfiles
 
 mainobjs = utils/utils.o main.o core/uart.o core/rng.o core/adc.o \
 	core/clock.o core/systimer.o crypto/mixer.o cmd.o core/init.o \
-	crypto/randombytes_salsa20_random.o usb/cdcacm.o core/irq.o \
+	crypto/randombytes_salsa20_random.o usb/usb_crypto.o core/irq.o \
 	core/dma.o sdio/sdio.o sdio/sd.o utils/memcpy.o utils/memset.o
 
 liteobjs = utils/utils.o lite.o cmd-lite.o core/uart.o core/rng.o core/adc.o \
-	core/clock.o core/systimer.o core/init.o usb/cdcacm.o core/irq.o \
+	core/clock.o core/systimer.o core/init.o usb/usb_crypto.o core/irq.o \
 	core/dma.o sdio/sdio.o sdio/sd.o core/led.o core/keys.o core/delay.o \
 	core/startup.o \
 	usb/msc/usb_bsp.o usb/msc/usb_dcd.o usb/msc/usbd_core.o usb/msc/usbd_ioreq.o \
@@ -27,7 +27,8 @@ liteobjs = utils/utils.o lite.o cmd-lite.o core/uart.o core/rng.o core/adc.o \
 	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
 	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o
 
-all : main.bin
+#all : main.bin
+all : lite.bin
 
 upload: main.bin
 	dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D main.bin
