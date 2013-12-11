@@ -1,6 +1,14 @@
 #include "stm32f.h"
 #include "keys.h"
+#include "delay.h"
 
+/**
+* @brief  enable_key
+*         configures a gpio as a button
+* @param  base : base address of gpio port
+* @param  port : pin number
+* @retval None
+*/
 void enable_key(unsigned int base, unsigned int port) {
   GPIO_Regs * greg;
   greg = (GPIO_Regs *) base;
@@ -10,32 +18,55 @@ void enable_key(unsigned int base, unsigned int port) {
   greg->OSPEEDR |= (GPIO_Speed_100MHz << (port << 1));
 }
 
+/**
+* @brief  key_pressed
+*         checks if a button was pressed, handles debouncing naively
+* @param  base : base address of gpio port
+* @param  key : pin number
+* @retval None
+*/
 char key_pressed(unsigned int port, unsigned int key) {
-  // handles debouncing naively
   unsigned int keyState;
   keyState = 0;
 
   keyState = gpio_get(port, key);
-  ASM_DELAY(1);
+  uDelay(4);
   if(keyState == (gpio_get(port, key))) {
-    return !!keyState;
+    return !keyState;
   }
   return -1;
 }
 
+unsigned char prevmask = 0;
+/**
+* @brief  key_handler
+*         checks all keys, returns a char with a mask of keys
+*         released since last invocation
+* @param  None
+* @retval None
+*/
 unsigned char key_handler(void) {
-  // checks all keys, returns a char with a mask of keys pressed
   unsigned char keymask = 0;
-  if(key_pressed(JOYSTICK_0) == 0)     keymask = 1;
-  if(key_pressed(JOYSTICK_1) == 0)     keymask |= 1 << 1;
-  if(key_pressed(JOYSTICK_2) == 0)     keymask |= 1 << 2;
-  if(key_pressed(JOYSTICK_3) == 0)     keymask |= 1 << 3;
-  if(key_pressed(JOYSTICK_PRESS) == 0) keymask |= 1 << 4;
-  if(key_pressed(USER_KEY) == 0)       keymask |= 1 << 5;
-  if(key_pressed(WAKEUP_KEY) == 0)     keymask |= 1 << 6;
-  return keymask;
+  unsigned char res;
+  if(key_pressed(JOYSTICK_0) == 1)     keymask = 1;
+  if(key_pressed(JOYSTICK_1) == 1)     keymask |= 1 << 1;
+  if(key_pressed(JOYSTICK_2) == 1)     keymask |= 1 << 2;
+  if(key_pressed(JOYSTICK_3) == 1)     keymask |= 1 << 3;
+  if(key_pressed(JOYSTICK_PRESS) == 1) keymask |= 1 << 4;
+  if(key_pressed(USER_KEY) == 1)       keymask |= 1 << 5;
+  if(key_pressed(WAKEUP_KEY) == 1)     keymask |= 1 << 6;
+  //res =  prevmask ^ keymask; /* detect changes in key states */
+  res = (prevmask ^ keymask) & ((~keymask) & prevmask); /* detect on key releases */
+  prevmask=keymask;
+  return res;
 }
 
+/**
+* @brief  keys_init
+*         enables gpios for all available buttons
+* @param  None
+* @retval None
+*/
 void keys_init(void) {
   MMIO32(RCC_AHB1ENR) |= (KEYBOARD_CLK);
 
