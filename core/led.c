@@ -41,6 +41,12 @@ LED_CFG leds[4] = {
   }
 };
 
+/**
+* @brief  led_init
+*         inits gpios for leds
+* @param  None
+* @retval None
+*/
 void led_init(void) {
   GPIO_Regs * greg;
 
@@ -67,6 +73,12 @@ void led_init(void) {
                     (GPIO_Speed_100MHz << (12 << 1)));
 }
 
+/**
+* @brief  handle_led
+*         handles led status
+* @param  led: pointer to led context
+* @retval None
+*/
 void handle_led(LED_CFG* led) {
   if(led->period>0) {
     if(led->counter>0) {
@@ -89,6 +101,15 @@ void handle_led(LED_CFG* led) {
   }
 }
 
+/**
+* @brief  led_handler
+*         handles "all" configured leds
+* @param  None
+* @retval None
+*/
 void led_handler(void) {
+  //handle_led(&leds[0]); // status 1
   handle_led(&leds[1]); // status 2
+  //handle_led(&leds[2]); // status r
+  //handle_led(&leds[3]); // status w
 }
