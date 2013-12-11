@@ -36,15 +36,10 @@ void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
   char buf[64];
   buf[0]=0;
   int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
-  if (state != OFF) return;
   if(len>0) {
     switch(buf[0]) {
     case 'r': {
       state = RNG;
-      break;
-    }
-    case 't': {
-      state = TIME;
       break;
     }
     case 'd': {
