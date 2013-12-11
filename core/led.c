@@ -1,5 +1,45 @@
 #include "stm32f.h"
 #include "led.h"
+#include "main.h"
+
+LED_CFG leds[4] = {
+  { // status 1 for usb status
+    .mode = FADEBLINK,
+    .port = LED_BASE,
+    .pin = GPIO_Pin_13,
+    .period = 0,
+    .counter = 0,
+    .fadedir = 0,
+    .fadeidx = 0,
+  },
+  { // status 2
+    .mode = SOFTBLINK,
+    .port = LED_BASE,
+    .pin = GPIO_Pin_12,
+    .period = 3000,
+    .counter = 0,
+    .fadedir = 2,
+    .fadeidx = 0,
+  },
+  { // used for read led
+    .mode = OFF,
+    .port = LED_BASE,
+    .pin = GPIO_Pin_15,
+    .period = 0,
+    .counter = 0,
+    .fadedir = 0,
+    .fadeidx = 0,
+  },
+  { // used for write led
+    .mode = OFF,
+    .port = LED_BASE,
+    .pin = GPIO_Pin_14,
+    .period = 0,
+    .counter = 0,
+    .fadedir = 0,
+    .fadeidx = 0,
+  }
+};
 
 void led_init(void) {
   GPIO_Regs * greg;
@@ -18,7 +58,7 @@ void led_init(void) {
   //                 (GPIO_OType_PP << 13) |
   //                 (GPIO_OType_PP << 12));
   greg->PUPDR |= ((GPIO_PuPd_UP << (15 << 1)) |
-                  (GPIO_PuPd_UP << (14 << 1)) |
+                 (GPIO_PuPd_UP << (14 << 1)) |
                   (GPIO_PuPd_UP << (13 << 1)) |
                   (GPIO_PuPd_UP << (12 << 1)));
   greg->OSPEEDR |= ((GPIO_Speed_100MHz << (15 << 1)) |
@@ -27,21 +67,28 @@ void led_init(void) {
                     (GPIO_Speed_100MHz << (12 << 1)));
 }
 
-void handle_led(const unsigned int port, const unsigned int pin, volatile unsigned int* ctr, const unsigned int period) {
-  if(period>0) {
-    if(*ctr>0) {
-      *ctr=(*ctr)-1;
+void handle_led(LED_CFG* led) {
+  if(led->period>0) {
+    if(led->counter>0) {
+      led->counter=led->counter-1;
     } else {
-      gpio_toggle(port, pin);
-      *ctr=period;
+      gpio_toggle(led->port, led->pin);
+      if(led->fadedir==0) {
+        // we reached bottom, restart
+        led->counter=led->period;
+      } else {
+        if((led->fadedir+led->fadeidx>=led->period) &&
+           (led->fadedir+led->fadeidx<=0)) {
+          // this is the end, reverse fading
+          led->fadedir *= -1;
+        }
+        led->fadeidx+=led->fadedir;
+        led->counter=led->fadeidx;
+      }
     }
   }
 }
 
-
-volatile unsigned int ledperiod[2];
-volatile unsigned int ledcounter[2];
 void led_handler(void) {
-  handle_led(LED_BASE, GPIO_Pin_13, &ledcounter[0], ledperiod[0]); // status 1
-  handle_led(LED_BASE, GPIO_Pin_12, &ledcounter[1], ledperiod[1]); // status 2
+  handle_led(&leds[1]); // status 2
 }
