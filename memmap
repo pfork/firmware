@@ -126,6 +126,6 @@ SECTIONS
     *(.eh_frame)
   }
 
-  PROVIDE(_stack = ORIGIN(ram) + LENGTH(ram));
+  PROVIDE(_stack = ORIGIN(RAM) + LENGTH(RAM));
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
