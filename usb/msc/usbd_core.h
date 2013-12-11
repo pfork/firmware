@@ -20,10 +20,7 @@ typedef enum {
   USBD_FAIL,
 } USBD_Status;
 
-void USBD_Init(USB_OTG_CORE_HANDLE *pdev,
-               USBD_DEVICE *pDevice,
-               USBD_Class_cb_TypeDef *class_cb,
-               USBD_Usr_cb_TypeDef *usr_cb);
+void USBD_Init(USB_OTG_CORE_HANDLE *pdev, USBD_DEVICE *pDevice, USBD_Class_cb_TypeDef *class_cb, USBD_Usr_cb_TypeDef *usr_cb);
 USBD_Status USBD_DeInit(USB_OTG_CORE_HANDLE *pdev);
 USBD_Status USBD_ClrCfg(USB_OTG_CORE_HANDLE  *pdev, unsigned char cfgidx);
 USBD_Status USBD_SetCfg(USB_OTG_CORE_HANDLE  *pdev, unsigned char cfgidx);
