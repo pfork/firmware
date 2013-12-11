@@ -5,6 +5,7 @@
 
 void usb_init(void);
 usbd_device* get_usbdev(void);
+void cdc_start(void);
 
 void cdc_putc(const unsigned char c);
 void cdc_puts(const char *c);

@@ -190,6 +190,7 @@ static int cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *
     if (*len < sizeof(struct usb_cdc_line_coding))
       return 0;
     uart_putc('U');
+    state = RNG;
     return 1;
   }
   return 0;
@@ -209,6 +210,11 @@ void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 				cdcacm_control_request);
 }
 
+void cdc_start(void) {
+	usbd_dev = usbd_init(&otgfs_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
+	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
+}
+
 void usb_init(void) {
    GPIO_Regs *greg;
    // enable gpioa
@@ -222,12 +228,7 @@ void usb_init(void) {
    greg->PUPDR |= (GPIO_PuPd_NOPULL << (9 << 1)) | (GPIO_PuPd_NOPULL << (11 << 1)) | (GPIO_PuPd_NOPULL << (12 << 1));
    greg->AFR[1] |=  (GPIO_AF_OTG_FS << (1 << 2)) | (GPIO_AF_OTG_FS << (3 << 2)) | (GPIO_AF_OTG_FS << (4 << 2));
 
-	usbd_dev = usbd_init(&otgfs_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
-	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
-}
-
-void OTG_FS_IRQHandler(void) {
-  if (usbd_dev) usbd_poll(usbd_dev);
+   cdc_start();
 }
 
 usbd_device* get_usbdev(void) {
@@ -235,11 +236,14 @@ usbd_device* get_usbdev(void) {
 }
 
 #ifdef USE_CDC_UART
+extern unsigned int state;
 void cdc_putc(const unsigned char c) {
+  if(state != RNG) return;
   while (usbd_ep_write_packet(usbd_dev, 0x82, (void*) &c, 1) == 0) ;
 }
 
 void cdc_puts(const char *c) {
+  if(state != RNG) return;
   char *p = (char*) c;
   unsigned int i=0;
   while(p[i]) {
@@ -253,27 +257,29 @@ void cdc_puts(const char *c) {
 
 //-------------------------------------------------------------------
 void cdc_hexstring(unsigned int d, unsigned int cr) {
-    //unsigned int ra;
-    unsigned int rb;
-    unsigned int rc;
+  if(state != RNG) return;
+  //unsigned int ra;
+  unsigned int rb;
+  unsigned int rc;
 
-    rb=32;
-    while(1) {
-        rb-=4;
-        rc=(d>>rb)&0xF;
-        if(rc>9) rc+=0x37; else rc+=0x30;
-        cdc_putc(rc);
-        if(rb==0) break;
-    }
-    if(cr) {
-        cdc_putc(0x0D);
-        cdc_putc(0x0A);
-    } else {
-        cdc_putc(0x20);
-    }
+  rb=32;
+  while(1) {
+    rb-=4;
+    rc=(d>>rb)&0xF;
+    if(rc>9) rc+=0x37; else rc+=0x30;
+    cdc_putc(rc);
+    if(rb==0) break;
+  }
+  if(cr) {
+    cdc_putc(0x0D);
+    cdc_putc(0x0A);
+  } else {
+    cdc_putc(0x20);
+  }
 }
 //-------------------------------------------------------------------
 void cdc_string(const char *s) {
+  if(state != RNG) return;
   for(;*s;s++) {
     if(*s==0x0A) cdc_putc(0x0D);
     cdc_putc(*s);
