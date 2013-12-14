@@ -15,6 +15,20 @@
 #include  "usbd_core.h"
 #include  "usbd_conf.h"
 
+#define USB_REQ_GET_STATUS			0
+#define USB_REQ_CLEAR_FEATURE			1
+/* Reserved for future use: 2 */
+#define USB_REQ_SET_FEATURE			3
+/* Reserved for future use: 3 */
+#define USB_REQ_SET_ADDRESS			5
+#define USB_REQ_GET_DESCRIPTOR			6
+#define USB_REQ_SET_DESCRIPTOR			7
+#define USB_REQ_GET_CONFIGURATION		8
+#define USB_REQ_SET_CONFIGURATION		9
+#define USB_REQ_GET_INTERFACE			10
+#define USB_REQ_SET_INTERFACE			11
+#define USB_REQ_SET_SYNCH_FRAME			12
+
 USBD_Status USBD_StdDevReq (USB_OTG_CORE_HANDLE  *pdev, USB_SETUP_REQ  *req);
 USBD_Status USBD_StdItfReq (USB_OTG_CORE_HANDLE  *pdev, USB_SETUP_REQ  *req);
 USBD_Status USBD_StdEPReq  (USB_OTG_CORE_HANDLE  *pdev, USB_SETUP_REQ  *req);
