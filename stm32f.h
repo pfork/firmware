@@ -29,6 +29,7 @@ unsigned int ASM_DELAY ( unsigned int );
 #define  MIN(a, b)      (((a) < (b)) ? (a) : (b))
 
 #define irq_enable(irqn) NVIC_ISER(irqn / 32) |= (1 << (irqn % 32))
+#define irq_disable(irqn) NVIC_ICER(irqn / 32) |= (1 << (irqn % 32))
 
 #define gpio_set(port, pin) ((GPIO_Regs*) port)->BSRRL = pin
 #define gpio_reset(port, pin) ((GPIO_Regs*) port)->BSRRH = pin
