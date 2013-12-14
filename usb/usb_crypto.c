@@ -22,11 +22,10 @@
 #include <libopencm3/usb/cdc.h>
 #include "stm32f.h"
 #include "randombytes_salsa20_random.h"
-#include "uart.h"
-#include "cmd.h"
+#include "dual.h"
 #include "main.h"
-
-usbd_device *usbd_dev = NULL;
+#include "usb_crypto.h"
+#include "crypto_handlers.h"
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -48,28 +47,28 @@ static const struct usb_device_descriptor dev = {
 static const struct usb_endpoint_descriptor data_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x01,
+	.bEndpointAddress = USB_CRYPTO_EP_CTRL_IN,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = 64,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x81,
+	.bEndpointAddress = USB_CRYPTO_EP_CTRL_OUT,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = 64,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x02,
+	.bEndpointAddress = USB_CRYPTO_EP_DATA_IN,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = 64,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x82,
+	.bEndpointAddress = USB_CRYPTO_EP_DATA_OUT,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = 64,
 	.bInterval = 1,
@@ -113,6 +112,80 @@ static const char *usb_strings[] = {
 	"0x01729a",
 };
 
+/**
+* @brief  usb_putc
+*         outputs one char to the usb debug endpoint
+* @param  c: char to output
+* @retval None
+*/
+void usb_putc(const unsigned char c) {
+  if(dual_usb_mode != CRYPTO) return;
+  while (usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_CTRL_OUT, (void*) &c, 1) == 0) ;
+}
+
+/**
+* @brief  usb_puts
+*         outputs a string to the usb debug endpoint
+* @param  s: string to output
+* @retval None
+*/
+void usb_puts(const char *c) {
+  if(dual_usb_mode != CRYPTO) return;
+  char *p = (char*) c;
+  unsigned int i=0;
+  while(p[i]) {
+    for(;p[i] && i<64;i++);
+    if(i==0) break;
+    while (usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_CTRL_OUT, (void*) p, i) == 0) ;
+    p+=i;
+    i=0;
+  }
+}
+
+/**
+* @brief  usb_hexstring
+*         converts an unsigned int to hex and
+*         outputs it to the usb debug endpoint
+* @param  d: int to output
+* @param  cr: append newline?
+* @retval None
+*/
+void usb_hexstring(unsigned int d, unsigned int cr) {
+  if(dual_usb_mode != CRYPTO) return;
+  //unsigned int ra;
+  unsigned int rb;
+  unsigned int rc;
+
+  rb=32;
+  while(1) {
+    rb-=4;
+    rc=(d>>rb)&0xF;
+    if(rc>9) rc+=0x37; else rc+=0x30;
+    usb_putc(rc);
+    if(rb==0) break;
+  }
+  if(cr) {
+    usb_putc(0x0D);
+    usb_putc(0x0A);
+  } else {
+    usb_putc(0x20);
+  }
+}
+
+/**
+* @brief  usb_puts
+*         outputs a string to the usb debug endpoint
+* @param  s: string to output
+* @retval None
+*/
+void usb_string(const char *s) {
+  if(dual_usb_mode != CRYPTO) return;
+  for(;*s;s++) {
+    if(*s==0x0A) usb_putc(0x0D);
+    usb_putc(*s);
+  }
+}
+
 /* Buffer to be used for control requests. */
 uint8_t usbd_control_buffer[128];
 
@@ -123,24 +196,32 @@ static int usb_control_request(usbd_device *usbd_dev, struct usb_setup_data *req
   (void)usbd_dev;
 
   /* switch (req->bRequest) { */
-  /* case USB_CDC_REQ_SET_LINE_CODING: */
-  /*   if (*len < sizeof(struct usb_cdc_line_coding)) */
-  /*     return 0; */
-  /*   uart_putc('U'); */
-  /*   state = RNG; */
+  /* case some_value: */
   /*   return 1; */
   /* } */
   return 0;
 }
 
+void usb_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
+  switch(ep) {
+  case USB_CRYPTO_EP_CTRL_IN: {
+    handle_ctl();
+  }
+  case USB_CRYPTO_EP_DATA_IN: {
+    if(cmd_fn != 0) cmd_fn();
+    // should only happen in polling mode
+    //else usb_puts("err: unexpected data");
+  }
+  }
+}
+
 void usb_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 	(void)wValue;
 
-	usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, usb_data_rx_cb);
-	usbd_ep_setup(usbd_dev, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
-	//usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
-	usbd_ep_setup(usbd_dev, 0x02, USB_ENDPOINT_ATTR_BULK, 64, usb_data_rx_cb);
-	usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+	usbd_ep_setup(usbd_dev, USB_CRYPTO_EP_CTRL_IN, USB_ENDPOINT_ATTR_BULK, 64, usb_data_rx_cb);
+	usbd_ep_setup(usbd_dev, USB_CRYPTO_EP_CTRL_OUT, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+	usbd_ep_setup(usbd_dev, USB_CRYPTO_EP_DATA_IN, USB_ENDPOINT_ATTR_BULK, 64, usb_data_rx_cb);
+	usbd_ep_setup(usbd_dev, USB_CRYPTO_EP_DATA_OUT, USB_ENDPOINT_ATTR_BULK, 64, NULL);
 
 	usbd_register_control_callback(usbd_dev,
 				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
@@ -168,59 +249,3 @@ void usb_init(void) {
 
    usb_start();
 }
-
-usbd_device* get_usbdev(void) {
-  return usbd_dev;
-}
-
-#ifdef USE_USB_UART
-extern unsigned int state;
-void usb_putc(const unsigned char c) {
-  if(state != RNG) return;
-  while (usbd_ep_write_packet(usbd_dev, 0x81, (void*) &c, 1) == 0) ;
-}
-
-void usb_puts(const char *c) {
-  if(state != RNG) return;
-  char *p = (char*) c;
-  unsigned int i=0;
-  while(p[i]) {
-    for(;p[i] && i<64;i++);
-    if(i==0) break;
-    while (usbd_ep_write_packet(usbd_dev, 0x81, (void*) p, i) == 0) ;
-    p+=i;
-    i=0;
-  }
-}
-
-//-------------------------------------------------------------------
-void usb_hexstring(unsigned int d, unsigned int cr) {
-  if(state != RNG) return;
-  //unsigned int ra;
-  unsigned int rb;
-  unsigned int rc;
-
-  rb=32;
-  while(1) {
-    rb-=4;
-    rc=(d>>rb)&0xF;
-    if(rc>9) rc+=0x37; else rc+=0x30;
-    usb_putc(rc);
-    if(rb==0) break;
-  }
-  if(cr) {
-    usb_putc(0x0D);
-    usb_putc(0x0A);
-  } else {
-    usb_putc(0x20);
-  }
-}
-//-------------------------------------------------------------------
-void usb_string(const char *s) {
-  if(state != RNG) return;
-  for(;*s;s++) {
-    if(*s==0x0A) usb_putc(0x0D);
-    usb_putc(*s);
-  }
-}
-#endif // USE_USB_UART
