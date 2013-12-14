@@ -1,7 +1,9 @@
 #include "usb_crypto.h"
 #include "stm32f.h"
 #include "clock.h"
+#ifdef USE_UART2
 #include "uart.h"
+#endif
 #include "rng.h"
 #include "adc.h"
 #include "systimer.h"
@@ -13,7 +15,9 @@
 void init(void) {
   clock_init();
   led_init();
+#ifdef USE_UART2
   uart_init();
+#endif
   rnd_init();
   adc_init();
   sysctr = 0;
