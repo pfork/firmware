@@ -3,8 +3,12 @@
 
 #include <libopencm3/usb/usbd.h>
 
+#define USB_CRYPTO_EP_CTRL_IN 0x01
+#define USB_CRYPTO_EP_DATA_IN 0x02
+#define USB_CRYPTO_EP_CTRL_OUT 0x81
+#define USB_CRYPTO_EP_DATA_OUT 0x82
+
 void usb_init(void);
-usbd_device* get_usbdev(void);
 void usb_start(void);
 
 void usb_putc(const unsigned char c);

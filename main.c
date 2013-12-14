@@ -1,40 +1,39 @@
-#include "cdcacm.h"
+#include "dual.h"
 #include "init.h"
-#include "uart.h"
-#include "cmd.h"
+#include "led.h"
+#include "keys.h"
 #include "randombytes_salsa20_random.h"
 #include "mixer.h"
-#include "main.h"
-
-unsigned int state = OFF;
+#include "crypto_handlers.h"
+#include "systimer.h"
 
 void randombytes_salsa20_random_init(struct entropy_store* pool);
 struct entropy_store* pool;
+void (*op_cb)(void) = 0;
 
 int main ( void ) {
-  unsigned int cnt = 0;
-  usbd_device *usbd_dev;
-
+  unsigned char kmask;
   init();
   pool = init_pool();
   randombytes_salsa20_random_init(pool);
-  usbd_dev = get_usbdev();
 
   while(1) {
-    if(state == RNG) {
-      stream_rnd();
-    }
-    if (cnt++ & (1<<(22 - (~~state)*7)) ) {
-      cnt = 0;
-      if(state!=RNG) {
-        // stir occasionally
-        uart_putc('S');
-        randombytes_salsa20_random_stir();
-      } else {
-        uart_putc('>');
+    //if(dual_usb_mode == CRYPTO && cmd_fn)
+      // we are in polling mode
+      //usbd_poll(usbd_dev);
+    if(dual_usb_mode == CRYPTO && op_cb)
+      op_cb();
+    kmask = key_handler();
+    if(kmask & (1<<6)) {
+      switch(dual_usb_mode) {
+      case CRYPTO: { storage_mode(); break; }
+      case DISK: { crypto_mode(); break; }
       }
     }
-    //Delay(1000);
+    led_handler();
+    if(!(sysctr & 1023)) { // app once / sec
+      randombytes_salsa20_random_stir();
+    }
   }
   return(0);
 }

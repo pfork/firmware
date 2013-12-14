@@ -1,19 +1,13 @@
-#include <libopencm3/usb/usbd.h>
+#include "dual.h"
 #include "sd.h"
 #include "sdio.h"
-#include "usb_core.h"
 #include "usbd_core.h"
-#include "main.h"
-
-extern USB_OTG_CORE_HANDLE USB_OTG_dev;
-extern usbd_device *usbd_dev;
-extern unsigned int USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev);
-extern unsigned int state;
+#include "usb_dcd_int.h"
 
 void OTG_FS_IRQHandler(void) {
-  if (state == RNG) {
+  if (dual_usb_mode == CRYPTO) {
     usbd_poll(usbd_dev);
-  } else if(state == DISK) {
+  } else if(dual_usb_mode == DISK) {
     USBD_OTG_ISR_Handler(&USB_OTG_dev);
   }
 }
