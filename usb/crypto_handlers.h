@@ -12,7 +12,7 @@ enum CRYPTO_CMD {
   USB_CRYPTO_CMD_STOP,
 };
 
-extern void (*cmd_fn)(void);
 void handle_ctl(void);
+void handle_data(void);
 
 #endif //crypto_handlers_h

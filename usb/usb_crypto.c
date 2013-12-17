@@ -206,11 +206,11 @@ void usb_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
   switch(ep) {
   case USB_CRYPTO_EP_CTRL_IN: {
     handle_ctl();
+    break;
   }
   case USB_CRYPTO_EP_DATA_IN: {
-    if(cmd_fn != 0) cmd_fn();
-    // should only happen in polling mode
-    //else usb_puts("err: unexpected data");
+    handle_data();
+    break;
   }
   }
 }
