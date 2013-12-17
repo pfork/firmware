@@ -38,6 +38,6 @@ clean:
 	rm -f $(objs)
 	rm -f *.elf
 	rm -f *.list
-	rm -f GPATH GRTAGS GSYMS GTAGS
+	#rm -f GPATH GRTAGS GSYMS GTAGS
 
 .PHONY: clean upload
