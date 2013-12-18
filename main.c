@@ -9,7 +9,6 @@
 
 void randombytes_salsa20_random_init(struct entropy_store* pool);
 struct entropy_store* pool;
-void (*op_cb)(void) = 0;
 
 int main ( void ) {
   unsigned char kmask;
@@ -18,11 +17,8 @@ int main ( void ) {
   randombytes_salsa20_random_init(pool);
 
   while(1) {
-    //if(dual_usb_mode == CRYPTO && cmd_fn)
-      // we are in polling mode
-      //usbd_poll(usbd_dev);
-    if(dual_usb_mode == CRYPTO && op_cb)
-      op_cb();
+    //usbd_poll(usbd_dev);
+    if(dual_usb_mode == CRYPTO) handle_buf();
     kmask = key_handler();
     if(kmask & (1<<6)) {
       switch(dual_usb_mode) {
