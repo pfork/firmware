@@ -9,24 +9,24 @@
 #include <string.h>
 #include "led.h"
 
-#define BUF_SIZE 32768
-
 extern usbd_device *usbd_dev;
 
-Crypto_State state = INPUT;
+CRYPTO_CMD modus=USB_CRYPTO_CMD_STOP;
+Buffer bufs[2];
+unsigned char active_buf = 0;
 unsigned char outbuf[crypto_secretbox_NONCEBYTES+crypto_secretbox_ZEROBYTES+BUF_SIZE];
 unsigned char* outstart = outbuf+crypto_secretbox_BOXZEROBYTES;
-unsigned char buf[BUF_SIZE+crypto_secretbox_ZEROBYTES];
-unsigned char* bufstart =  buf + crypto_secretbox_ZEROBYTES;
-int buf_size;
 crypto_generichash_state hash_state;
 unsigned char signature[crypto_generichash_BYTES];
-CRYPTO_CMD modus;
+unsigned char blocked = 0;
 
-void crypto_mode_reset(void) {
+void reset(void) {
   modus = USB_CRYPTO_CMD_STOP;
-  buf_size = 0;
-  state = INPUT;
+  bufs[0].size = 0;
+  bufs[1].size = 0;
+  bufs[0].state = INPUT;
+  bufs[1].state = INPUT;
+  usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
 }
 
 unsigned int data_read(unsigned char* dst) {
@@ -48,16 +48,16 @@ void usb_write(const unsigned char* src, const char len, unsigned int retries, u
   reset_write_led;
 }
 
-void encrypt_block(void) {
-  int i, len, size = buf_size;
+void encrypt_block(Buffer *buf) {
+  int i, len, size = buf->size;
   unsigned char key[crypto_secretbox_KEYBYTES];
   // get key TODO
   for(i=0;i<(crypto_secretbox_KEYBYTES>>2);i++) ((unsigned int*) key)[i]=0;
-  for(i=0;i<(crypto_secretbox_ZEROBYTES>>2);i++) ((unsigned int*) buf)[i]=0;
+  for(i=0;i<(crypto_secretbox_ZEROBYTES>>2);i++) ((unsigned int*) buf->buf)[i]=0;
   // get nonce
   randombytes_salsa20_random_buf(outbuf, crypto_secretbox_NONCEBYTES);
   // encrypt
-  crypto_secretbox(outbuf+crypto_secretbox_NONCEBYTES, buf, size+crypto_secretbox_ZEROBYTES, outbuf, key);
+  crypto_secretbox(outbuf+crypto_secretbox_NONCEBYTES, buf->buf, size+crypto_secretbox_ZEROBYTES, outbuf, key);
   // move nonce over boxzerobytes - so it's
   // concated to the ciphertext for sending
   for(i=(crypto_secretbox_NONCEBYTES>>2)-1;i>=0;i--)
@@ -76,7 +76,7 @@ void encrypt_block(void) {
   }
 }
 
-void decrypt_block() {
+void decrypt_block(Buffer* buf) {
 }
 
 void hash_init(void) {
@@ -87,33 +87,36 @@ void hash_init(void) {
   crypto_generichash_init(&hash_state, k, crypto_generichash_KEYBYTES, 32);
 }
 
-void hash_block(void) {
-  crypto_generichash_update(&hash_state, bufstart, buf_size);
+void hash_block(Buffer *buf) {
+  crypto_generichash_update(&hash_state, buf->start, buf->size);
 }
 
 void sign_msg(void) {
-  crypto_mode_reset();
   crypto_generichash_final(&hash_state, outbuf, 32);
   usb_write(outbuf, 32, 0, USB_CRYPTO_EP_DATA_OUT);
 }
 
 void verify_msg(void) {
-  crypto_mode_reset();
   crypto_generichash_final(&hash_state, outbuf, 32);
   outbuf[0] = (sodium_memcmp(signature, outbuf, 32) != -1);
   usb_write(outbuf, 1, 0, USB_CRYPTO_EP_DATA_OUT);
 }
 
 void rng_handler(void) {
+  int i;
   set_write_led;
-  randombytes_salsa20_random_buf((void *) outbuf, 64);
+  randombytes_salsa20_random_buf((void *) outbuf, BUF_SIZE);
   irq_disable(NVIC_OTG_FS_IRQ);
-  while((usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_DATA_OUT, outbuf, 64) == 0) && (modus == USB_CRYPTO_CMD_RNG)) usbd_poll(usbd_dev);
+  for(i=0;i<BUF_SIZE && (modus == USB_CRYPTO_CMD_RNG);i+=64) {
+    while((usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_DATA_OUT, outbuf+i, 64) == 0) &&
+          (modus == USB_CRYPTO_CMD_RNG))
+      usbd_poll(usbd_dev);
+  }
   irq_enable(NVIC_OTG_FS_IRQ);
   reset_write_led;
 }
 
-void (*ops[])(void) = {
+void (*ops[])(Buffer* buf) = {
   &encrypt_block,
   &decrypt_block,
   &hash_block,
@@ -121,27 +124,53 @@ void (*ops[])(void) = {
 };
 
 void handle_buf(void) {
-  if(modus==USB_CRYPTO_CMD_RNG) {
-    rng_handler();
+  Buffer *buf = 0;
+  if(modus  > USB_CRYPTO_CMD_RNG) return; // nothing to process
+  if(modus == USB_CRYPTO_CMD_RNG) {
+    rng_handler(); // produce rng pkts
     return;
   }
-  if(state == INPUT || modus>USB_CRYPTO_CMD_VERIFY) return;
-  if(buf_size <= 0) {
-    // buf is not full, why?
-    usb_write((unsigned char*) "err: buffer underrun", 20, 32,USB_CRYPTO_EP_CTRL_OUT);
-    return; // try again in next main loop iteration
+
+  if(((bufs[!active_buf].state!=INPUT) && (bufs[!active_buf].size>0)) ||
+     ((bufs[!active_buf].state==CLOSED) && (bufs[!active_buf].size==0))) {
+    buf = &bufs[!active_buf]; // alias default active buf
+  } else {
+      // inactive buffer has nothing to process, check the active one
+      // this should only happen in the case when we became stalled.
+      // in which case this branch is taken on the second invocation
+      // of this function from the mainloop
+    if(((bufs[active_buf].state!=INPUT) && (bufs[active_buf].size>0)) ||
+       ((bufs[active_buf].state==CLOSED) && (bufs[active_buf].size==0))) {
+        buf = &bufs[active_buf]; // alias other inactive buf
+    } else return; // nothing to do
   }
+
   set_write_led;
-  ops[modus]();
-  if(state == OUTPUT) {
-    buf_size=0;
-    state=INPUT;
-  } else if(state == CLOSED) {
+  // finally do the processing
+  if(buf->size>0) ops[modus](buf);
+  if(buf->state == CLOSED ) {
     if(modus == USB_CRYPTO_CMD_SIGN) sign_msg();
     else if(modus == USB_CRYPTO_CMD_VERIFY) verify_msg();
-    crypto_mode_reset();
+    reset();
+  } else { // buf->state == OUTPUT
+    buf->size=0;
+    buf->state=INPUT;
+    if(blocked==1)
+      // now that there is an empty buf, handle postponed pkts
+      blocked = 0;
+      usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
   }
   reset_write_led;
+}
+
+int toggle_buf(void) {
+  if(bufs[!active_buf].state == INPUT && bufs[!active_buf].size==0) {
+    if(bufs[active_buf].state == INPUT)
+      bufs[active_buf].state = OUTPUT;
+    active_buf = !active_buf;
+    return active_buf;
+  }
+  return -1;
 }
 
 void handle_data(void) {
@@ -150,32 +179,36 @@ void handle_data(void) {
   if(modus>USB_CRYPTO_CMD_VERIFY) {
     // we are not in any modus that needs a buffer
     len = data_read(tmpbuf); // sink it
+    // todo overwrite this so attacker cannot get reliably data written to stack?
     usb_write((unsigned char*) "err: no op", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     return;
   }
-  if(buf_size+64>BUF_SIZE || state != INPUT) {
-    // wouldn't fit, careful
-    len = data_read(tmpbuf);
-    if(buf_size+len>BUF_SIZE || state!=INPUT) {
-      usb_write((unsigned char*) "err: buffer overflow", 20, 32,USB_CRYPTO_EP_CTRL_OUT);
-      crypto_mode_reset();
+  if(bufs[active_buf].state != INPUT) {
+    if(toggle_buf() == -1) { // if other buffer yet unavailable
+      // throttle input
+      usb_write((unsigned char*) "err: overflow", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
       return;
-    } else if(len>0 && buf_size+len<=BUF_SIZE) {
-      // this should not happen, it means we previously had
-      // 32kB - n, n<64 already in the buffer. that means we
-      // already had a short pkt and should've gone into CLOSED
-      // mode earlier
-      memcpy(bufstart+buf_size, tmpbuf, len);
     }
-  } else {
-    // read into buffer
-    len = data_read(bufstart+buf_size);
+    // or switch buffers and read into the new one
   }
-  buf_size+=len;
-  if(len<64 && buf_size<BUF_SIZE) {
-    state = CLOSED;
-  } else if(buf_size >= BUF_SIZE) {
-    state = OUTPUT;
+  // read into buffer
+  len = data_read(bufs[active_buf].start+bufs[active_buf].size);
+  reset_read_led;
+  // adjust buffer size
+  bufs[active_buf].size+=len;
+  if(len<64) {
+    // short buffer read finish off reading
+    bufs[active_buf].state = CLOSED;
+    toggle_buf();
+  } else if(bufs[active_buf].size >= BUF_SIZE) {
+    // buffer full mark it ...
+    bufs[active_buf].state = OUTPUT;
+    // ... and try to switch to other buffer
+    if(toggle_buf() == -1) { // if other buffer yet unavailable
+      // throttle input
+      blocked = 1;
+      usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
+    }
   }
 }
 
@@ -185,8 +218,17 @@ void handle_ctl(void) {
   int len = usbd_ep_read_packet(usbd_dev, USB_CRYPTO_EP_CTRL_IN, buf, 64);
   if(len>0) {
     if(buf[0]==USB_CRYPTO_CMD_STOP) {
-        crypto_mode_reset();
-        return;
+      if(modus == USB_CRYPTO_CMD_RNG) {
+        // finish rng with zlp
+        usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_DATA_OUT, outbuf, 0);
+      }
+      reset();
+      return;
+    }
+    if(modus!=USB_CRYPTO_CMD_STOP) {
+      // we are already in a mode
+      usb_write((unsigned char*) "err: mode", 9, 32,USB_CRYPTO_EP_CTRL_OUT);
+      return;
     }
     switch(buf[0] & 7) {
       case USB_CRYPTO_CMD_ENCRYPT: {

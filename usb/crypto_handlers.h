@@ -1,6 +1,10 @@
 #ifndef crypto_handlers_h
 #define crypto_handlers_h
 
+#include <crypto_secretbox.h>
+
+#define BUF_SIZE 32768
+
 typedef enum {
   USB_CRYPTO_CMD_ENCRYPT = 0,
   USB_CRYPTO_CMD_DECRYPT,
@@ -17,8 +21,17 @@ typedef enum {
   CLOSED
 } Crypto_State;
 
+typedef struct {
+  Crypto_State state;
+  int size;
+  unsigned char buf[BUF_SIZE+crypto_secretbox_ZEROBYTES];
+  unsigned char * start;
+} Buffer;
+
 void handle_ctl(void);
 void handle_data(void);
 void handle_buf(void);
+
+extern Buffer bufs[2];
 
 #endif //crypto_handlers_h

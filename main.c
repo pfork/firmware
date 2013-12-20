@@ -16,6 +16,9 @@ int main ( void ) {
   pool = init_pool();
   randombytes_salsa20_random_init(pool);
 
+  bufs[0].start =  bufs[0].buf + crypto_secretbox_ZEROBYTES;
+  bufs[1].start =  bufs[1].buf + crypto_secretbox_ZEROBYTES;
+
   while(1) {
     //usbd_poll(usbd_dev);
     if(dual_usb_mode == CRYPTO) handle_buf();
@@ -27,7 +30,7 @@ int main ( void ) {
       }
     }
     led_handler();
-    if(!(sysctr & 1023)) { // app once / sec
+    if(!(sysctr & 1023)) { // 1/1000 chance ;)
       randombytes_salsa20_random_stir();
     }
   }
