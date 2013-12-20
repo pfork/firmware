@@ -107,8 +107,8 @@ static const struct usb_config_descriptor config = {
 };
 
 static const char *usb_strings[] = {
-	"stf",
-	"saltystick "VERSION,
+	"stf (c) 2013",
+	"pocketsalt "VERSION,
 	"0x01729a",
 };
 

@@ -14,6 +14,7 @@
 #include "usbd_conf.h"
 #include "usb_regs.h"
 #include "stm32f.h"
+#include "main.h"
 
 #define USBD_VID                   0x0483
 #define USBD_PID                   0x5720
@@ -22,8 +23,8 @@
 #define USBD_MANUFACTURER_STRING   ((unsigned char*) "stf (c) 2013")
 
 
-#define USBD_PRODUCT_FS_STRING        ((unsigned char*) "Mass Storage in FS Mode")
-#define USBD_SERIALNUMBER_FS_STRING   ((unsigned char*) "000000000017")
+#define USBD_PRODUCT_FS_STRING        ((unsigned char*) "pocketsalt "VERSION" in FS Mass Storage Mode")
+#define USBD_SERIALNUMBER_FS_STRING   ((unsigned char*) "0x01729a")
 #define USBD_CONFIGURATION_FS_STRING  ((unsigned char*) "MSC Config")
 #define USBD_INTERFACE_FS_STRING      ((unsigned char*) "MSC Interface")
 
