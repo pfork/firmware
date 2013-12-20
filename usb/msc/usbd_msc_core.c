@@ -63,7 +63,7 @@ __ALIGN_BEGIN unsigned char USBD_MSC_CfgDesc[USB_MSC_CONFIG_DESC_SIZ] __ALIGN_EN
   0x01,   /* bNumInterfaces: 1 interface */
   0x01,   /* bConfigurationValue: */
   0x04,   /* iConfiguration: */
-  0xC0,   /* bmAttributes: */
+  0x80,   /* bmAttributes: */
   0x32,   /* MaxPower 100 mA */
 
   /********************  Mass Storage interface ********************/
