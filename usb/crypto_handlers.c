@@ -16,6 +16,7 @@ Buffer bufs[2];
 unsigned char active_buf = 0;
 unsigned char outbuf[crypto_secretbox_NONCEBYTES+crypto_secretbox_ZEROBYTES+BUF_SIZE];
 unsigned char* outstart = outbuf+crypto_secretbox_BOXZEROBYTES;
+unsigned char* outstart32 = outbuf+crypto_secretbox_ZEROBYTES;
 crypto_generichash_state hash_state;
 unsigned char signature[crypto_generichash_BYTES];
 unsigned char blocked = 0;
@@ -53,6 +54,7 @@ void encrypt_block(Buffer *buf) {
   unsigned char key[crypto_secretbox_KEYBYTES];
   // get key TODO
   for(i=0;i<(crypto_secretbox_KEYBYTES>>2);i++) ((unsigned int*) key)[i]=0;
+  // zero out beginning of plaintext as demanded by nacl
   for(i=0;i<(crypto_secretbox_ZEROBYTES>>2);i++) ((unsigned int*) buf->buf)[i]=0;
   // get nonce
   randombytes_salsa20_random_buf(outbuf, crypto_secretbox_NONCEBYTES);
@@ -77,6 +79,44 @@ void encrypt_block(Buffer *buf) {
 }
 
 void decrypt_block(Buffer* buf) {
+  int i, len;
+  // substract nonce size from total size (40B)
+  int size = buf->size - (crypto_secretbox_NONCEBYTES + crypto_secretbox_BOXZEROBYTES);
+  unsigned char key[crypto_secretbox_KEYBYTES];
+  unsigned char nonce[crypto_secretbox_NONCEBYTES];
+  // get key TODO
+  for(i=0;i<(crypto_secretbox_KEYBYTES>>2);i++) ((unsigned int*) key)[i]=0;
+  // get nonce from beginning of input buffer
+  memcpy(nonce, buf->start, crypto_secretbox_NONCEBYTES);
+  //for(i=0;i<(crypto_secretbox_NONCEBYTES>>2);i++)
+  //  ((unsigned int*) nonce)[i] = ((unsigned int*) buf->start)[i];
+  // zero out crypto_secretbox_BOXZEROBYTES preamble
+  // overwriting tne end of the nonce
+  for(i=((crypto_secretbox_NONCEBYTES-crypto_secretbox_BOXZEROBYTES)>>2);
+      i<(crypto_secretbox_NONCEBYTES>>2);
+      i++)
+    ((unsigned int*) buf->start)[i]=0;
+  // decrypt
+  if(-1 == crypto_secretbox_open(outbuf,  // m
+                                 (buf->start) + (crypto_secretbox_NONCEBYTES - crypto_secretbox_BOXZEROBYTES), // c + preamble
+                                 size+crypto_secretbox_ZEROBYTES,  // clen = len(plain)+2x(boxzerobytes)
+                                 nonce, // n
+                                 key)) {
+    usb_write((unsigned char*) "err: corrupt", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
+    reset();
+    return;
+  }
+  // send usb packet sized result
+  for(i=0;i<size;i+=len) {
+    len = (size-i)>=64?64:(size-i);
+    irq_disable(NVIC_OTG_FS_IRQ);
+    usb_write(outstart32+i, len, 0, USB_CRYPTO_EP_DATA_OUT);
+    irq_enable(NVIC_OTG_FS_IRQ);
+    // final packet
+    if(len<64) {
+      break;
+    }
+  }
 }
 
 void hash_init(void) {
@@ -189,22 +229,23 @@ void handle_data(void) {
       usb_write((unsigned char*) "err: overflow", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
       return;
     }
-    // or switch buffers and read into the new one
+    // or read into the fresh buffer
   }
   // read into buffer
   len = data_read(bufs[active_buf].start+bufs[active_buf].size);
-  reset_read_led;
   // adjust buffer size
   bufs[active_buf].size+=len;
-  if(len<64) {
+  if(len<64 && (modus!=USB_CRYPTO_CMD_DECRYPT || (len==40 && bufs[active_buf].size<BUF_SIZE+40) )) {
     // short buffer read finish off reading
     bufs[active_buf].state = CLOSED;
     toggle_buf();
   } else if(bufs[active_buf].size >= BUF_SIZE) {
-    // buffer full mark it ...
-    bufs[active_buf].state = OUTPUT;
+    if(modus!=USB_CRYPTO_CMD_DECRYPT || (bufs[active_buf].size > BUF_SIZE)) {
+      // buffer full mark it ...
+      bufs[active_buf].state = OUTPUT;
+    }
     // ... and try to switch to other buffer
-    if(toggle_buf() == -1) { // if other buffer yet unavailable
+    if((bufs[active_buf].state == OUTPUT) && toggle_buf() == -1) { // if other buffer yet unavailable
       // throttle input
       blocked = 1;
       usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);

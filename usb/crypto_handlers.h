@@ -24,8 +24,10 @@ typedef enum {
 typedef struct {
   Crypto_State state;
   int size;
-  unsigned char buf[BUF_SIZE+crypto_secretbox_ZEROBYTES];
-  unsigned char * start;
+  unsigned char buf[BUF_SIZE+crypto_secretbox_ZEROBYTES+64]; // extra crypto_secretbox_ZEROBYTES (32) for encryption
+                                                             // but decryption needs 40 (nonce+mac) - since this is read
+                                                             // it is padded to maxpacketsize so we can handle meh.
+  unsigned char* start;
 } Buffer;
 
 void handle_ctl(void);
