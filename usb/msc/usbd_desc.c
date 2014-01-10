@@ -23,7 +23,7 @@
 #define USBD_MANUFACTURER_STRING   ((unsigned char*) "stf (c) 2013")
 
 
-#define USBD_PRODUCT_FS_STRING        ((unsigned char*) "pocketsalt "VERSION" in FS Mass Storage Mode")
+#define USBD_PRODUCT_FS_STRING        ((unsigned char*) "PITCHFORK "VERSION" in FS Mass Storage Mode")
 #define USBD_SERIALNUMBER_FS_STRING   ((unsigned char*) "0x01729a")
 #define USBD_CONFIGURATION_FS_STRING  ((unsigned char*) "MSC Config")
 #define USBD_INTERFACE_FS_STRING      ((unsigned char*) "MSC Interface")

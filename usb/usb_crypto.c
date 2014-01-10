@@ -21,7 +21,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include "stm32f.h"
-#include "randombytes_salsa20_random.h"
 #include "dual.h"
 #include "main.h"
 #include "usb_crypto.h"
@@ -108,7 +107,7 @@ static const struct usb_config_descriptor config = {
 
 static const char *usb_strings[] = {
 	"stf (c) 2013",
-	"pocketsalt "VERSION,
+	"PITCHFORK "VERSION,
 	"0x01729a",
 };
 
