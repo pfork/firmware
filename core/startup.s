@@ -1,18 +1,15 @@
 /**
   ******************************************************************************
-  * @file      startup_stm32f2xx.s
+  * @file      startup.s
   * @author  stf
   * @version V0.0.1
   * @date    06-December-2013
-  * @brief     STM32F2xx Devices vector table for RIDE7 toolchain.
+  * @brief     STM32F2xx Devices vector table
   *            This module performs:
   *                - Set the initial SP
   *                - Set the initial PC == Reset_Handler,
   *                - Set the vector table entries with the exceptions ISR address
-  *                - Configure the clock system and the external SRAM mounted on
-  *                  STM3220F-EVAL board to be used as data memory (optional,
-  *                  to be enabled by user)
-  *                - Branches to main in the C library (which eventually
+  *                - Configure the clock system
   *                  calls main()).
   *            After Reset the Cortex-M3 processor is in Thread mode,
   *            priority is Privileged, and the Stack is set to Main.
