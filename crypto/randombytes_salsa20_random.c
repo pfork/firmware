@@ -107,7 +107,7 @@ void randombytes_salsa20_random_stir(void) {
 	 * twice as much data as we output.
 	 */
    for(i=0;i<HASHSIZE/2;i++)
-     stream.key[i] ^= w[i] ^ w[HASHSIZE-i];
+     stream.key[i] ^= w[i] ^ w[HASHSIZE-(i+1)];
 
 	sodium_memzero(w, sizeof(w));
 }
