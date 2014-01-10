@@ -33,3 +33,18 @@ void irq_init(void) {
   NVIC_IPR(NVIC_OTG_FS_IRQ) = 0;
   irq_enable(NVIC_OTG_FS_IRQ);
 }
+
+void disable_irqs(void) {
+  SYSTICK_CTRL &= ~((unsigned int) 2); /* disable interrupts */
+  irq_disable(NVIC_SDIO_IRQn);
+  irq_disable(SD_SDIO_DMA_IRQn);
+  irq_disable(NVIC_OTG_FS_IRQ);
+}
+
+void enable_irqs(void) {
+  irq_enable(NVIC_SDIO_IRQn);
+  irq_enable(SD_SDIO_DMA_IRQn);
+  irq_enable(NVIC_OTG_FS_IRQ);
+  // enable systick irq
+  SYSTICK_CTRL |= 2; /* Enable interrupts */
+}
