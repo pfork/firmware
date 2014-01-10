@@ -27,6 +27,7 @@ unsigned int ASM_DELAY ( unsigned int );
 #define HIBYTE(x)  ((unsigned char)((x & 0xFF00) >>8))
 
 #define  MIN(a, b)      (((a) < (b)) ? (a) : (b))
+#define  MAX(a, b)      (((a) > (b)) ? (a) : (b))
 
 #define irq_enable(irqn) NVIC_ISER(irqn / 32) |= (1 << (irqn % 32))
 #define irq_disable(irqn) NVIC_ICER(irqn / 32) |= (1 << (irqn % 32))
@@ -47,7 +48,9 @@ typedef enum {RESET = 0, SET = !RESET} FlagStatus, ITStatus;
 
 #define nrf24l0_SPIx ((SPI_Regs*) SPI1_BASE)
 //-------------------------------------------------------------------
-#define PERIPH_BASE			   ((unsigned int)0x40000000)
+#ifndef PERIPH_BASE
+# define PERIPH_BASE			   ((unsigned int)0x40000000)
+#endif
 #define PERIPH_BB_BASE        ((unsigned int)0x42000000) /*!< Peripheral base address in the bit-band region */
 #define PERIPH_BASE_APB1		(PERIPH_BASE + 0x00000)
 #define PERIPH_BASE_APB2		(PERIPH_BASE + 0x10000)
@@ -117,7 +120,9 @@ typedef struct {
 
 //-------------------------------------------------------------------
 #define TIM5BASE  0x40000C00
-#define FLASH_ACR  0x40023C00
+#ifndef FLASH_ACR
+#  define FLASH_ACR  0x40023C00
+#endif
 
 //-------------------------------------------------------------------
 
@@ -260,7 +265,9 @@ typedef struct
 #define GPIO_AF_EVENTOUT      ((unsigned char)0x0F)  /* EVENTOUT Alternate Function mapping */
 
 //-------------------------------------------------------------------
-#define USART2_BASE 0x40004400
+#ifndef USART2_BASE
+#  define USART2_BASE 0x40004400
+#endif
 #define USART2_SR  (USART2_BASE+0x00)
 #define USART2_DR  (USART2_BASE+0x04)
 #define USART2_BRR (USART2_BASE+0x08)
@@ -270,7 +277,9 @@ typedef struct
 #define USART2_GTPR (USART2_BASE+0x18)
 
 //-------------------------------------------------------------------
-#define RNG_BASE 0x50060800
+#ifndef RNG_BASE
+#  define RNG_BASE 0x50060800
+#endif
 #define RNG_CR MMIO32(RNG_BASE+0x00)
 #define RNG_SR MMIO32(RNG_BASE+0x04)
 #define RNG_DR MMIO32(RNG_BASE+0x08)
@@ -951,7 +960,9 @@ being at the same relative location */
 #define DMA2_Stream7_BASE     (DMA2_BASE + 0x0B8)
 
 /* ---------------------------------------------------- */
-#define DWT_BASE        0xE0001000
+#ifndef DWT_BASE
+#  define DWT_BASE        0xE0001000
+#endif
 #define DWT_CONTROL		MMIO32(DWT_BASE)
 #define DWT_CYCCNT		MMIO32(DWT_BASE + 0x04)
 #define SCB_DEMCR			MMIO32(0xE000EDFC)
