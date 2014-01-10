@@ -24,7 +24,7 @@
 #include "dual.h"
 #include "main.h"
 #include "usb_crypto.h"
-#include "crypto_handlers.h"
+#include "crypto/usb_handler.h"
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
