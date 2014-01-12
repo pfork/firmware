@@ -19,6 +19,17 @@ USB_CRYPTO_EP_DATA_IN = 0x02
 USB_CRYPTO_EP_CTRL_OUT = 0x81
 USB_CRYPTO_EP_DATA_OUT = 0x82
 
+USB_CRYPTO_CMD_ENCRYPT = chr(0)
+USB_CRYPTO_CMD_DECRYPT = chr(1)
+USB_CRYPTO_CMD_SIGN = chr(2)
+USB_CRYPTO_CMD_VERIFY = chr(3)
+USB_CRYPTO_CMD_ECDH_START = chr(4)
+USB_CRYPTO_CMD_ECDH_RESPOND = chr(5)
+USB_CRYPTO_CMD_ECDH_END = chr(6)
+USB_CRYPTO_CMD_RNG = chr(7)
+USB_CRYPTO_CMD_STOP = chr(8)
+USB_CRYPTO_CMD_STORAGE = chr(9)
+
 eps={}
 
 def init():
@@ -59,7 +70,7 @@ def encrypt(plain):
 
     if DEBUG: start = time.time()
     flush(USB_CRYPTO_EP_DATA_OUT, True)
-    eps[USB_CRYPTO_EP_CTRL_IN].write(chr(0))
+    eps[USB_CRYPTO_EP_CTRL_IN].write(USB_CRYPTO_CMD_ENCRYPT)
     size=0
     for pkt in split_by_n(plain,32768):
         wrote = eps[USB_CRYPTO_EP_DATA_IN].write(pkt)
@@ -89,7 +100,7 @@ def decrypt(ctext):
 
     if DEBUG: start = time.time()
     flush(USB_CRYPTO_EP_DATA_OUT, True)
-    eps[USB_CRYPTO_EP_CTRL_IN].write(chr(1))
+    eps[USB_CRYPTO_EP_CTRL_IN].write(USB_CRYPTO_CMD_DECRYPT)
     size=0
     for pkt in split_by_n(ctext,32808):
         wrote = eps[USB_CRYPTO_EP_DATA_IN].write(pkt)
@@ -112,10 +123,10 @@ def rng(size):
     if DEBUG: print 'rng bytes to read:',size >> 10, 'kB',
     read = 0
     if DEBUG: start = time.time()
-    eps[USB_CRYPTO_EP_CTRL_IN].write(chr(4))
+    eps[USB_CRYPTO_EP_CTRL_IN].write(USB_CRYPTO_CMD_RNG)
     while(read<size):
         read += len(eps[USB_CRYPTO_EP_DATA_OUT].read(32768 if size -read > 32768 else size -read))
-    eps[USB_CRYPTO_EP_CTRL_IN].write(chr(5))
+    eps[USB_CRYPTO_EP_CTRL_IN].write(USB_CRYPTO_CMD_STOP)
     #read_ctrl()
     if DEBUG:
         end = time.time()
@@ -131,7 +142,7 @@ def sign(msg):
     if DEBUG: print 'sign msg size:',size >> 10, 'kB',
     written=0
     if DEBUG: start = time.time()
-    eps[USB_CRYPTO_EP_CTRL_IN].write(chr(2))
+    eps[USB_CRYPTO_EP_CTRL_IN].write(USB_CRYPTO_CMD_SIGN)
     for pkt in split_by_n(msg,32768):
         while(True):
             try:
@@ -165,7 +176,7 @@ def verify(sign, msg):
     print 'verify msg size:',size >> 10, 'kB',
     if DEBUG: start = time.time()
     flush(USB_CRYPTO_EP_DATA_OUT, True)
-    eps[USB_CRYPTO_EP_CTRL_IN].write("%s%s" % (chr(3),sign))
+    eps[USB_CRYPTO_EP_CTRL_IN].write("%s%s" % (USB_CRYPTO_CMD_VERIFY,sign))
     written=0
     for pkt in split_by_n(msg,32768):
         while(True):
@@ -192,8 +203,49 @@ def verify(sign, msg):
     flush(USB_CRYPTO_EP_DATA_OUT)
     return res[0]
 
+def start_ecdh(name):
+    if DEBUG: start = time.time()
+    flush(USB_CRYPTO_EP_DATA_OUT, True)
+    eps[USB_CRYPTO_EP_CTRL_IN].write(USB_CRYPTO_CMD_ECDH_START+name)
+    while(True):
+        try:
+            resp=eps[USB_CRYPTO_EP_DATA_OUT].read(64)
+            break
+        except usb.core.USBError:
+            continue
+    reset()
+    resp = ''.join([chr(x) for x in resp])
+    return (resp[:16], resp[16:])
+
+def resp_ecdh(pub, name):
+    if DEBUG: start = time.time()
+    flush(USB_CRYPTO_EP_DATA_OUT, True)
+    eps[USB_CRYPTO_EP_CTRL_IN].write(USB_CRYPTO_CMD_ECDH_RESPOND+pub+name)
+    while(True):
+        try:
+            resp=eps[USB_CRYPTO_EP_DATA_OUT].read(64)
+            break
+        except usb.core.USBError:
+            continue
+    reset()
+    resp = ''.join([chr(x) for x in resp])
+    return (resp[:16], resp[16:])
+
+def end_ecdh(pub, keyid):
+    if DEBUG: start = time.time()
+    flush(USB_CRYPTO_EP_DATA_OUT, True)
+    eps[USB_CRYPTO_EP_CTRL_IN].write(USB_CRYPTO_CMD_ECDH_END+pub+keyid)
+    while(True):
+        try:
+            resp=eps[USB_CRYPTO_EP_DATA_OUT].read(64)
+            break
+        except usb.core.USBError:
+            continue
+    reset()
+    return ''.join([chr(x) for x in resp])
+
 def reset():
-    eps[USB_CRYPTO_EP_CTRL_IN].write(chr(5))
+    eps[USB_CRYPTO_EP_CTRL_IN].write(USB_CRYPTO_CMD_STOP)
     flush(USB_CRYPTO_EP_DATA_OUT)
     flush(USB_CRYPTO_EP_CTRL_OUT)
 
@@ -226,4 +278,49 @@ def test():
         rng(1<<22)
 
 init()
+
+import binascii, sys
+reset()
+#keyid1,pub1 = start_ecdh('test user 3')
+# print hexlify(start_ecdh('test user 1')
+# returned 
+#msg=binascii.unhexlify("bd15cf68071fdd9c63eb8b4be1cf8166d8c563918282f1e3a82ac41705e72479d3ff433699f3f3ff15005849c40eb117")
+#keyid1=msg[:16]
+#pub1=msg[16:]
+
+#print 'sending', repr(keyid1), repr(pub1)
+#keyid2, pub2 =  resp_ecdh(pub1, 'test user 3')
+#print 'keyid2', binascii.hexlify(keyid2)
+#print 'pub2', binascii.hexlify(pub2)
+# returned
+#keyid2=binascii.unhexlify("c70aeffb82105c2db7d174e7d817b246")
+#pub2=binascii.unhexlify("1cf5c8e15217a694e2ad74166abe4db2984f4145292f15a500ec927e131faa73")
+
+#keyid3 = end_ecdh(pub2, keyid1)
+#print 'keyid3', binascii.hexlify(keyid3)
+
+#keyid1, pub1 = start_ecdh('test user 9')
+#keyid2, pub2 = resp_ecdh(pub1, 'test user a')
+#keyid3 = end_ecdh(pub2, keyid1)
+
+# interaction with pbp
+
+# python pbp/main.py -D1
+# secret exponent 4dae91f41901addf073738ffc5c353fc2f98fb6af6b90592edcf10e0fb379ff0
+# public component c108521213bbe7a7b6aeec0a81b9414d891b907ee79eabbcea810ef893b34140
+
+# pub1 = binascii.unhexlify("c108521213bbe7a7b6aeec0a81b9414d891b907ee79eabbcea810ef893b34140")
+# keyid2, pub2 = resp_ecdh(pub1, 'pbp')
+# print binascii.hexlify(pub2)
+
+#  python pbp/main.py -D3 -DP 8bcafd74ebfc1a834e93e4a8abbbf855ea2565c2026ba5f4b61b6545d9027d52 -DE 4dae91f41901addf073738ffc5c353fc2f98fb6af6b90592edcf10e0fb379ff0
+# shared secret 1db5410eff8465dbd932d860668001cd5587f6dc9c6428e0a8034e05ad0bbf58
+
+# after reading out the seed in memory via jtag it resulted in
+# 1db5410eff8465dbd932d860668001cd5587f6dc9c6428e0a8034e05ad0bbf58
+# 1db5410eff8465dbd932d860668001cd5587f6dc9c6428e0a8034e05ad0bbf58
+# for both pbp and pitchfork
+
+sys.exit(0)
+
 test()

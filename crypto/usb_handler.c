@@ -3,11 +3,13 @@
 #include "crypto/usb_handler.h"
 #include "stm32f.h"
 #include "randombytes_salsa20_random.h"
+#include "crypto_scalarmult_curve25519.h"
 #include <crypto_generichash.h>
 #include <crypto_secretbox.h>
 #include <utils.h>
 #include <string.h>
 #include "led.h"
+#include "ecdho.h"
 
 extern usbd_device *usbd_dev;
 
@@ -18,8 +20,8 @@ unsigned char outbuf[crypto_secretbox_NONCEBYTES+crypto_secretbox_ZEROBYTES+BUF_
 unsigned char* outstart = outbuf+crypto_secretbox_BOXZEROBYTES;
 unsigned char* outstart32 = outbuf+crypto_secretbox_ZEROBYTES;
 crypto_generichash_state hash_state;
-unsigned char signature[crypto_generichash_BYTES];
 unsigned char blocked = 0;
+unsigned char params[128];
 
 void reset(void) {
   modus = USB_CRYPTO_CMD_STOP;
@@ -27,6 +29,7 @@ void reset(void) {
   bufs[1].size = 0;
   bufs[0].state = INPUT;
   bufs[1].state = INPUT;
+  blocked = 0;
   usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
 }
 
@@ -138,7 +141,7 @@ void sign_msg(void) {
 
 void verify_msg(void) {
   crypto_generichash_final(&hash_state, outbuf, 32);
-  outbuf[0] = (sodium_memcmp(signature, outbuf, 32) != -1);
+  outbuf[0] = (sodium_memcmp(params, outbuf, 32) != -1);
   usb_write(outbuf, 1, 0, USB_CRYPTO_EP_DATA_OUT);
 }
 
@@ -156,6 +159,42 @@ void rng_handler(void) {
   reset_write_led;
 }
 
+void ecdh_start_handler(void) {
+  ECDH_Start_Params* args = (ECDH_Start_Params*) params;
+  unsigned char pub[crypto_scalarmult_curve25519_BYTES];
+  unsigned char keyid[16];
+  start_ecdh(args->name, args->len, pub, keyid);
+  // output keyid, pub
+  memcpy(outbuf,keyid,STORAGE_ID_LEN);
+  memcpy(outbuf+STORAGE_ID_LEN,pub,crypto_scalarmult_curve25519_BYTES);
+  usb_write(outbuf, STORAGE_ID_LEN+crypto_scalarmult_curve25519_BYTES, 0, USB_CRYPTO_EP_DATA_OUT);
+  reset();
+}
+void ecdh_respond_handler(void) {
+  ECDH_Response_Params* args = (ECDH_Response_Params*) params;
+  unsigned char keyid[16];
+  respond_ecdh(args->name, args->len, args->pub, keyid);
+  // output keyid, pub
+  memcpy(outbuf,keyid,STORAGE_ID_LEN);
+  memcpy(outbuf+STORAGE_ID_LEN,args->pub,crypto_scalarmult_curve25519_BYTES);
+  usb_write(outbuf, STORAGE_ID_LEN+crypto_scalarmult_curve25519_BYTES, 0, USB_CRYPTO_EP_DATA_OUT);
+  reset();
+}
+
+void ecdh_end_handler(void) {
+  unsigned char peer[32];
+  unsigned char keyid[16];
+  ECDH_End_Params* args = (ECDH_End_Params*) params;
+  SeedRecord* seedptr = get_seedrec(SEED,0,args->keyid);
+  unsigned char peer_len = get_peer(peer, (unsigned char*) seedptr->peerid);
+  if(seedptr > 0 && peer_len > 0)
+    finish_ecdh(peer, peer_len, args->keyid, args->pub, keyid);
+  // output keyid
+  memcpy(outbuf,keyid,STORAGE_ID_LEN);
+  usb_write(outbuf, STORAGE_ID_LEN, 0, USB_CRYPTO_EP_DATA_OUT);
+  reset();
+}
+
 void (*ops[])(Buffer* buf) = {
   &encrypt_block,
   &decrypt_block,
@@ -168,6 +207,15 @@ void handle_buf(void) {
   if(modus  > USB_CRYPTO_CMD_RNG) return; // nothing to process
   if(modus == USB_CRYPTO_CMD_RNG) {
     rng_handler(); // produce rng pkts
+    return;
+  } else if(modus == USB_CRYPTO_CMD_ECDH_START) {
+    ecdh_start_handler(); // produce rng pkts
+    return;
+  } else if(modus == USB_CRYPTO_CMD_ECDH_RESPOND) {
+    ecdh_respond_handler(); // produce rng pkts
+    return;
+  } else if(modus == USB_CRYPTO_CMD_ECDH_END) {
+    ecdh_end_handler(); // produce rng pkts
     return;
   }
 
@@ -271,7 +319,7 @@ void handle_ctl(void) {
       usb_write((unsigned char*) "err: mode", 9, 32,USB_CRYPTO_EP_CTRL_OUT);
       return;
     }
-    switch(buf[0] & 7) {
+    switch(buf[0] & 15) {
       case USB_CRYPTO_CMD_ENCRYPT: {
         modus = USB_CRYPTO_CMD_ENCRYPT;
         break;
@@ -288,7 +336,7 @@ void handle_ctl(void) {
       case USB_CRYPTO_CMD_VERIFY: {
         if(len==crypto_generichash_BYTES+1) {
           hash_init();
-          memcpy(signature, buf+1, crypto_generichash_BYTES);
+          memcpy(params, buf+1, crypto_generichash_BYTES);
           modus = USB_CRYPTO_CMD_VERIFY;
         } else {
           usb_write((unsigned char*) "err: no sig", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
@@ -299,6 +347,40 @@ void handle_ctl(void) {
         modus = USB_CRYPTO_CMD_RNG;
         break;
       }
+      case USB_CRYPTO_CMD_ECDH_START: {
+        if(len>1) {
+          ECDH_Start_Params* args = (ECDH_Start_Params*) params;
+          args->len = len-1;
+          memcpy(args->name, buf+1, args->len);
+          modus = USB_CRYPTO_CMD_ECDH_START;
+        } else {
+          usb_write((unsigned char*) "err: bad args", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
+        }
+        break;
+      }
+      case USB_CRYPTO_CMD_ECDH_RESPOND: {
+        if(len>crypto_scalarmult_curve25519_BYTES+1) {
+          ECDH_Response_Params* args = (ECDH_Response_Params*) params;
+          args->len=len-(crypto_scalarmult_curve25519_BYTES+1);
+          memcpy(args->pub, buf+1, crypto_scalarmult_curve25519_BYTES);
+          memcpy(args->name, buf+crypto_scalarmult_curve25519_BYTES+1, args->len);
+          modus = USB_CRYPTO_CMD_ECDH_RESPOND;
+        } else {
+          usb_write((unsigned char*) "err: bad args", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+        }
+        break;
+      }
+      case USB_CRYPTO_CMD_ECDH_END: {
+        if(len==crypto_scalarmult_curve25519_BYTES+STORAGE_ID_LEN+1) {
+          ECDH_End_Params* args = (ECDH_End_Params*) params;
+          memcpy(args->pub, buf+1, crypto_scalarmult_curve25519_BYTES);
+          memcpy(args->keyid, buf+1+crypto_scalarmult_curve25519_BYTES, STORAGE_ID_LEN);
+          modus = USB_CRYPTO_CMD_ECDH_END;
+        } else {
+          usb_write((unsigned char*) "err: bad args", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+        }
+        break;
+      }
       /* case USB_CRYPTO_CMD_STORAGE: { */
       /*   if(cmd_fn!=0) { */
       /*     irq_mode(); */
@@ -306,7 +388,6 @@ void handle_ctl(void) {
       /*   dual_usb_mode = DISK; */
       /*   break; */
       /* } */
-
       default: {
         //usb_puts("err: invalid cmd");
       }
