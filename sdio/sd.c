@@ -68,15 +68,8 @@
   *
   *  B - SD Card Read operation
   *  ==========================
-  *   - You can read SD card by using two function: SD_ReadBlock() and
-  *     SD_ReadMultiBlocks() functions. These functions support only
-  *     512-byte block length.
-  *   - The SD_ReadBlock() function read only one block (512-byte). This
-  *     function can transfer the data using DMA controller or using
-  *     polling mode. To select between DMA or polling mode refer to
-  *     "SD_DMA_MODE" or "SD_POLLING_MODE" inside the sd.h
-  *     file and uncomment the corresponding line. By default the SD DMA
-  *     mode is selected
+  *   - You can read SD card by using the function: SD_ReadMultiBlocks()
+  *     function. This function support only 512-byte block length.
   *   - The SD_ReadMultiBlocks() function read only mutli blocks (multiple
   *     of 512-byte).
   *   - Any read operation should be followed by two functions to check
@@ -94,15 +87,9 @@
   *
   *  C - SD Card Write operation
   *  ===========================
-  *   - You can write SD card by using two function: SD_WriteBlock() and
-  *     SD_WriteMultiBlocks() functions. These functions support only
+  *   - You can write SD card by using the function:
+  *     SD_WriteMultiBlocks() functions. This function supports only
   *     512-byte block length.
-  *   - The SD_WriteBlock() function write only one block (512-byte). This
-  *     function can transfer the data using DMA controller or using
-  *     polling mode. To select between DMA or polling mode refer to
-  *     "SD_DMA_MODE" or "SD_POLLING_MODE" inside the stm322xg_eval_sdio_sd.h
-  *     file and uncomment the corresponding line. By default the SD DMA
-  *     mode is selected
   *   - The SD_WriteMultiBlocks() function write only mutli blocks (multiple
   *     of 512-byte).
   *   - Any write operation should be followed by two functions to check
@@ -143,18 +130,8 @@
   *     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
   *     NVIC_Init(&NVIC_InitStructure);
   *
-  *     // Write operation as described in Section C
-  *     Status = SD_WriteBlock(buffer, address, 512);
-  *     Status = SD_WaitWriteOperation();
-  *     while(SD_GetStatus() != SD_TRANSFER_OK);
-  *
   *     Status = SD_WriteMultiBlocks(buffer, address, 512, NUMBEROFBLOCKS);
   *     Status = SD_WaitWriteOperation();
-  *     while(SD_GetStatus() != SD_TRANSFER_OK);
-  *
-  *     // Read operation as described in Section B
-  *     Status = SD_ReadBlock(buffer, address, 512);
-  *     Status = SD_WaitReadOperation();
   *     while(SD_GetStatus() != SD_TRANSFER_OK);
   *
   *     Status = SD_ReadMultiBlocks(buffer, address, 512, NUMBEROFBLOCKS);
@@ -170,17 +147,6 @@
   *         {
   *           SD_ProcessDMAIRQ();
   *         }
-  *
-  *  F - Programming Model (Selecting Polling for SDIO data Transfer)
-  *  ================================================================
-  *    //Only SD Card Single Block operation are managed.
-  *    Status = SD_Init(); // Initialization Step as described in section
-  *
-  *    // Write operation as described in Section C
-  *    Status = SD_WriteBlock(buffer, address, 512);
-  *
-  *    // Read operation as described in Section B
-  *    Status = SD_ReadBlock(buffer, address, 512);
   *
   *  STM32 SDIO Pin assignment
   *  =========================
@@ -994,122 +960,6 @@ SD_Error SD_SelectDeselect(unsigned int addr) {
 }
 
 /**
-  * @brief  Allows to read one block from a specified address in a card. The Data
-  *         transfer can be managed by DMA mode or Polling mode.
-  * @note   This operation should be followed by two functions to check if the
-  *         DMA Controller and SD Card status.
-  *          - SD_ReadWaitOperation(): this function insure that the DMA
-  *            controller has finished all data transfer.
-  *          - SD_GetStatus(): to check that the SD Card has finished the
-  *            data transfer and it is ready for data.
-  * @param  readbuff: pointer to the buffer that will contain the received data
-  * @param  ReadAddr: Address from where data are to be read.
-  * @param  BlockSize: the SD card Data block size. The Block size should be 512.
-  * @retval SD_Error: SD Card Error code.
-  */
-SD_Error SD_ReadBlock(unsigned char *readbuff, unsigned int ReadAddr, unsigned short BlockSize) {
-  SD_Error errorstatus = SD_OK;
-#if defined (SD_POLLING_MODE)
-  unsigned int count = 0, *tempbuff = (unsigned int *)readbuff;
-#endif
-
-  TransferError = SD_OK;
-  TransferEnd = 0;
-  StopCondition = 0;
-
-  SDIO->DCTRL = 0x0;
-  set_read_led;
-
-  if (CardType == SDIO_HIGH_CAPACITY_SD_CARD) {
-    BlockSize = 512;
-    ReadAddr /= 512;
-  }
-
-  /* Set Block Size for Card */
-  SDIO_CmdInitStructure.Argument = (unsigned int) BlockSize;
-  SDIO_CmdInitStructure.CmdIndex = SD_CMD_SET_BLOCKLEN;
-  SDIO_CmdInitStructure.Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
-
-  errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
-
-  if (SD_OK != errorstatus) {
-    return(errorstatus);
-  }
-
-  SDIO_DataInitStructure.DataTimeOut = SD_DATATIMEOUT;
-  SDIO_DataInitStructure.DataLength = BlockSize;
-  SDIO_DataInitStructure.DataBlockSize = (unsigned int) 9 << 4;
-  SDIO_DataInitStructure.TransferDir = SDIO_TransferDir_ToSDIO;
-  SDIO_DataInitStructure.TransferMode = SDIO_TransferMode_Block;
-  SDIO_DataInitStructure.DPSM = SDIO_DPSM_Enable;
-  SDIO_DataConfig(&SDIO_DataInitStructure);
-
-  /*!< Send CMD17 READ_SINGLE_BLOCK */
-  SDIO_CmdInitStructure.Argument = (unsigned int)ReadAddr;
-  SDIO_CmdInitStructure.CmdIndex = SD_CMD_READ_SINGLE_BLOCK;
-  SDIO_CmdInitStructure.Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
-
-  errorstatus = CmdResp1Error(SD_CMD_READ_SINGLE_BLOCK);
-
-  if (errorstatus != SD_OK) {
-    return(errorstatus);
-  }
-
-#if defined (SD_POLLING_MODE)
-  /*!< In case of single block transfer, no need of stop transfer at all.*/
-  /*!< Polling mode */
-  while (!(SDIO->STA &(SDIO_FLAG_RXOVERR | SDIO_FLAG_DCRCFAIL | SDIO_FLAG_DTIMEOUT | SDIO_FLAG_DBCKEND | SDIO_FLAG_STBITERR))) {
-    if (SDIO_GetFlagStatus(SDIO_FLAG_RXFIFOHF) != RESET) {
-      for (count = 0; count < 8; count++) {
-        *(tempbuff + count) = SDIO_ReadData();
-      }
-      tempbuff += 8;
-    }
-  }
-
-  if (SDIO_GetFlagStatus(SDIO_FLAG_DTIMEOUT) != RESET) {
-    SDIO_ClearFlag(SDIO_FLAG_DTIMEOUT);
-    errorstatus = SD_DATA_TIMEOUT;
-    return(errorstatus);
-  } else if (SDIO_GetFlagStatus(SDIO_FLAG_DCRCFAIL) != RESET) {
-    SDIO_ClearFlag(SDIO_FLAG_DCRCFAIL);
-    errorstatus = SD_DATA_CRC_FAIL;
-    return(errorstatus);
-  } else if (SDIO_GetFlagStatus(SDIO_FLAG_RXOVERR) != RESET) {
-    SDIO_ClearFlag(SDIO_FLAG_RXOVERR);
-    errorstatus = SD_RX_OVERRUN;
-    return(errorstatus);
-  } else if (SDIO_GetFlagStatus(SDIO_FLAG_STBITERR) != RESET) {
-    SDIO_ClearFlag(SDIO_FLAG_STBITERR);
-    errorstatus = SD_START_BIT_ERR;
-    return(errorstatus);
-  }
-  count = SD_DATATIMEOUT;
-  while ((SDIO_GetFlagStatus(SDIO_FLAG_RXDAVL) != RESET) && (count > 0)) {
-    *tempbuff = SDIO_ReadData();
-    tempbuff++;
-    count--;
-  }
-
-  /*!< Clear all the static flags */
-  SDIO_ClearFlag(SDIO_STATIC_FLAGS);
-
-#elif defined (SD_DMA_MODE)
-    SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
-    SDIO_DMACmd(ENABLE);
-    SD_LowLevel_DMA_RxConfig((unsigned int *)readbuff, BlockSize);
-#endif
-
-  return(errorstatus);
-}
-
-/**
   * @brief  Allows to read blocks from a specified address  in a card.  The Data
   *         transfer can be managed by DMA mode or Polling mode.
   * @note   This operation should be followed by two functions to check if the
@@ -1223,123 +1073,6 @@ SD_Error SD_WaitReadOperation(void) {
   } else {
     return(errorstatus);
   }
-}
-
-/**
-  * @brief  Allows to write one block starting from a specified address in a card.
-  *         The Data transfer can be managed by DMA mode or Polling mode.
-  * @note   This operation should be followed by two functions to check if the
-  *         DMA Controller and SD Card status.
-  *          - SD_ReadWaitOperation(): this function insure that the DMA
-  *            controller has finished all data transfer.
-  *          - SD_GetStatus(): to check that the SD Card has finished the
-  *            data transfer and it is ready for data.
-  * @param  writebuff: pointer to the buffer that contain the data to be transferred.
-  * @param  WriteAddr: Address from where data are to be read.
-  * @param  BlockSize: the SD card Data block size. The Block size should be 512.
-  * @retval SD_Error: SD Card Error code.
-  */
-SD_Error SD_WriteBlock(unsigned char *writebuff, unsigned int WriteAddr, unsigned short BlockSize) {
-  SD_Error errorstatus = SD_OK;
-
-#if defined (SD_POLLING_MODE)
-  unsigned int bytestransferred = 0, count = 0, restwords = 0;
-  unsigned int *tempbuff = (unsigned int *)writebuff;
-#endif
-
-  TransferError = SD_OK;
-  TransferEnd = 0;
-  StopCondition = 0;
-
-  SDIO->DCTRL = 0x0;
-  set_write_led;
-
-  if (CardType == SDIO_HIGH_CAPACITY_SD_CARD) {
-    BlockSize = 512;
-    WriteAddr /= 512;
-  }
-
-  /* Set Block Size for Card */
-  SDIO_CmdInitStructure.Argument = (unsigned int) BlockSize;
-  SDIO_CmdInitStructure.CmdIndex = SD_CMD_SET_BLOCKLEN;
-  SDIO_CmdInitStructure.Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
-
-  errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
-
-  if (SD_OK != errorstatus) {
-    return(errorstatus);
-  }
-
-  /*!< Send CMD24 WRITE_SINGLE_BLOCK */
-  SDIO_CmdInitStructure.Argument = WriteAddr;
-  SDIO_CmdInitStructure.CmdIndex = SD_CMD_WRITE_SINGLE_BLOCK;
-  SDIO_CmdInitStructure.Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
-
-  errorstatus = CmdResp1Error(SD_CMD_WRITE_SINGLE_BLOCK);
-
-  if (errorstatus != SD_OK) {
-    return(errorstatus);
-  }
-
-  SDIO_DataInitStructure.DataTimeOut = SD_DATATIMEOUT;
-  SDIO_DataInitStructure.DataLength = BlockSize;
-  SDIO_DataInitStructure.DataBlockSize = (unsigned int) 9 << 4;
-  SDIO_DataInitStructure.TransferDir = SDIO_TransferDir_ToCard;
-  SDIO_DataInitStructure.TransferMode = SDIO_TransferMode_Block;
-  SDIO_DataInitStructure.DPSM = SDIO_DPSM_Enable;
-  SDIO_DataConfig(&SDIO_DataInitStructure);
-
-  /*!< In case of single data block transfer no need of stop command at all */
-#if defined (SD_POLLING_MODE)
-  while (!(SDIO->STA & (SDIO_FLAG_DBCKEND | SDIO_FLAG_TXUNDERR | SDIO_FLAG_DCRCFAIL | SDIO_FLAG_DTIMEOUT | SDIO_FLAG_STBITERR))) {
-    if (SDIO_GetFlagStatus(SDIO_FLAG_TXFIFOHE) != RESET) {
-      if ((512 - bytestransferred) < 32) {
-        restwords = ((512 - bytestransferred) % 4 == 0) ? ((512 - bytestransferred) / 4) : (( 512 -  bytestransferred) / 4 + 1);
-        for (count = 0; count < restwords; count++, tempbuff++, bytestransferred += 4) {
-          SDIO_WriteData(*tempbuff);
-        }
-      } else {
-        for (count = 0; count < 8; count++) {
-          SDIO_WriteData(*(tempbuff + count));
-        }
-        tempbuff += 8;
-        bytestransferred += 32;
-      }
-    }
-  }
-  if (SDIO_GetFlagStatus(SDIO_FLAG_DTIMEOUT) != RESET) {
-    SDIO_ClearFlag(SDIO_FLAG_DTIMEOUT);
-    errorstatus = SD_DATA_TIMEOUT;
-    return(errorstatus);
-  }
-  if (SDIO_GetFlagStatus(SDIO_FLAG_DCRCFAIL) != RESET) {
-    SDIO_ClearFlag(SDIO_FLAG_DCRCFAIL);
-    errorstatus = SD_DATA_CRC_FAIL;
-    return(errorstatus);
-  }
-  if (SDIO_GetFlagStatus(SDIO_FLAG_TXUNDERR) != RESET) {
-    SDIO_ClearFlag(SDIO_FLAG_TXUNDERR);
-    errorstatus = SD_TX_UNDERRUN;
-    return(errorstatus);
-  }
-  if (SDIO_GetFlagStatus(SDIO_FLAG_STBITERR) != RESET) {
-    SDIO_ClearFlag(SDIO_FLAG_STBITERR);
-    errorstatus = SD_START_BIT_ERR;
-    return(errorstatus);
-  }
-#elif defined (SD_DMA_MODE)
-  SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
-  SD_LowLevel_DMA_TxConfig((unsigned int *)writebuff, BlockSize);
-  SDIO_DMACmd(ENABLE);
-#endif
-
-  return(errorstatus);
 }
 
 /**

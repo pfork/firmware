@@ -12,7 +12,7 @@ void usb_init(void);
 void usb_start(void);
 
 void usb_putc(const unsigned char c);
-void usb_puts(const char *c);
+/* void usb_puts(const char *c); */
 void usb_hexstring(const unsigned int d, const unsigned int cr);
 void usb_string(const char *s);
 

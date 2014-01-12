@@ -37,12 +37,7 @@ typedef struct Salsa20Random_ {
   int           initialized;
   struct entropy_store* pool;
 } Salsa20Random;
-
-Salsa20Random stream = {
-    .rnd32_outleft = (size_t) 0U,
-    .initialized = 0,
-    .fresh = 0
-};
+Salsa20Random stream;
 
 void randombytes_salsa20_random_init(struct entropy_store* pool) {
     unsigned int dev_uuid[4];
@@ -54,6 +49,7 @@ void randombytes_salsa20_random_init(struct entropy_store* pool) {
     dev_uuid[2]=DESIG_UNIQUE_ID2;
     dev_uuid[3]=0;
     crypto_generichash(stream.s, crypto_generichash_KEYBYTES, (unsigned char *) dev_uuid, (uint64_t) 16, NULL, 0);
+    stream.rnd32_outleft = (size_t) 0U;
     stream.fresh = 0;
     stream.initialized = 1;
     //assert(stream.nonce != (uint64_t) 0U);
@@ -123,46 +119,6 @@ randombytes_salsa20_random_stir_if_needed(void)
     }
 }
 
-static uint32_t
-randombytes_salsa20_random_getword(void)
-{
-    uint32_t val;
-
-    COMPILER_ASSERT(sizeof stream.rnd32 >= sizeof val);
-    COMPILER_ASSERT(sizeof stream.rnd32 % sizeof val == (size_t) 0U);
-    if (stream.rnd32_outleft <= (size_t) 0U) {
-        randombytes_salsa20_random_stir_if_needed();
-        COMPILER_ASSERT(sizeof stream.nonce == crypto_stream_salsa20_NONCEBYTES);
-        crypto_stream_salsa20((unsigned char *) stream.rnd32,
-                              (unsigned long long) sizeof stream.rnd32,
-                              (unsigned char *) &stream.nonce,
-                              stream.key);
-        stream.nonce++;
-        stream.rnd32_outleft = sizeof stream.rnd32;
-    }
-    stream.rnd32_outleft -= sizeof val;
-    memcpy(&val, &stream.rnd32[stream.rnd32_outleft], sizeof val);
-
-    return val;
-}
-
-int
-randombytes_salsa20_random_close(void)
-{
-    int ret = -1;
-
-    stream.initialized = 0;
-    ret = 0;
-
-    return ret;
-}
-
-uint32_t
-randombytes_salsa20_random(void)
-{
-    return randombytes_salsa20_random_getword();
-}
-
 void
 randombytes_salsa20_random_buf(void * const buf, const size_t size)
 {
@@ -180,41 +136,3 @@ randombytes_salsa20_random_buf(void * const buf, const size_t size)
     stream.nonce++;
 }
 
-/*
- * randombytes_salsa20_random_uniform() derives from OpenBSD's arc4random_uniform()
- * Copyright (c) 2008, Damien Miller <djm@openbsd.org>
- */
-
-uint32_t
-randombytes_salsa20_random_uniform(const uint32_t upper_bound)
-{
-    uint32_t min;
-    uint32_t r;
-
-    if (upper_bound < 2) {
-        return 0;
-    }
-    min = (uint32_t) (-upper_bound % upper_bound);
-    for (;;) {
-        r = randombytes_salsa20_random();
-        if (r >= min) {
-            break;
-        }
-    }
-    return r % upper_bound;
-}
-
-const char *
-randombytes_salsa20_implementation_name(void)
-{
-    return "salsa20";
-}
-
-struct randombytes_implementation randombytes_salsa20_implementation = {
-    _SODIUM_C99(.implementation_name =) randombytes_salsa20_implementation_name,
-    _SODIUM_C99(.random =) randombytes_salsa20_random,
-    _SODIUM_C99(.stir =) randombytes_salsa20_random_stir,
-    _SODIUM_C99(.uniform =) randombytes_salsa20_random_uniform,
-    _SODIUM_C99(.buf =) randombytes_salsa20_random_buf,
-    _SODIUM_C99(.close =) randombytes_salsa20_random_close
-};

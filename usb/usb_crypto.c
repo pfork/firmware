@@ -128,18 +128,18 @@ void usb_putc(const unsigned char c) {
 * @param  s: string to output
 * @retval None
 */
-void usb_puts(const char *c) {
-  if(dual_usb_mode != CRYPTO) return;
-  char *p = (char*) c;
-  unsigned int i=0;
-  while(p[i]) {
-    for(;p[i] && i<64;i++);
-    if(i==0) break;
-    while (usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_CTRL_OUT, (void*) p, i) == 0) ;
-    p+=i;
-    i=0;
-  }
-}
+/* void usb_puts(const char *c) { */
+/*   if(dual_usb_mode != CRYPTO) return; */
+/*   char *p = (char*) c; */
+/*   unsigned int i=0; */
+/*   while(p[i]) { */
+/*     for(;p[i] && i<64;i++); */
+/*     if(i==0) break; */
+/*     while (usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_CTRL_OUT, (void*) p, i) == 0) ; */
+/*     p+=i; */
+/*     i=0; */
+/*   } */
+/* } */
 
 /**
 * @brief  usb_hexstring
@@ -172,7 +172,7 @@ void usb_hexstring(unsigned int d, unsigned int cr) {
 }
 
 /**
-* @brief  usb_puts
+* @brief  usb_string
 *         outputs a string to the usb debug endpoint
 * @param  s: string to output
 * @retval None
