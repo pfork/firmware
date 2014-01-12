@@ -7,7 +7,7 @@ AS=$(PREFIX)-as
 
 INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Icrypto/ -Iutils/ -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
 LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3_stm32f2.a
-CFLAGS = -mno-unaligned-access -g -Wall -Werror -O2 \
+CFLAGS = -mno-unaligned-access -g -Wall -Werror -Os \
 	-mfix-cortex-m3-ldrd -msoft-float -mthumb -Wno-strict-aliasing \
 	-fomit-frame-pointer -mcpu=cortex-m3 $(INCLUDES) -DSTM32F2 \
 	-fstack-protector --param=ssp-buffer-size=4
