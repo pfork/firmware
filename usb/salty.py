@@ -4,10 +4,8 @@ DEBUG = True
 
 if DEBUG:
     import os
-    #os.environ['PYUSB_DEBUG_LEVEL'] = 'debug'
-    #os.environ['PYUSB_DEBUG'] = 'debug'
-    os.environ['PYUSB_DEBUG_LEVEL'] = 'warning'
-    os.environ['PYUSB_DEBUG'] = 'warning'
+    os.environ['PYUSB_DEBUG_LEVEL'] = 'warning' # 'debug'
+    os.environ['PYUSB_DEBUG'] = 'warning' # 'debug'
     import time
 
 import usb.core
@@ -278,9 +276,10 @@ def test():
         rng(1<<22)
 
 init()
+test()
 
-import binascii, sys
-reset()
+#import binascii, sys
+#reset()
 #keyid1,pub1 = start_ecdh('test user 3')
 # print hexlify(start_ecdh('test user 1')
 # returned 
@@ -321,6 +320,5 @@ reset()
 # 1db5410eff8465dbd932d860668001cd5587f6dc9c6428e0a8034e05ad0bbf58
 # for both pbp and pitchfork
 
-sys.exit(0)
+#sys.exit(0)
 
-test()
