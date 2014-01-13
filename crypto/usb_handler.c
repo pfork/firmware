@@ -10,6 +10,7 @@
 #include <string.h>
 #include "led.h"
 #include "ecdho.h"
+#include "storage.h"
 
 extern usbd_device *usbd_dev;
 
@@ -24,15 +25,16 @@ unsigned char blocked = 0;
 unsigned char params[128];
 
 void reset(void) {
+  unsigned int i;
   modus = USB_CRYPTO_CMD_STOP;
   bufs[0].size = 0;
   bufs[1].size = 0;
   bufs[0].state = INPUT;
   bufs[1].state = INPUT;
   blocked = 0;
+  for (i=0;i<(sizeof(params)>>2);i++) ((unsigned int*) params)[i]=0;
   usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
 }
-
 unsigned int data_read(unsigned char* dst) {
   unsigned int len;
   set_read_led;
@@ -54,15 +56,12 @@ void usb_write(const unsigned char* src, const char len, unsigned int retries, u
 
 void encrypt_block(Buffer *buf) {
   int i, len, size = buf->size;
-  unsigned char key[crypto_secretbox_KEYBYTES];
-  // get key TODO
-  for(i=0;i<(crypto_secretbox_KEYBYTES>>2);i++) ((unsigned int*) key)[i]=0;
   // zero out beginning of plaintext as demanded by nacl
   for(i=0;i<(crypto_secretbox_ZEROBYTES>>2);i++) ((unsigned int*) buf->buf)[i]=0;
   // get nonce
   randombytes_salsa20_random_buf(outbuf, crypto_secretbox_NONCEBYTES);
-  // encrypt
-  crypto_secretbox(outbuf+crypto_secretbox_NONCEBYTES, buf->buf, size+crypto_secretbox_ZEROBYTES, outbuf, key);
+  // encrypt (key is stored in beginning of params)
+  crypto_secretbox(outbuf+crypto_secretbox_NONCEBYTES, buf->buf, size+crypto_secretbox_ZEROBYTES, outbuf, params);
   // move nonce over boxzerobytes - so it's
   // concated to the ciphertext for sending
   for(i=(crypto_secretbox_NONCEBYTES>>2)-1;i>=0;i--)
@@ -85,26 +84,21 @@ void decrypt_block(Buffer* buf) {
   int i, len;
   // substract nonce size from total size (40B)
   int size = buf->size - (crypto_secretbox_NONCEBYTES + crypto_secretbox_BOXZEROBYTES);
-  unsigned char key[crypto_secretbox_KEYBYTES];
   unsigned char nonce[crypto_secretbox_NONCEBYTES];
-  // get key TODO
-  for(i=0;i<(crypto_secretbox_KEYBYTES>>2);i++) ((unsigned int*) key)[i]=0;
   // get nonce from beginning of input buffer
   memcpy(nonce, buf->start, crypto_secretbox_NONCEBYTES);
-  //for(i=0;i<(crypto_secretbox_NONCEBYTES>>2);i++)
-  //  ((unsigned int*) nonce)[i] = ((unsigned int*) buf->start)[i];
   // zero out crypto_secretbox_BOXZEROBYTES preamble
   // overwriting tne end of the nonce
   for(i=((crypto_secretbox_NONCEBYTES-crypto_secretbox_BOXZEROBYTES)>>2);
       i<(crypto_secretbox_NONCEBYTES>>2);
       i++)
     ((unsigned int*) buf->start)[i]=0;
-  // decrypt
+  // decrypt (key is stored in beginning of params)
   if(-1 == crypto_secretbox_open(outbuf,  // m
                                  (buf->start) + (crypto_secretbox_NONCEBYTES - crypto_secretbox_BOXZEROBYTES), // c + preamble
                                  size+crypto_secretbox_ZEROBYTES,  // clen = len(plain)+2x(boxzerobytes)
                                  nonce, // n
-                                 key)) {
+                                 params)) {
     usb_write((unsigned char*) "err: corrupt", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
     reset();
     return;
@@ -122,11 +116,7 @@ void decrypt_block(Buffer* buf) {
   }
 }
 
-void hash_init(void) {
-  unsigned int i;
-  unsigned char k[crypto_generichash_KEYBYTES];
-  // get key TODO
-  for(i=0;i<(crypto_secretbox_KEYBYTES>>2);i++) ((unsigned int*) k)[i]=0;
+void hash_init(unsigned char* k) {
   crypto_generichash_init(&hash_state, k, crypto_generichash_KEYBYTES, 32);
 }
 
@@ -209,13 +199,13 @@ void handle_buf(void) {
     rng_handler(); // produce rng pkts
     return;
   } else if(modus == USB_CRYPTO_CMD_ECDH_START) {
-    ecdh_start_handler(); // produce rng pkts
+    ecdh_start_handler(); // generate a secret and a public
     return;
   } else if(modus == USB_CRYPTO_CMD_ECDH_RESPOND) {
-    ecdh_respond_handler(); // produce rng pkts
+    ecdh_respond_handler(); // respond to an ecdh request
     return;
   } else if(modus == USB_CRYPTO_CMD_ECDH_END) {
-    ecdh_end_handler(); // produce rng pkts
+    ecdh_end_handler(); // finish ecdh request
     return;
   }
 
@@ -236,6 +226,7 @@ void handle_buf(void) {
   set_write_led;
   // finally do the processing
   if(buf->size>0) ops[modus](buf);
+  // some final loose ends to tend to
   if(buf->state == CLOSED ) {
     if(modus == USB_CRYPTO_CMD_SIGN) sign_msg();
     else if(modus == USB_CRYPTO_CMD_VERIFY) verify_msg();
@@ -301,6 +292,28 @@ void handle_data(void) {
   }
 }
 
+unsigned char check_seed(unsigned int sptr) {
+  if (sptr == 0) {
+    usb_write((unsigned char*) "err: no key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+    return 0;
+  }
+  if (sptr == -1) {
+    usb_write((unsigned char*) "err: unavailable key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+    return 0;
+  }
+  return 1;
+}
+unsigned char peer_to_seed(unsigned char* dst, unsigned char* src, unsigned char len) {
+  if( len == 0 || len >= PEER_NAME_MAX) {
+    usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+    return 0;
+  }
+  unsigned int sptr = get_peer_seed(dst, src, len);
+  if(check_seed(sptr) == 0) return 0;
+  usb_write( ((unsigned char*) ((SeedRecord*) sptr)->keyid), STORAGE_ID_LEN, 32, USB_CRYPTO_EP_CTRL_OUT);
+  return 1;
+}
+
 void handle_ctl(void) {
   char buf[64];
   buf[0]=0;
@@ -321,26 +334,43 @@ void handle_ctl(void) {
     }
     switch(buf[0] & 15) {
       case USB_CRYPTO_CMD_ENCRYPT: {
+        if(peer_to_seed(params, (unsigned char*) buf+1, len-1)==0)
+          return;
         modus = USB_CRYPTO_CMD_ENCRYPT;
         break;
       }
       case USB_CRYPTO_CMD_DECRYPT: {
+        if(len!=STORAGE_ID_LEN+1) {
+          usb_write((unsigned char*) "err: no keyid", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+          return;
+        }
+        // keyid 2 seed
+        unsigned int sptr = get_seed(params, 0, (unsigned char*) buf+1);
+        if(check_seed(sptr) == 0) return;
         modus = USB_CRYPTO_CMD_DECRYPT;
         break;
       }
       case USB_CRYPTO_CMD_SIGN: {
-        hash_init();
+        unsigned char seed [crypto_generichash_KEYBYTES];
+        if(peer_to_seed(seed, (unsigned char*) buf+1, len-1)==0)
+          return;
+        hash_init(seed);
         modus = USB_CRYPTO_CMD_SIGN;
         break;
       }
       case USB_CRYPTO_CMD_VERIFY: {
-        if(len==crypto_generichash_BYTES+1) {
-          hash_init();
-          memcpy(params, buf+1, crypto_generichash_BYTES);
-          modus = USB_CRYPTO_CMD_VERIFY;
-        } else {
-          usb_write((unsigned char*) "err: no sig", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+        if(len!=crypto_generichash_BYTES+STORAGE_ID_LEN+1) {
+          usb_write((unsigned char*) "err: bad args", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+          return;
         }
+        // get seed via keyid
+        unsigned char seed[crypto_generichash_KEYBYTES];
+        if(check_seed(get_seed(seed,0,(unsigned char*) buf+1+crypto_generichash_BYTES)) == 0)
+          return;
+        hash_init(seed);
+        // copy signature for final verification
+        memcpy(params, buf+1, crypto_generichash_BYTES);
+        modus = USB_CRYPTO_CMD_VERIFY;
         break;
       }
       case USB_CRYPTO_CMD_RNG: {
