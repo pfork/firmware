@@ -274,7 +274,8 @@ void handle_data(void) {
   len = data_read(bufs[active_buf].start+bufs[active_buf].size);
   // adjust buffer size
   bufs[active_buf].size+=len;
-  if(len<64 && (modus!=USB_CRYPTO_CMD_DECRYPT || (len==40 && bufs[active_buf].size<BUF_SIZE+40) )) {
+  //if(len<64 && (modus!=USB_CRYPTO_CMD_DECRYPT || (len==40 && bufs[active_buf].size<BUF_SIZE+40) )) {
+  if(len<64) {
     // short buffer read finish off reading
     bufs[active_buf].state = CLOSED;
     toggle_buf();
