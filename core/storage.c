@@ -270,7 +270,7 @@ int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid) {
      == -1)
     return -1;
   memcpy(seed, plain+crypto_secretbox_ZEROBYTES,crypto_scalarmult_curve25519_BYTES);
-  return 0;
+  return (unsigned int) seedrec;
 }
 
 MapRecord* get_maprec(unsigned char* peerid) {
@@ -284,6 +284,12 @@ MapRecord* get_maprec(unsigned char* peerid) {
     curmaprec = (MapRecord*) find((unsigned int) maprec,PEERMAP);
   }
   return map;
+}
+
+int get_peer_seed(unsigned char *seed, unsigned char* peer, unsigned char len) {
+  unsigned char peerid[STORAGE_ID_LEN];
+  topeerid(peer, len, peerid);
+  return get_seed(seed, peerid, 0);
 }
 
 MapRecord* store_map(unsigned char* name, unsigned char len, unsigned char* peerid) {

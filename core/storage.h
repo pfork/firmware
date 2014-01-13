@@ -89,9 +89,11 @@ unsigned int find_last(unsigned int ptr, unsigned char type);
 
 unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
 int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid);
+int get_peer_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
 SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid);
 unsigned int del_seed(unsigned char* peerid, unsigned char* keyid);
 
+// reverse mapping of peerids
 MapRecord* store_map(unsigned char* name, unsigned char len, unsigned char* peerid);
 int get_peer(unsigned char* map, unsigned char* peerid);
 
