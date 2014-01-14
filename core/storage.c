@@ -20,10 +20,10 @@ void topeerid(unsigned char* peer,
                      (userdata->salt), USER_SALT_LEN);    // key
 }
 
-SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid) {
+SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid, unsigned int ptr) {
   SeedRecord *seedrec, *curseedrec, *seed = 0;
 
-  curseedrec = (SeedRecord*) find(0,type);
+  curseedrec = (SeedRecord*) find(ptr,type);
   while((unsigned int) curseedrec >= FLASH_BASE && (unsigned int) curseedrec < FLASH_BASE+FLASH_SECTOR_SIZE) {
     seedrec = curseedrec;
     if((peerid != 0 && sodium_memcmp(peerid,seedrec->peerid, STORAGE_ID_LEN) == 0) ||
@@ -101,7 +101,7 @@ unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char 
                      seed, crypto_secretbox_KEYBYTES);                   // key
 
   // skip storing if already existing record
-  if( (ptr = get_seedrec(SEED, 0, (unsigned char*) rec.keyid)) != 0 )
+  if( (ptr = get_seedrec(SEED, 0, (unsigned char*) rec.keyid, 0)) != 0 )
     return (unsigned int) ptr;
   // calculate nonce
   crypto_generichash(nonce, sizeof(nonce),                               // output
@@ -128,9 +128,9 @@ unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char 
 unsigned int del_seed(unsigned char* peerid, unsigned char* keyid) {
   DeletedSeed rec;
   unsigned int ptr;
-  if((ptr = (unsigned int) get_seedrec(SEED|0x80, peerid, keyid))!=0)
+  if((ptr = (unsigned int) get_seedrec(SEED|DELETED, peerid, keyid, 0))!=0)
     return ptr;
-  rec.type = SEED | 0x80;
+  rec.type = SEED | DELETED;
   memcpy(rec.peerid, peerid, STORAGE_ID_LEN);
   memcpy(rec.keyid, keyid, STORAGE_ID_LEN);
   return data_store((unsigned char*) &rec, sizeof(DeletedSeed));
@@ -140,7 +140,7 @@ unsigned int next_rec(unsigned int ptr) {
   switch(*((unsigned char*) ptr)) {
   case SEED:
     return ptr + sizeof(SeedRecord);
-  case (SEED | 0x80):
+  case (SEED | DELETED):
     return ptr + sizeof(DeletedSeed);
   case PEERMAP:
     return ptr + ((MapRecord*) ptr)->len;
@@ -248,7 +248,7 @@ int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid) {
   unsigned int i;
   unsigned char plain[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
 
-  SeedRecord* seedrec = get_seedrec(SEED, peerid, keyid);
+  SeedRecord* seedrec = get_seedrec(SEED, peerid, keyid, 0);
   UserRecord *userdata = get_userrec();
 
   if(seedrec == 0) return 0; // seed not found
