@@ -10,7 +10,8 @@ typedef enum {
   USERDATA,
   SEED,
   PEERMAP,
-  EMPTY = 0xff
+  DELETED = 0x80,
+  EMPTY   = 0xff
 } StorageType;
 
 #define DeletedEntry(ptr) (ptr->type & 0x80)
@@ -90,7 +91,7 @@ unsigned int find_last(unsigned int ptr, unsigned char type);
 unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
 int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid);
 int get_peer_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
-SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid);
+SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid, unsigned int ptr);
 unsigned int del_seed(unsigned char* peerid, unsigned char* keyid);
 
 // reverse mapping of peerids
