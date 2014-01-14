@@ -15,6 +15,7 @@ typedef enum {
   USB_CRYPTO_CMD_ECDH_START,
   USB_CRYPTO_CMD_ECDH_RESPOND,
   USB_CRYPTO_CMD_ECDH_END,
+  USB_CRYPTO_CMD_LIST_KEYS,
   USB_CRYPTO_CMD_RNG,
   USB_CRYPTO_CMD_STOP,
   USB_CRYPTO_CMD_STORAGE,
@@ -54,6 +55,7 @@ typedef struct {
 void handle_ctl(void);
 void handle_data(void);
 void handle_buf(void);
+void usb_write(const unsigned char* src, const char len, unsigned int retries, unsigned char ep);
 
 extern Buffer bufs[2];
 

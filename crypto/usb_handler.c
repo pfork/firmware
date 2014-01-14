@@ -11,6 +11,7 @@
 #include "led.h"
 #include "ecdho.h"
 #include "storage.h"
+#include "master.h"
 
 extern usbd_device *usbd_dev;
 
@@ -175,13 +176,112 @@ void ecdh_end_handler(void) {
   unsigned char peer[32];
   unsigned char keyid[16];
   ECDH_End_Params* args = (ECDH_End_Params*) params;
-  SeedRecord* seedptr = get_seedrec(SEED,0,args->keyid);
+  SeedRecord* seedptr = get_seedrec(SEED,0,args->keyid, 0);
   unsigned char peer_len = get_peer(peer, (unsigned char*) seedptr->peerid);
   if(seedptr > 0 && peer_len > 0)
     finish_ecdh(peer, peer_len, args->keyid, args->pub, keyid);
   // output keyid
   memcpy(outbuf,keyid,STORAGE_ID_LEN);
   usb_write(outbuf, STORAGE_ID_LEN, 0, USB_CRYPTO_EP_DATA_OUT);
+  reset();
+}
+
+void listkeys(void) {
+  extern unsigned char outbuf[crypto_secretbox_NONCEBYTES+crypto_secretbox_ZEROBYTES+BUF_SIZE];
+  unsigned int ptr = FLASH_BASE;
+  unsigned char *outptr = outbuf, *tptr, nlen;
+  unsigned char nonce[crypto_secretbox_NONCEBYTES];
+  unsigned char cipher[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
+  unsigned char plain[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
+  unsigned short deleted = 0, corrupt = 0, unknown = 0;
+  DeletedSeed* delrec;
+  UserRecord *userdata = get_userrec();
+
+  while(ptr < FLASH_BASE + FLASH_SECTOR_SIZE && *((unsigned char*)ptr) != EMPTY ) {
+    if(*((unsigned char*)ptr) != SEED) { // only seeds
+        goto endloop; // this seed has been deleted skip it.
+    }
+
+    // check if deleted?
+    delrec = (DeletedSeed*) get_seedrec(SEED | DELETED,
+                                        0,
+                                        (unsigned char*) (((SeedRecord*) ptr)->keyid),
+                                        ptr);
+    if(delrec!=0 &&
+       memcmp(delrec->peerid, ((SeedRecord*) ptr)->peerid, STORAGE_ID_LEN)==0) {
+      deleted++;
+      goto endloop; // this seed has been deleted skip it.
+    }
+
+    // try to unmask name
+    nlen = get_peer(outptr, (unsigned char*) ((SeedRecord*) ptr)->peerid);
+    if(nlen==0 || nlen >= PEER_NAME_MAX) {
+      // couldn't map peerid to name
+      // what to do? write "unresolvable name"
+      unknown++;
+      nlen=0;
+    }
+    outptr[nlen] = 0; //terminate it
+    nlen++;
+    // test if seed can be decrypted
+
+    // pad ciphertext with extra 16 bytes
+    memcpy(cipher+crypto_secretbox_BOXZEROBYTES,
+           ((SeedRecord*) ptr)->mac,
+           crypto_scalarmult_curve25519_BYTES+crypto_secretbox_MACBYTES);
+    memset(cipher, 0, crypto_secretbox_BOXZEROBYTES>>2);
+    // nonce
+    crypto_generichash(nonce, crypto_secretbox_NONCEBYTES,                  // output
+                       (unsigned char*) ((SeedRecord*) ptr)->peerid, STORAGE_ID_LEN<<1, // input
+                       (unsigned char*) userdata->salt, USER_SALT_LEN);      // key
+    // decrypt
+    if(crypto_secretbox_open(plain,                 // ciphertext output
+                             cipher,                // plaintext input
+                             crypto_scalarmult_curve25519_BYTES+crypto_secretbox_ZEROBYTES, // plain length
+                             nonce,                 // nonce
+                             get_master_key())      // key
+       == -1) {
+      // rewind name of corrupt seed
+      corrupt++;
+      goto endloop;
+    }
+    outptr+=nlen;
+    // copy keyid
+    memcpy(outptr, ((SeedRecord*) ptr)->keyid, STORAGE_ID_LEN);
+    outptr+=STORAGE_ID_LEN;
+
+  endloop:
+    if( (ptr = next_rec(ptr)) == -1) {
+      // invalid record type found, corrupt storage?
+      //return -2;
+      break;
+    }
+  }
+  if(outptr>outbuf) {
+    // write out stats
+    *((unsigned short*) outptr) = deleted;
+    outptr+=2;
+    *((unsigned short*) outptr) = corrupt;
+    outptr+=2;
+    *((unsigned short*) outptr) = unknown;
+    outptr+=2;
+    *((unsigned short*) outptr) = ptr - FLASH_BASE;
+    outptr+=2;
+    tptr=outbuf;
+    // write out outbuf
+    while(tptr+64<=outptr) {
+      usb_write(tptr, 64, 0, USB_CRYPTO_EP_DATA_OUT);
+      tptr+=64;
+    }
+    // write out last packet
+    if(tptr<outptr) {
+      // short
+      usb_write(tptr, outptr-tptr, 0, USB_CRYPTO_EP_DATA_OUT);
+    } else {
+      // zlp
+      usb_write(outptr, 0, 0, USB_CRYPTO_EP_DATA_OUT);
+    }
+  }
   reset();
 }
 
@@ -206,6 +306,9 @@ void handle_buf(void) {
     return;
   } else if(modus == USB_CRYPTO_CMD_ECDH_END) {
     ecdh_end_handler(); // finish ecdh request
+    return;
+  } else if(modus == USB_CRYPTO_CMD_LIST_KEYS) {
+    listkeys(); // list keys
     return;
   }
 
@@ -372,6 +475,10 @@ void handle_ctl(void) {
         // copy signature for final verification
         memcpy(params, buf+1, crypto_generichash_BYTES);
         modus = USB_CRYPTO_CMD_VERIFY;
+        break;
+      }
+      case USB_CRYPTO_CMD_LIST_KEYS: {
+        modus = USB_CRYPTO_CMD_LIST_KEYS;
         break;
       }
       case USB_CRYPTO_CMD_RNG: {
