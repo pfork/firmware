@@ -285,9 +285,6 @@ void listkeys(unsigned char *peerid) {
     if(tptr<outptr) {
       // short
       usb_write(tptr, outptr-tptr, 0, USB_CRYPTO_EP_DATA_OUT);
-    } else {
-      // zlp
-      usb_write(outptr, 0, 0, USB_CRYPTO_EP_DATA_OUT);
     }
   }
   reset();
