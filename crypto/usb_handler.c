@@ -186,7 +186,7 @@ void ecdh_end_handler(void) {
   reset();
 }
 
-void listkeys(void) {
+void listkeys(unsigned char *peerid) {
   extern unsigned char outbuf[crypto_secretbox_NONCEBYTES+crypto_secretbox_ZEROBYTES+BUF_SIZE];
   unsigned int ptr = FLASH_BASE;
   unsigned char *outptr = outbuf, *tptr, nlen;
@@ -200,6 +200,14 @@ void listkeys(void) {
   while(ptr < FLASH_BASE + FLASH_SECTOR_SIZE && *((unsigned char*)ptr) != EMPTY ) {
     if(*((unsigned char*)ptr) != SEED) { // only seeds
         goto endloop; // this seed has been deleted skip it.
+    }
+
+    if(peerid!=0 && // list only keys of user
+       memcmp((unsigned char*) (((SeedRecord*) ptr)->peerid),
+              peerid,
+              STORAGE_ID_LEN) != 0) {
+      // skip other peers
+      goto endloop;
     }
 
     // check if deleted?
@@ -308,7 +316,11 @@ void handle_buf(void) {
     ecdh_end_handler(); // finish ecdh request
     return;
   } else if(modus == USB_CRYPTO_CMD_LIST_KEYS) {
-    listkeys(); // list keys
+    if(params[0]==1) {
+      listkeys(params+1); // list keys
+    } else {
+      listkeys(0); // list keys
+    }
     return;
   }
 
@@ -478,6 +490,12 @@ void handle_ctl(void) {
         break;
       }
       case USB_CRYPTO_CMD_LIST_KEYS: {
+        if(len>1 && len<PEER_NAME_MAX) {
+          topeerid((unsigned char*) buf+1, len-1, params+1);
+          params[0] = 1;
+        } else {
+          params[0] = 0;
+        }
         modus = USB_CRYPTO_CMD_LIST_KEYS;
         break;
       }
