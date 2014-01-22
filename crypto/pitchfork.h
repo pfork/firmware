@@ -3,9 +3,12 @@
 
 #include <crypto_secretbox.h>
 #include <crypto_generichash.h>
+#include "crypto_scalarmult_curve25519.h"
 #include "storage.h"
 
 #define BUF_SIZE 32768
+#define outstart (outbuf+crypto_secretbox_BOXZEROBYTES)
+#define outstart32 (outbuf+crypto_secretbox_ZEROBYTES)
 
 typedef enum {
   USB_CRYPTO_CMD_ENCRYPT = 0,
@@ -52,11 +55,17 @@ typedef struct {
   unsigned char pub[crypto_scalarmult_curve25519_BYTES];
 } __attribute((packed)) ECDH_End_Params;
 
-void handle_ctl(void);
-void handle_data(void);
+void handle_ctl(usbd_device *usbd_dev, uint8_t ep);
+void handle_data(usbd_device *usbd_dev, uint8_t ep);
 void handle_buf(void);
-void usb_write(const unsigned char* src, const char len, unsigned int retries, unsigned char ep);
+void reset(void);
 
 extern Buffer bufs[2];
+extern CRYPTO_CMD modus;
+extern unsigned char params[128];
+extern crypto_generichash_state hash_state;
+extern unsigned char blocked;
+extern unsigned char outbuf[crypto_secretbox_NONCEBYTES+crypto_secretbox_ZEROBYTES+BUF_SIZE];
+extern unsigned char active_buf;
 
 #endif //crypto_handlers_h
