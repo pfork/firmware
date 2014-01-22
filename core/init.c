@@ -4,11 +4,13 @@
 #ifdef USE_UART2
 #  include "uart.h"
 #endif
-#  include "rng.h"
+#include "rng.h"
 #include "adc.h"
 #include "systimer.h"
 #include "irq.h"
+#ifdef HAVE_MSC
 #include "sd.h"
+#endif // HAVE_MSC
 #include "led.h"
 #include "keys.h"
 
@@ -28,7 +30,9 @@ void init(void) {
   sysctr = 0;
   systick_init();
   irq_init();
+#ifdef HAVE_MSC
   SD_Init();
+#endif // HAVE_MSC
   usb_init();
   keys_init();
 }

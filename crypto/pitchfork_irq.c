@@ -1,12 +1,9 @@
-#include "dual.h"
 #include "usb.h"
 #include "pitchfork.h"
 #include "stm32f.h"
 #include <utils.h>
 #include <string.h>
 #include "led.h"
-
-extern usbd_device *usbd_dev;
 
 /**
   * @brief  modus: state of PITCHFORK, of is USB_CRYPTO_CMD_STOP
