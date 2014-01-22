@@ -18,7 +18,6 @@ void OTG_FS_IRQHandler(void) {
   } else if(dual_usb_mode == DISK) {
     USBD_OTG_ISR_Handler(&USB_OTG_dev);
   }
-    usbd_poll(usbd_dev);
 }
 
 /**
