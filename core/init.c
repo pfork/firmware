@@ -1,10 +1,10 @@
-#include "usb_crypto.h"
+#include "usb.h"
 #include "stm32f.h"
 #include "clock.h"
 #ifdef USE_UART2
-#include "uart.h"
+#  include "uart.h"
 #endif
-#include "rng.h"
+#  include "rng.h"
 #include "adc.h"
 #include "systimer.h"
 #include "irq.h"
@@ -12,6 +12,11 @@
 #include "led.h"
 #include "keys.h"
 
+/**
+  * @brief  main initialization routine
+  * @param  None
+  * @retval None
+  */
 void init(void) {
   clock_init();
   led_init();
