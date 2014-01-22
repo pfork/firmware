@@ -10,6 +10,14 @@
 #include "master.h"
 #include <utils.h>
 
+/**
+  * @brief  topeerid: calculates peerid from peers name
+  *         a peerid can be used to get a key from the storage
+  * @param  peer: pointer to peers name
+  * @param  peer_len: length of peers name
+  * @param  peerid: pointer to buffer receiving peerid
+  * @retval None
+  */
 void topeerid(unsigned char* peer,
               unsigned char peer_len,
               unsigned char* peerid) {
@@ -17,9 +25,18 @@ void topeerid(unsigned char* peer,
   userdata = get_userrec();
   crypto_generichash(peerid, STORAGE_ID_LEN,              // output
                      peer, peer_len,                      // input
-                     (userdata->salt), USER_SALT_LEN);    // key
+                     (userdata!=0)?(userdata->salt):0,    // salt
+                     (userdata!=0)?USER_SALT_LEN:0);      // salt len
 }
 
+/**
+  * @brief  get_seedrec: returns a seedrecord matching the search parameters.
+  * @param  type: SEED or SEED|DELETED
+  * @param  peerid: pointer to peerid to search for or 0 (keyid overrides if specified)
+  * @param  keyid: pointer to keyid to search for or 0
+  * @param  ptr: pointer to starting record in storage or 0 if searching from start
+  * @retval pointer to found seed or 0
+  */
 SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid, unsigned int ptr) {
   SeedRecord *seedrec, *curseedrec, *seed = 0;
 
@@ -33,6 +50,13 @@ SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char
   return seed;
 }
 
+/**
+  * @brief  data_store: appends the record in the internal flash storage
+  * @param  data: pointer to buffer to store
+  * @param  len: length of record
+  * @param  ptr: pointer to starting record in storage or 0 if searching from start
+  * @retval pointer to stored record or -1|-2
+  */
 unsigned int data_store(unsigned char *data, unsigned int len) {
   unsigned int dst;
 
@@ -57,6 +81,16 @@ unsigned int data_store(unsigned char *data, unsigned int len) {
   return dst;
 }
 
+/**
+  * @brief  combine: concats two strings
+  * @param  a: pointer to 1st buffer
+  * @param  alen: length of 1st buffer
+  * @param  b: pointer to 2nd buffer
+  * @param  blen: length of 2nd buffer
+  * @param  dst: pointer to output buffer
+  * @param  dst_len: length of output buffer
+  * @retval length of result
+  */
 unsigned int combine(unsigned char* a, unsigned char alen, unsigned char* b, unsigned char blen, unsigned char* dst, unsigned char dst_len) {
   if(alen+blen+2>dst_len)
     return 0;
@@ -67,6 +101,13 @@ unsigned int combine(unsigned char* a, unsigned char alen, unsigned char* b, uns
   return alen+blen+2;
 }
 
+/**
+  * @brief  store_seed: stores a seed related to a peer
+  * @param  seed: pointer to seed
+  * @param  peer: pointer to peers name
+  * @param  len: length of peers name
+  * @retval pointer to stored seed or 0
+  */
 unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char len) {
   unsigned char intmp[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
   unsigned char outtmp[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
@@ -77,6 +118,7 @@ unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char 
   UserRecord *userdata;
 
   userdata = get_userrec();
+  if(userdata == 0) return 0; // userdata not found - todo test this, this fn had no 0 return before
 
   rec.type = SEED;
   // set peerid
@@ -125,6 +167,12 @@ unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char 
   return data_store((unsigned char*) &rec, sizeof(SeedRecord));
 }
 
+/**
+  * @brief  del_seed: deletes a seed by peerid or keyid
+  * @param  peerid: pointer to peerid
+  * @param  keyid: pointer to keyid
+  * @retval pointer to DeletedSeed
+  */
 unsigned int del_seed(unsigned char* peerid, unsigned char* keyid) {
   DeletedSeed rec;
   unsigned int ptr;
@@ -136,6 +184,11 @@ unsigned int del_seed(unsigned char* peerid, unsigned char* keyid) {
   return data_store((unsigned char*) &rec, sizeof(DeletedSeed));
 }
 
+/**
+  * @brief  next_rex: advances the record ptr base on the size of the current record
+  * @param  ptr: pointer to current record
+  * @retval pointer to next record or -1
+  */
 unsigned int next_rec(unsigned int ptr) {
   switch(*((unsigned char*) ptr)) {
   case SEED:
@@ -152,6 +205,12 @@ unsigned int next_rec(unsigned int ptr) {
   }
 }
 
+/**
+  * @brief  find_last: finds the last record of a given type
+  * @param  ptr: pointer to current record
+  * @param  type: record type to find.
+  * @retval pointer to last record or 0
+  */
 unsigned int find_last(unsigned int ptr, unsigned char type) {
   unsigned int last = 0;
   unsigned int cur = 0;
@@ -169,6 +228,12 @@ unsigned int find_last(unsigned int ptr, unsigned char type) {
   return last;
 }
 
+/**
+  * @brief  find: finds the next record matching type
+  * @param  ptr: pointer to current record
+  * @param  type: record type to find.
+  * @retval pointer to last record or -1 or -2
+  */
 unsigned int find(unsigned int ptr, unsigned char type) {
   if(ptr == 0) {
     ptr = FLASH_BASE;
@@ -198,6 +263,11 @@ unsigned int find(unsigned int ptr, unsigned char type) {
   return ptr;
 }
 
+/**
+  * @brief  get_userrec: finds the last userrec
+  * @param  None
+  * @retval pointer to last userrec or 0
+  */
 UserRecord* get_userrec(void) {
   UserRecord *userrec = (UserRecord*) find_last(0,USERDATA);
   if((unsigned int)userrec >= FLASH_BASE &&
@@ -208,12 +278,18 @@ UserRecord* get_userrec(void) {
   return 0;
 }
 
+/**
+  * @brief  init_user: creates a new user record with a fresh salt.
+  * @param  name: pointer to users name (max 32 char)
+  * @param  name_len: length of users name.
+  * @retval pointer to new userrec or 0
+  */
 UserRecord* init_user(unsigned char* name, unsigned char name_len) {
   // todo test this!!!
   unsigned char rec[255];
   UserRecord *userrec = get_userrec();
-  if((unsigned int)userrec != 0 &&
-     sodium_memcmp(userrec->name, name, name_len) == 0) {
+  if(userrec == 0) return 0; // userdata not found
+  if(memcmp(userrec->name, name, name_len) == 0) {
     // already existing user record returning it
     return userrec;
   }
@@ -232,7 +308,11 @@ UserRecord* init_user(unsigned char* name, unsigned char name_len) {
   return userrec;
 }
 
-// invoke with clear_flash(FLASH_SECTOR_ID)
+/**
+  * @brief  clear_flash: erases given sector
+  * @param  sector_id: id of sector to delete (e.g. FLASH_SECTOR00)
+  * @retval None
+  */
 void clear_flash(unsigned int sector_id) {
   disable_irqs();
   flash_unlock();
@@ -242,6 +322,13 @@ void clear_flash(unsigned int sector_id) {
   enable_irqs();
 }
 
+/**
+  * @brief  get_seed: returns pointer to seed for peerid or keyid
+  * @param  seed: ptr to buffer receiving the seed
+  * @param  peerid: pointer to buffer containing peerid
+  * @param  keyid: pointer to buffer containing keyid
+  * @retval pointer to seedrecord for found seed or 0.
+  */
 int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid) {
   unsigned char nonce[crypto_secretbox_NONCEBYTES];
   unsigned char cipher[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
@@ -252,6 +339,7 @@ int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid) {
   UserRecord *userdata = get_userrec();
 
   if(seedrec == 0) return 0; // seed not found
+  if(userdata == 0) return 0; // userdata not found
   // pad ciphertext with extra 16 bytes
   memcpy(cipher+crypto_secretbox_BOXZEROBYTES,
          seedrec->mac,
@@ -273,6 +361,11 @@ int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid) {
   return (unsigned int) seedrec;
 }
 
+/**
+  * @brief  get_maprec: returns pointer to peerid to name mapping record
+  * @param  peerid: pointer to buffer containing peerid
+  * @retval pointer to maprecord for found peerid or 0.
+  */
 MapRecord* get_maprec(unsigned char* peerid) {
   MapRecord *maprec, *curmaprec, *map = 0;
 
@@ -286,12 +379,26 @@ MapRecord* get_maprec(unsigned char* peerid) {
   return map;
 }
 
+/**
+  * @brief  get_peer_seed: returns seed for peer given by name.
+  * @param  seed: pointer to storage receiving found seed
+  * @param  peer: pointer to name of peer
+  * @param  len: length of peer name.
+  * @retval pointer to seedrecord for found seed or 0.
+  */
 int get_peer_seed(unsigned char *seed, unsigned char* peer, unsigned char len) {
   unsigned char peerid[STORAGE_ID_LEN];
   topeerid(peer, len, peerid);
   return get_seed(seed, peerid, 0);
 }
 
+/**
+  * @brief  store_map: stores a peerid to c(name) mapping
+  * @param  name: pointer to name of peer
+  * @param  len: length of peer name.
+  * @param  peerid: pointer to peerid
+  * @retval pointer to maprecord or 0
+  */
 MapRecord* store_map(unsigned char* name, unsigned char len, unsigned char* peerid) {
   MapRecord map, *maprec;
   unsigned char nonce[crypto_secretbox_NONCEBYTES];
@@ -304,6 +411,7 @@ MapRecord* store_map(unsigned char* name, unsigned char len, unsigned char* peer
     return maprec;
 
   userdata = get_userrec();
+  if(userdata == 0) return 0; // userdata not found
 
   map.type = PEERMAP;
   map.len = PEERMAP_HEADER_LEN + len;
@@ -329,6 +437,12 @@ MapRecord* store_map(unsigned char* name, unsigned char len, unsigned char* peer
   return (MapRecord*) data_store((unsigned char*) &map, PEERMAP_HEADER_LEN+len);
 }
 
+/**
+  * @brief  get_peer: reverses peerid into name
+  * @param  map: pointer to receiving 32B buf for name of peer
+  * @param  peerid: pointer to peerid
+  * @retval length of peers name
+  */
 int get_peer(unsigned char* map, unsigned char* peerid) {
   unsigned char nonce[crypto_secretbox_NONCEBYTES];
   unsigned char cipher[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
@@ -339,6 +453,7 @@ int get_peer(unsigned char* map, unsigned char* peerid) {
   UserRecord *userdata = get_userrec();
 
   if(maprec == 0) return 0; // seed not found
+  if(userdata == 0) return 0; // userdata not found
   // pad ciphertext with extra 16 bytes
   memcpy(cipher+crypto_secretbox_BOXZEROBYTES,
          maprec->mac,
