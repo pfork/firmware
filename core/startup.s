@@ -1,10 +1,9 @@
 /**
   ******************************************************************************
   * @file      startup.s
-  * @author  stf
   * @version V0.0.1
   * @date    06-December-2013
-  * @brief     STM32F2xx Devices vector table
+  * @brief     STM32F2xx NVIC
   *            This module performs:
   *                - Set the initial SP
   *                - Set the initial PC == Reset_Handler,
