@@ -2,6 +2,11 @@
 #include "led.h"
 #include "main.h"
 
+/**
+  * @brief  configuration for leds
+  * @param  None
+  * @retval None
+  */
 LED_CFG leds[4] = {
   { // status 1 for usb status
     .mode = 0,
@@ -16,7 +21,7 @@ LED_CFG leds[4] = {
     .mode = SOFTBLINK,
     .port = LED_BASE,
     .pin = GPIO_Pin_12,
-    .period = 3000,
+    .period = 300,
     .counter = 0,
     .fadedir = 5,
     .fadeidx = 3000,
