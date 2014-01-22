@@ -1,5 +1,21 @@
 #include "stm32f.h"
+/**
+* @brief  adc.c
+*
+*         this module implements the eris ADC, it misreads to maximize entropy.
+*
+*/
 
+/**
+* @brief  adc_init
+*
+*         configures ADC1 for sampling the internal temperature and
+*         vref sensors, to achieve maximum entropy it misconfigures
+*         the ADC timing
+*
+* @param  None
+* @retval None
+*/
 void adc_init ( void ) {
   //enable adc1
   MMIO32(RCC_APB2ENR) |= 1<<8;
@@ -22,6 +38,15 @@ void adc_init ( void ) {
   ADC_SQR1(ADC1) = 0; // only one entry
 }
 
+/**
+* @brief  read_chan
+*
+*         reads from given chan abusing it for reading the most
+*         inaccurate measurements possible
+*
+* @param  chan: channel to read
+* @retval sampled value
+*/
 unsigned short read_chan( unsigned char chan ) {
   unsigned int res = 0x800;
 
@@ -45,10 +70,26 @@ unsigned short read_chan( unsigned char chan ) {
   return res;
 }
 
+/**
+* @brief  read_temp
+*
+*         read cpu temperature, wrapper for read_chan
+*
+* @param  None
+* @retval sampled CPU temperature
+*/
 unsigned short read_temp( void ) {
   return read_chan(ADC_CHANNEL16);
 }
 
+/**
+* @brief  read_vref
+*
+*         read vref, wrapper for read_chan
+*
+* @param  None
+* @retval sampled CPU temperature
+*/
 unsigned short read_vref( void ) {
   return read_chan(ADC_CHANNEL17);
 }
