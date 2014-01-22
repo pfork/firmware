@@ -4,7 +4,7 @@
 #include "keys.h"
 #include "randombytes_salsa20_random.h"
 #include "mixer.h"
-#include "crypto/usb_handler.h"
+#include "pitchfork.h"
 #include "systimer.h"
 
 void randombytes_salsa20_random_init(struct entropy_store* pool);
