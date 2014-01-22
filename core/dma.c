@@ -1,12 +1,10 @@
-/**
-  * @brief  Deinitialize the DMAy Streamx registers to their default reset values.
-  * @param  stream: where y can be 1 or 2 to select the DMA and x can be 0
-  *         to 7 to select the DMA Stream.
-  * @retval None
-  */
-
 #include "stm32f.h"
 
+/**
+  * @brief  Deinitialize the DMAy Streamx registers to their default reset values.
+  * @param  stream: a pointer to the DMA_Stream_Regs struct representing the stream
+  * @retval None
+  */
 void DMA_DeInit(DMA_Stream_Regs* stream) {
   /* Disable the selected DMA Stream */
   stream->CR &= ~((unsigned int)DMA_SxCR_EN);
