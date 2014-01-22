@@ -21,7 +21,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include "stm32f.h"
-#include "dual.h"
 #include "main.h"
 #include "led.h"
 #include "usb.h"

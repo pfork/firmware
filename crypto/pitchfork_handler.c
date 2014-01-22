@@ -1,4 +1,3 @@
-#include "dual.h"
 #include "usb.h"
 #include "pitchfork.h"
 #include "stm32f.h"
