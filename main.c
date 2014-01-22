@@ -1,6 +1,16 @@
+/**
+  ************************************************************************************
+  * @file    main.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file contains the main init and then runs the mainloop
+  ************************************************************************************
+  */
+
 #ifdef HAVE_MSC
 #  include "dual.h"
-#else 
+#else
 #  include "usb.h"
 #endif // HAVE_MSC
 #include "init.h"

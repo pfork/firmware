@@ -1,3 +1,12 @@
+/**
+  ************************************************************************************
+  * @file    dma.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides DMA reset and supplementary functions
+  ************************************************************************************
+  */
 #include "stm32f.h"
 
 /**

@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    keys.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides reading and handling of buttons
+  ************************************************************************************
+  */
+
 #include "stm32f.h"
 #include "keys.h"
 #include "delay.h"

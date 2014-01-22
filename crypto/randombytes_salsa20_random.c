@@ -1,3 +1,14 @@
+/**
+  ************************************************************************************
+  * @file    randombytes_salsa20_random.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides basic randombytes implementation
+  *          to interface with nacl using the entropy mixer
+  ************************************************************************************
+  */
+
 #include <sys/types.h>
 #include <string.h>
 

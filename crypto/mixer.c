@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    mixer.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides the entropy mixer
+  ************************************************************************************
+  */
+
 #include "adc.h"
 #include "rng.h"
 #include "mixer.h"

@@ -1,3 +1,14 @@
+/**
+  ************************************************************************************
+  * @file    rng.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides initializers and supplementary
+  *          functions for the HW RNG
+  ************************************************************************************
+  */
+
 #include <sys/types.h>
 #include "stm32f.h"
 

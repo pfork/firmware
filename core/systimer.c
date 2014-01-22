@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    systimer.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides an initializer for the system timer.
+  ************************************************************************************
+  */
+
 #include "stm32f.h"
 
 volatile unsigned long long sysctr;

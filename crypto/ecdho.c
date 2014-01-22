@@ -1,3 +1,14 @@
+/**
+  ************************************************************************************
+  * @file    ecdho.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides the 3 functions for performing an
+  *          ecdh exchange using the internal storage
+  ************************************************************************************
+  */
+
 #include <string.h> //memcpy
 #include "randombytes_salsa20_random.h"
 #include "crypto_scalarmult_curve25519.h"

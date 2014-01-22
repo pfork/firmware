@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    memset.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides a memset implementation.
+  ************************************************************************************
+  */
+
 /*
 FUNCTION
 	<<memset>>---set an area of memory

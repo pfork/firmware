@@ -1,4 +1,14 @@
 /**
+  ************************************************************************************
+  * @file    delay.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides usec and msec delay functions.
+  ************************************************************************************
+  */
+
+/**
 * @brief  uDelay
 *         This function provides delay time in micro sec
 * @param  usec : Value of delay required in micro sec

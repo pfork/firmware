@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    irq.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides all the IRQ handlers and supplemenatary functions
+  ************************************************************************************
+  */
+
 #ifdef HAVE_MSC
 #   include "dual.h"
 #   include "sd.h"

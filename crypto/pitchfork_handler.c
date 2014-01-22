@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    pitchfork_handler.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides PITCHFORK ops in "userspace"
+  ************************************************************************************
+  */
+
 #include "usb.h"
 #include "pitchfork.h"
 #include "stm32f.h"

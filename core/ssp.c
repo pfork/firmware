@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    ssp.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides stack protector callbacks
+  ************************************************************************************
+  */
+
 #include "randombytes_salsa20_random.h"
 
 void * __stack_chk_guard = NULL;

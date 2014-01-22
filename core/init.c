@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    init.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides the main initialization function.
+  ************************************************************************************
+  */
+
 #include "usb.h"
 #include "stm32f.h"
 #include "clock.h"

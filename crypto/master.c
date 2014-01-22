@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    master.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides functions to return the master password
+  ************************************************************************************
+  */
+
 #include "crypto_secretbox.h"
 
 unsigned char* get_master_key(void) {

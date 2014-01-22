@@ -1,3 +1,13 @@
+/**
+  ************************************************************************************
+  * @file    led.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides functions and intializers for the leds
+  ************************************************************************************
+  */
+
 #include "stm32f.h"
 #include "led.h"
 #include "main.h"

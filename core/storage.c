@@ -1,3 +1,14 @@
+/**
+  ************************************************************************************
+  * @file    storage.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013
+  * @brief   This file provides all functions to handle the internal
+  *          flash ram as storage for keys and other data.
+  ************************************************************************************
+  */
+
 #include "storage.h"
 #include <string.h> //memcpy
 #include "libopencm3/stm32/flash.h"
