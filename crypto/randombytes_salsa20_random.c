@@ -1,16 +1,7 @@
 #include <sys/types.h>
-
-#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include <crypto_core_salsa20.h>
-#include <crypto_auth_hmacsha512256.h>
 #include <crypto_stream_salsa20.h>
 #include <randombytes.h>
 #include <randombytes_salsa20_random.h>
@@ -23,9 +14,8 @@
 
 #define STIRPERIOD 128
 #define SALSA20_RANDOM_BLOCK_SIZE crypto_core_salsa20_OUTPUTBYTES
-#define SHA512_BLOCK_SIZE 128U
-#define SHA512_MIN_PAD_SIZE (1U + 16U)
 #define COMPILER_ASSERT(X) (void) sizeof(char[(X) ? 1 : -1])
+#define HASHSIZE (crypto_stream_salsa20_KEYBYTES >> 1)
 
 typedef struct Salsa20Random_ {
   unsigned char key[crypto_stream_salsa20_KEYBYTES];
@@ -39,6 +29,12 @@ typedef struct Salsa20Random_ {
 } Salsa20Random;
 Salsa20Random stream;
 
+/**
+  * @brief  randombytes_salsa20_random_init: initializes the rng
+  *         by hashing the unique device id (96bits)
+  * @param  pool: pointer to the entropy_store
+  * @retval None
+  */
 void randombytes_salsa20_random_init(struct entropy_store* pool) {
     unsigned int dev_uuid[4];
     stream.nonce = sysctr;
@@ -55,7 +51,12 @@ void randombytes_salsa20_random_init(struct entropy_store* pool) {
     //assert(stream.nonce != (uint64_t) 0U);
 }
 
-#define HASHSIZE (crypto_stream_salsa20_KEYBYTES >> 1)
+/**
+  * @brief  randombytes_salsa20_random_stir: (re)seeds the rng from the entropy pool
+  *         ported from the linux rng
+  * @param  None
+  * @retval None
+  */
 void randombytes_salsa20_random_stir(void) {
   	int i;
    unsigned int w[HASHSIZE];
@@ -108,9 +109,12 @@ void randombytes_salsa20_random_stir(void) {
 	sodium_memzero(w, sizeof(w));
 }
 
-static void
-randombytes_salsa20_random_stir_if_needed(void)
-{
+/**
+  * @brief  randombytes_salsa20_random_stir_if_needed: check if reseed the rng
+  * @param  None
+  * @retval None
+  */
+static void randombytes_salsa20_random_stir_if_needed(void) {
     if (stream.fresh == 0) {
       randombytes_salsa20_random_stir();
       stream.fresh = STIRPERIOD;
@@ -119,9 +123,13 @@ randombytes_salsa20_random_stir_if_needed(void)
     }
 }
 
-void
-randombytes_salsa20_random_buf(void * const buf, const size_t size)
-{
+/**
+  * @brief  randombytes_salsa20_random_buf: fills buf with random bytes
+  * @param  buf: pointer to output buf
+  * @param  size: size of output buf
+  * @retval None
+  */
+void randombytes_salsa20_random_buf(void * const buf, const size_t size) {
   //int ret;
 
     randombytes_salsa20_random_stir_if_needed();
@@ -135,4 +143,3 @@ randombytes_salsa20_random_buf(void * const buf, const size_t size)
     //assert(ret == 0);
     stream.nonce++;
 }
-
