@@ -2,9 +2,19 @@
 #include "rng.h"
 #include "mixer.h"
 
+#define TEMP_COLLECT_ITER (8/5)*INPUT_POOL_WORDS*32 << 1 // measured entropy / byte = 5.7
+#define VREF_COLLECT_ITER (8/2)*INPUT_POOL_WORDS*32 << 1 // measured entropy / byte = 2.8
+#define RNG_COLLECT_ITER INPUT_POOL_WORDS << 1 // advertised 32 bit rng
+
 // ported from
 // https://github.com/torvalds/linux/blob/673fdfe3f0630b03f3854d0361b1232f2e5ef7fb/drivers/char/random.c
 
+/**
+  * @brief  rol32: rotate left 32bit
+  * @param  A: word to rotate
+  * @param  n: rotate n bits left
+  * @retval A rotated by n bits left
+  */
 static inline unsigned int rol32(unsigned int A, unsigned char n) {
   return ((A) << (n)) | ((A)>>(32-(n)));
 }
@@ -13,6 +23,14 @@ static unsigned int const twist_table[8] = {
 	0x00000000, 0x3b6e20c8, 0x76dc4190, 0x4db26158,
 	0xedb88320, 0xd6d6a3e8, 0x9b64c2b0, 0xa00ae278 };
 
+/**
+  * @brief  mix_pool_bytes: mixes n bytes into entropy pool.
+  *         ported from the late 2014 linux kernel
+  * @param  r: pointer to entropy store
+  * @param  in: pointer to input entropy
+  * @param  nbytes: length of input entropy
+  * @retval None
+  */
 void mix_pool_bytes(struct entropy_store *r, const void *in,
                     int nbytes) {
 	unsigned long i,tap1, tap2, tap3, tap4, tap5;
@@ -77,14 +95,13 @@ struct entropy_store* init_pool(void) {
   return &input_pool;
 }
 
-#define TEMP_COLLECT_ITER (8/6)*INPUT_POOL_WORDS*32 << 1 // measured entropy / byte = 5.7
-#define VREF_COLLECT_ITER (8/3)*INPUT_POOL_WORDS*32 << 1 // measured entropy / byte = 2.8
-#define RNG_COLLECT_ITER INPUT_POOL_WORDS << 1 // advertised 32 bit rng
-
-//#define TEMP_COLLECT_ITER 1
-//#define VREF_COLLECT_ITER 1
-//#define RNG_COLLECT_ITER 1
-
+/**
+  * @brief  seed_pool: seeds the entropy pool the cpu temp, vref and rng
+  *         all sources are read until INPUT_POOL_WORDS bytes
+  *         of entropy are gathered from each.
+  * @param  None
+  * @retval None
+  */
 void seed_pool(void) {
   unsigned int i;
   unsigned short val16;
@@ -102,19 +119,3 @@ void seed_pool(void) {
     mix_pool_bytes(&input_pool, (const void *) &val32, 4);
   }
 }
-
-unsigned int get_entropy( const size_t size, unsigned char* buf) {
-  //unsigned int ra;
-  unsigned int cnt = 0;
-  /* if (size - cnt >= 4) { */
-  /*   PUT32((unsigned int) buf+cnt, ra); */
-  /*   cnt+=4; */
-  /*   continue; */
-  /* } */
-  /* unsigned int s=0; */
-  /* while(cnt<size) { */
-  /*   *(buf+cnt++)=*(((unsigned char*) &ra)+s++); */
-  /* } */
-  return cnt;
-}
-//-------------------------------------------------------------------
