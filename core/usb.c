@@ -126,6 +126,7 @@ void usb_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 
 /**
   * @brief  usb set config callback as per libopencm3
+  *         This needs to be called to activate PITCHFORK usb mode.
   * @param  None
   * @retval None
   */
@@ -179,7 +180,7 @@ void usb_write(const unsigned char* src, const char len, unsigned int retries, u
   * @param  dst: receiving buffer (64bytes)
   * @retval lenght of bytes received in dst
   */
-unsigned int data_read(unsigned char* dst) {
+unsigned int usb_read(unsigned char* dst) {
   unsigned int len;
   set_read_led;
   len = usbd_ep_read_packet(usbd_dev, USB_CRYPTO_EP_DATA_IN, dst, 64);

@@ -113,7 +113,7 @@ void handle_data(usbd_device *usbd_dev, uint8_t ep) {
   unsigned char tmpbuf[64];
   if(modus>USB_CRYPTO_CMD_VERIFY) {
     // we are not in any modus that needs a buffer
-    len = data_read(tmpbuf); // sink it
+    len = usb_read(tmpbuf); // sink it
     // todo overwrite this so attacker cannot get reliably data written to stack?
     usb_write((unsigned char*) "err: no op", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     return;
@@ -127,7 +127,7 @@ void handle_data(usbd_device *usbd_dev, uint8_t ep) {
     // or read into the fresh buffer
   }
   // read into buffer
-  len = data_read(bufs[active_buf].start+bufs[active_buf].size);
+  len = usb_read(bufs[active_buf].start+bufs[active_buf].size);
   // adjust buffer size
   bufs[active_buf].size+=len;
   if(len<64 && (modus!=USB_CRYPTO_CMD_DECRYPT || bufs[active_buf].size!=BUF_SIZE+40 )) {

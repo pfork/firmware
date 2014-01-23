@@ -13,7 +13,7 @@ extern usbd_device *usbd_dev;
 void usb_init(void);
 void usb_start(void);
 void usb_write(const unsigned char* src, const char len, unsigned int retries, unsigned char ep);
-unsigned int data_read(unsigned char* dst);
+unsigned int usb_read(unsigned char* dst);
 
 void OTG_FS_IRQHandler(void);
 
