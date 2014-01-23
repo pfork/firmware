@@ -1,3 +1,11 @@
+/**
+  ************************************************************************************
+  * @file    pitchfork.h
+  * @author  stf
+  * @version V0.0.1
+  * @date    01-January-2014
+  ************************************************************************************
+  */
 #ifndef crypto_handlers_h
 #define crypto_handlers_h
 
@@ -10,6 +18,9 @@
 #define outstart (outbuf+crypto_secretbox_BOXZEROBYTES)
 #define outstart32 (outbuf+crypto_secretbox_ZEROBYTES)
 
+/**
+  * @brief  CRYPTO_CMD: enum for all PITCHFORK USB cmd byte
+  */
 typedef enum {
   USB_CRYPTO_CMD_ENCRYPT = 0,
   USB_CRYPTO_CMD_DECRYPT,
@@ -24,32 +35,51 @@ typedef enum {
   USB_CRYPTO_CMD_STORAGE,
 } CRYPTO_CMD;
 
+/**
+  * @brief  Buffer_State: USB buffer state
+  */
 typedef enum {
-  INPUT,
-  OUTPUT,
-  CLOSED
+  INPUT,      // buffer is ready to accept
+  OUTPUT,     // buffer is awaiting output processing
+  CLOSED      // buffer is the final one.
 } Buffer_State;
 
+/**
+  * @brief  Buffer: USB read buffer for double buffering
+  */
 typedef struct {
-  Buffer_State state;
-  int size;
-  unsigned char buf[BUF_SIZE+crypto_secretbox_ZEROBYTES+64]; // extra crypto_secretbox_ZEROBYTES (32) for encryption
-                                                             // but decryption needs 40 (nonce+mac) - since this is read
-                                                             // it is padded to maxpacketsize so we can handle meh.
-  unsigned char* start;
+  Buffer_State state;                                        /* buffer state (i/o/c) */
+  int size;                                                  /* size of buffer */
+  unsigned char buf[BUF_SIZE+crypto_secretbox_ZEROBYTES+64]; /* extra crypto_secretbox_ZEROBYTES (32) for encryption
+                                                              * but decryption needs 40 (nonce+mac) - since this is read
+                                                              * it is padded to maxpacketsize so we can handle meh.
+                                                              */
+  unsigned char* start;                                      /* ptr to start of unused space in buffer */
 } Buffer;
 
+/**
+  * @brief ECDH_Start_Params: struct for accessing params passed from
+  *        irq to handler in global params buffer
+  */
 typedef struct {
   unsigned char len;
   unsigned char name[32];
 } __attribute((packed)) ECDH_Start_Params;
 
+/**
+  * @brief ECDH_Response_Params: struct for accessing params passed from
+  *        irq to handler in global params buffer
+  */
 typedef struct {
   unsigned char len;
   unsigned char pub[crypto_scalarmult_curve25519_BYTES];
   unsigned char name[32];
 } __attribute((packed)) ECDH_Response_Params;
 
+/**
+  * @brief ECDH_End_Params: struct for accessing params passed from
+  *        irq to handler in global params buffer
+  */
 typedef struct {
   unsigned char keyid[STORAGE_ID_LEN];
   unsigned char pub[crypto_scalarmult_curve25519_BYTES];

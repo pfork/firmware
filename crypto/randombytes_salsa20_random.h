@@ -1,3 +1,11 @@
+/**
+  ************************************************************************************
+  * @file    randombytes_salsa20_random.h
+  * @author  stf
+  * @version V0.0.1
+  * @date    01-January-2014
+  ************************************************************************************
+  */
 
 #ifndef randombytes_salsa20_random_H
 #define randombytes_salsa20_random_H
