@@ -16,7 +16,7 @@
 #include "led.h"
 
 /**
-  * @brief  modus: state of PITCHFORK, of is USB_CRYPTO_CMD_STOP
+  * @brief  modus: state of PITCHFORK, off is USB_CRYPTO_CMD_STOP
   */
 CRYPTO_CMD modus=USB_CRYPTO_CMD_STOP;
 /**
