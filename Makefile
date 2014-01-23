@@ -26,6 +26,7 @@ objs = utils/utils.o main.o core/rng.o core/adc.o core/ssp.o \
 	crypto/pitchfork_handler.o
 
 all : main.bin
+full: clean main.bin doc tags
 
 upload: main.bin
 	dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D main.bin
@@ -34,7 +35,12 @@ main.bin : memmap $(objs)
 	$(CC) $(LDFLAGS) -o main.elf $(objs) $(LIBS)
 	$(OD) -Dl main.elf > main.list
 	$(OC) main.elf main.bin -O binary
-	#gtags
+
+tags:
+	gtags
+
+doc:
+	doxygen doc/doxygen.cfg
 
 clean:
 	rm -f *.bin
