@@ -35,8 +35,12 @@ unsigned int ASM_DELAY ( unsigned int );
 #define LOBYTE(x)  ((unsigned char)(x & 0x00FF))
 #define HIBYTE(x)  ((unsigned char)((x & 0xFF00) >>8))
 
-#define  MIN(a, b)      (((a) < (b)) ? (a) : (b))
-#define  MAX(a, b)      (((a) > (b)) ? (a) : (b))
+#ifndef MIN
+#   define  MIN(a, b)      (((a) < (b)) ? (a) : (b))
+#endif
+#ifndef MAX
+#   define  MAX(a, b)      (((a) > (b)) ? (a) : (b))
+#endif
 
 #define irq_enable(irqn) NVIC_ISER(irqn / 32) |= (1 << (irqn % 32))
 #define irq_disable(irqn) NVIC_ICER(irqn / 32) |= (1 << (irqn % 32))
