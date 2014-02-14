@@ -47,6 +47,9 @@ clean:
 	rm -f $(objs)
 	rm -f *.elf
 	rm -f *.list
-	#rm -f GPATH GRTAGS GSYMS GTAGS
 
-.PHONY: clean upload
+clean-all: clean
+	rm -rf doc/latex doc/html
+	rm -f GPATH GRTAGS GSYMS GTAGS
+
+.PHONY: clean clean-all upload full doc tags
