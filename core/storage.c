@@ -347,10 +347,11 @@ int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid) {
   unsigned char plain[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
 
   SeedRecord* seedrec = get_seedrec(SEED, peerid, keyid, 0);
-  UserRecord *userdata = get_userrec();
-
   if(seedrec == 0) return 0; // seed not found
+
+  UserRecord *userdata = get_userrec();
   if(userdata == 0) return 0; // userdata not found
+
   // pad ciphertext with extra 16 bytes
   memcpy(cipher+crypto_secretbox_BOXZEROBYTES,
          seedrec->mac,
