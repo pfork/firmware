@@ -346,9 +346,9 @@ void (*ops[])(Buffer* buf) = {
 
 /**
   * @brief  handle_buf: dispatches PITCHFORK operations
+  *         and manages data buffer
   *         this function should be called from the
   *         mainloop when in PITCHFORK mode
-  *         and manages data buffer
   * @param  None
   * @retval None
   */
