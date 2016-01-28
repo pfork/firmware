@@ -58,13 +58,10 @@ unsigned char prevmask = 0;
 unsigned char key_handler(void) {
   unsigned char keymask = 0;
   unsigned char res;
-  if(key_pressed(JOYSTICK_0) == 1)     keymask = 1;
-  if(key_pressed(JOYSTICK_1) == 1)     keymask |= 1 << 1;
-  if(key_pressed(JOYSTICK_2) == 1)     keymask |= 1 << 2;
-  if(key_pressed(JOYSTICK_3) == 1)     keymask |= 1 << 3;
-  if(key_pressed(JOYSTICK_PRESS) == 1) keymask |= 1 << 4;
-  if(key_pressed(USER_KEY) == 1)       keymask |= 1 << 5;
-  if(key_pressed(WAKEUP_KEY) == 1)     keymask |= 1 << 6;
+  if(key_pressed(BTN_0) == 1)     keymask = 1;
+  if(key_pressed(BTN_1) == 1)     keymask |= 1 << 1;
+  if(key_pressed(BTN_2) == 1)     keymask |= 1 << 2;
+  if(key_pressed(BTN_3) == 1)     keymask |= 1 << 3;
   //res =  prevmask ^ keymask; /* detect changes in key states */
   res = (prevmask ^ keymask) & ((~keymask) & prevmask); /* detect on key releases */
   prevmask=keymask;
@@ -80,11 +77,8 @@ unsigned char key_handler(void) {
 void keys_init(void) {
   MMIO32(RCC_AHB1ENR) |= (KEYBOARD_CLK);
 
-  enable_key(JOYSTICK_0_PORT,JOYSTICK_0_PINNO);
-  enable_key(JOYSTICK_1_PORT,JOYSTICK_1_PINNO);
-  enable_key(JOYSTICK_2_PORT,JOYSTICK_2_PINNO);
-  enable_key(JOYSTICK_3_PORT,JOYSTICK_3_PINNO);
-  enable_key(JOYSTICK_PRESS_PORT,JOYSTICK_PRESS_PINNO);
-  enable_key(USER_PORT,USER_KEY_PINNO);
-  enable_key(WAKEUP_PORT,WAKEUP_KEY_PINNO);
+  enable_key(BTN_0_PORT,BTN_0_PINNO);
+  enable_key(BTN_1_PORT,BTN_1_PINNO);
+  enable_key(BTN_2_PORT,BTN_2_PINNO);
+  enable_key(BTN_3_PORT,BTN_3_PINNO);
 }
