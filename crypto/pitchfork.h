@@ -9,6 +9,7 @@
 #ifndef crypto_handlers_h
 #define crypto_handlers_h
 
+#include "usb.h"
 #include <crypto_secretbox.h>
 #include <crypto_generichash.h>
 #include "crypto_scalarmult_curve25519.h"
