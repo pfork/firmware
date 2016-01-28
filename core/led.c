@@ -79,7 +79,7 @@ void led_init(void) {
   //                 (GPIO_OType_PP << 13) |
   //                 (GPIO_OType_PP << 12));
   greg->PUPDR |= ((GPIO_PuPd_UP << (15 << 1)) |
-                 (GPIO_PuPd_UP << (14 << 1)) |
+                  (GPIO_PuPd_UP << (14 << 1)) |
                   (GPIO_PuPd_UP << (13 << 1)) |
                   (GPIO_PuPd_UP << (12 << 1)));
   greg->OSPEEDR |= ((GPIO_Speed_100MHz << (15 << 1)) |
