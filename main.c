@@ -40,14 +40,14 @@ int main ( void ) {
 #ifdef HAVE_MSC
     if(dual_usb_mode == CRYPTO) handle_buf();
     kmask = key_handler();
-    if(kmask & (1<<6)) {
+    if(kmask & (1<<0)) {
       switch(dual_usb_mode) {
       case CRYPTO: { storage_mode(); break; }
       case DISK: { crypto_mode(); break; }
       }
     }
 #endif // HAVE_MSC
-    led_handler();
+    //led_handler(); // we have no leds on the pitchfork
     if(!(sysctr & 1023)) { // 1/1000 chance ;)
       randombytes_salsa20_random_stir();
     }
