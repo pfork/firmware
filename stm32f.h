@@ -75,6 +75,7 @@ typedef enum {RESET = 0, SET = !RESET} FlagStatus, ITStatus;
 #define RCC_CFGR  (RCCBASE+0x08)
 #define RCC_AHB1ENR (RCCBASE+0x30)
 #define RCC_AHB2ENR (RCCBASE+0x34)
+#define RCC_AHB3ENR (RCCBASE+0x38)
 #define RCC_APB1ENR (RCCBASE+0x40)
 #define RCC_APB2ENR (RCCBASE+0x44)
 
@@ -95,6 +96,7 @@ typedef enum {RESET = 0, SET = !RESET} FlagStatus, ITStatus;
 #define RCC_AHB1Periph_DMA2              ((unsigned int)0x00400000)
 #define RCC_AHB2ENR_OTGFSEN              ((unsigned int)(1<<7))
 #define RCC_APB2ENR_SYSCFG               ((unsigned int)(1<<14))
+#define RCC_AHB3Periph_FSMC              ((unsigned int)0x00000001)
 
 typedef struct {
   volatile unsigned int CR;            /*!< RCC clock control register,                                  Addr offset: 0x00 */
@@ -1059,6 +1061,11 @@ typedef struct {
 #define SPI_FirstBit_MSB                ((unsigned short)0x0000)
 #define SPI_FirstBit_LSB                ((unsigned short)0x0080)
 
+#define SPI_SSOE                        ((unsigned short) 1<<2)
+#define SPI_ERRIE                       ((unsigned short) 1<<5)
+#define SPI_RXNEIE                      ((unsigned short) 1<<6)
+#define SPI_TXEIE                       ((unsigned short) 1<<7)
+
 #define SPI_I2S_DMAReq_Tx               ((unsigned short)0x0002)
 #define SPI_I2S_DMAReq_Rx               ((unsigned short)0x0001)
 
@@ -1348,5 +1355,60 @@ typedef struct {
 
 /******************  Bit definition for SDIO_FIFO register  *******************/
 #define  SDIO_FIFO_FIFODATA                  ((unsigned int)0xFFFFFFFF)        /*!<Receive and transmit FIFO data */
+
+/***********************  fsmc stuff **************************************/
+#define FSMC_Bank1_NORSRAM1                             ((unsigned int)0x00000000)
+#define FSMC_Bank1_NORSRAM2                             ((unsigned int)0x00000002)
+#define FSMC_Bank1_NORSRAM3                             ((unsigned int)0x00000004)
+#define FSMC_Bank1_NORSRAM4                             ((unsigned int)0x00000006)
+#define FSMC_Bank2_NAND                                 ((unsigned int)0x00000010)
+#define FSMC_Bank3_NAND                                 ((unsigned int)0x00000100)
+#define FSMC_Bank4_PCCARD                               ((unsigned int)0x00001000)
+
+#define FSMC_DataAddressMux_Disable                     ((unsigned int)0x00000000)
+#define FSMC_DataAddressMux_Enable                      ((unsigned int)0x00000002)
+#define FSMC_MemoryType_SRAM                            ((unsigned int)0x00000000)
+#define FSMC_MemoryType_PSRAM                           ((unsigned int)0x00000004)
+#define FSMC_MemoryType_NOR                             ((unsigned int)0x00000008)
+#define FSMC_MemoryDataWidth_8b                         ((unsigned int)0x00000000)
+#define FSMC_MemoryDataWidth_16b                        ((unsigned int)0x00000010)
+#define FSMC_BurstAccessMode_Disable                    ((unsigned int)0x00000000)
+#define FSMC_BurstAccessMode_Enable                     ((unsigned int)0x00000100)
+#define FSMC_WaitSignalPolarity_Low                     ((unsigned int)0x00000000)
+#define FSMC_WaitSignalPolarity_High                    ((unsigned int)0x00000200)
+#define FSMC_WrapMode_Disable                           ((unsigned int)0x00000000)
+#define FSMC_WrapMode_Enable                            ((unsigned int)0x00000400)
+#define FSMC_WaitSignalActive_BeforeWaitState           ((unsigned int)0x00000000)
+#define FSMC_WaitSignalActive_DuringWaitState           ((unsigned int)0x00000800)
+#define FSMC_WriteOperation_Disable                     ((unsigned int)0x00000000)
+#define FSMC_WriteOperation_Enable                      ((unsigned int)0x00001000)
+#define FSMC_WaitSignal_Disable                         ((unsigned int)0x00000000)
+#define FSMC_WaitSignal_Enable                          ((unsigned int)0x00002000)
+#define FSMC_ExtendedMode_Disable                       ((unsigned int)0x00000000)
+#define FSMC_ExtendedMode_Enable                        ((unsigned int)0x00004000)
+#define FSMC_WriteBurst_Disable                         ((unsigned int)0x00000000)
+#define FSMC_WriteBurst_Enable                          ((unsigned int)0x00080000)
+
+#define FSMC_AccessMode_A                               ((unsigned int)0x00000000)
+#define FSMC_AccessMode_B                               ((unsigned int)0x10000000) 
+#define FSMC_AccessMode_C                               ((unsigned int)0x20000000)
+#define FSMC_AccessMode_D                               ((unsigned int)0x30000000)
+
+#define FSMC_R_BASE                                     ((unsigned int)0xA0000000) /*!< FSMC registers base address */
+#define FSMC_BCR1                                       MMIO32((unsigned int) FSMC_R_BASE + 0x0)
+#define FSMC_BTR1                                       MMIO32((unsigned int) FSMC_R_BASE + 0x4)
+#define FSMC_BWTR1                                      MMIO32((unsigned int) FSMC_R_BASE + 0x104)
+#define FSMC_BCR2                                       MMIO32((unsigned int) FSMC_R_BASE + 0x8)
+#define FSMC_BTR2                                       MMIO32((unsigned int) FSMC_R_BASE + 0xC)
+#define FSMC_BWTR2                                      MMIO32((unsigned int) FSMC_R_BASE + 0x10C)
+#define FSMC_BCR3                                       MMIO32((unsigned int) FSMC_R_BASE + 0x10)
+#define FSMC_BTR3                                       MMIO32((unsigned int) FSMC_R_BASE + 0x14)
+#define FSMC_BWTR3                                      MMIO32((unsigned int) FSMC_R_BASE + 0x114)
+#define FSMC_BCR4                                       MMIO32((unsigned int) FSMC_R_BASE + 0x18)
+#define FSMC_BTR4                                       MMIO32((unsigned int) FSMC_R_BASE + 0x1c)
+#define FSMC_BWTR4                                      MMIO32((unsigned int) FSMC_R_BASE + 0x11c)
+
+#define BCR_MBKEN_Set                       ((unsigned int)0x00000001)
+#define BCR_MBKEN_Reset                     ((unsigned int)0x000FFFFE)
 
 #endif
