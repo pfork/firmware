@@ -1,4 +1,4 @@
-PREFIX = /home/stef/tasks/cdong/stm32/gcc-arm-none-eabi-4_7-2013q3/bin/arm-none-eabi
+PREFIX = /home/stef/tasks/pitchfork/gcc-arm-none-eabi-4_7-2013q3/bin/arm-none-eabi
 CC=$(PREFIX)-gcc
 LD=$(PREFIX)-ld
 OC=$(PREFIX)-objcopy
@@ -42,6 +42,10 @@ tags:
 doc:
 	doxygen doc/doxygen.cfg
 
+main.check:
+	cppcheck --enable=all $(objs:.o=.c) $(INCLUDES) 2>main.check
+	flawfinder --quiet $(objs:.o=.c) >>main.check
+
 clean:
 	rm -f *.bin
 	rm -f $(objs)
@@ -52,4 +56,4 @@ clean-all: clean
 	rm -rf doc/latex doc/html
 	rm -f GPATH GRTAGS GSYMS GTAGS
 
-.PHONY: clean clean-all upload full doc tags
+.PHONY: clean clean-all upload full doc tags static_check
