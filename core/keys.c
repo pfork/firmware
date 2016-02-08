@@ -47,6 +47,19 @@ char key_pressed(unsigned int port, unsigned int key) {
   return -1;
 }
 
+/**
+* @brief  keys_pressed
+*         returns a keymask of all buttons pressed
+* @retval None
+*/
+
+unsigned char keys_pressed(void) {
+    return key_pressed(BTN_0) |
+           key_pressed(BTN_1) << 1 |
+           key_pressed(BTN_2) << 2 |
+           key_pressed(BTN_3) << 3;
+}
+
 unsigned char prevmask = 0;
 /**
 * @brief  key_handler
@@ -56,12 +69,8 @@ unsigned char prevmask = 0;
 * @retval None
 */
 unsigned char key_handler(void) {
-  unsigned char keymask = 0;
+  unsigned char keymask = keys_pressed();
   unsigned char res;
-  if(key_pressed(BTN_0) == 1)     keymask = 1;
-  if(key_pressed(BTN_1) == 1)     keymask |= 1 << 1;
-  if(key_pressed(BTN_2) == 1)     keymask |= 1 << 2;
-  if(key_pressed(BTN_3) == 1)     keymask |= 1 << 3;
   //res =  prevmask ^ keymask; /* detect changes in key states */
   res = (prevmask ^ keymask) & ((~keymask) & prevmask); /* detect on key releases */
   prevmask=keymask;

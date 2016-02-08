@@ -43,6 +43,7 @@
 
 void keys_init(void);
 char key_pressed(unsigned int port, unsigned int key);
+unsigned char keys_pressed(void);
 unsigned char key_handler(void);
 
 #endif
