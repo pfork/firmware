@@ -13,24 +13,24 @@ void USB_OTG_BSP_Init(void) {
 
    greg = (GPIO_Regs *) GPIOA_BASE;
    // enable gpioa_[9, 11, 12]
-   greg->MODER |= (GPIO_Mode_AF << (8 << 1)) |
+   greg->MODER |= /* (GPIO_Mode_AF << (8 << 1)) | */
                   (GPIO_Mode_AF << (9 << 1)) |
                   (GPIO_Mode_OUT << (10 << 1)) |
                   (GPIO_Mode_AF << (11 << 1)) |
                   (GPIO_Mode_AF << (12 << 1));
    greg->OTYPER |= (GPIO_OType_OD << 10 );
-   greg->PUPDR |= (GPIO_PuPd_NOPULL << (8 << 1)) |
+   greg->PUPDR |= /* (GPIO_PuPd_NOPULL << (8 << 1)) | */
                   (GPIO_PuPd_NOPULL << (9 << 1)) |
                   (GPIO_PuPd_UP << (10 << 1)) |
                   (GPIO_PuPd_NOPULL << (11 << 1)) |
                   (GPIO_PuPd_NOPULL << (12 << 1));
-   greg->OSPEEDR |= (GPIO_Speed_100MHz << (8 << 1)) |
+   greg->OSPEEDR |= /* (GPIO_Speed_100MHz << (8 << 1)) | */
                     (GPIO_Speed_100MHz << (9 << 1)) |
                     (GPIO_Speed_100MHz << (10 << 1)) |
                     (GPIO_Speed_100MHz << (11 << 1)) |
                     (GPIO_Speed_100MHz << (12 << 1));
    greg->MODER |= (GPIO_Mode_AF << (10 << 1));
-   greg->AFR[1] |= (GPIO_AF_OTG_FS << (0 << 2)) |
+   greg->AFR[1] |= /* (GPIO_AF_OTG_FS << (0 << 2)) | */
                    (GPIO_AF_OTG_FS << (1 << 2)) |
                    (GPIO_AF_OTG_FS << (2 << 2)) |
                    (GPIO_AF_OTG_FS << (3 << 2)) |
