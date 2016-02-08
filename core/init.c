@@ -23,6 +23,7 @@
 #endif // HAVE_MSC
 #include "led.h"
 #include "keys.h"
+#include "oled.h"
 
 /**
   * @brief  main initialization routine
@@ -31,7 +32,7 @@
   */
 void init(void) {
   clock_init();
-  led_init();
+  //led_init();
 #ifdef USE_UART2
   uart_init();
 #endif
@@ -45,4 +46,5 @@ void init(void) {
 #endif // HAVE_MSC
   usb_init();
   keys_init();
+  oled_init();
 }

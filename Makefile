@@ -23,7 +23,7 @@ objs = utils/utils.o main.o core/rng.o core/adc.o core/ssp.o \
    usb/msc/usbd_msc_core.o usb/msc/usbd_msc_scsi.o usb/msc/usbd_storage_msd.o \
 	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
 	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork_irq.o \
-	crypto/pitchfork_handler.o
+	crypto/pitchfork_handler.o core/smallfonts.o core/oled.o ramload/rsp.o
 
 all : main.bin
 full: clean main.bin doc tags
