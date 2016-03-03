@@ -37,14 +37,15 @@ void enable_key(unsigned int base, unsigned int port) {
 */
 char key_pressed(unsigned int port, unsigned int key) {
   unsigned int keyState;
-  keyState = 0;
+  while(1) {
+    keyState = 0;
 
-  keyState = gpio_get(port, key);
-  uDelay(4);
-  if(keyState == (gpio_get(port, key))) {
-    return !keyState;
+    keyState = gpio_get(port, key);
+    uDelay(4);
+    if(keyState == (gpio_get(port, key))) {
+      return !keyState;
+    }
   }
-  return -1;
 }
 
 /**
