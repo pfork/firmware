@@ -13,4 +13,10 @@
 
 void DMA_DeInit(DMA_Stream_Regs* stream);
 FlagStatus DMA_GetFlagStatus(DMA_Stream_Regs* stream, unsigned int flag);
+
+void dmacpy_init(void);
+void dmacpy32(void* dest, const void *buf, unsigned short len);
+void dmaset32(void* dest, const int val, unsigned short len);
+void dmawait(void);
+
 #endif

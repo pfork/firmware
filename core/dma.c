@@ -1,13 +1,15 @@
 /**
   ************************************************************************************
-  * @file    dma.c
-  * @author  stf
-  * @version V0.0.1
-  * @date    05-December-2013
+  * @file    dma.c @author  stf @version V0.0.1 @date    05-December-2013
   * @brief   This file provides DMA reset and supplementary functions
   ************************************************************************************
   */
-#include "stm32f.h"
+#include "stm32f.h" #include <stdint.h>
+
+// dma2, stream0, channel1
+#define DMACPY_CHANNEL DMA_SxCR_CHSEL_1
+#define DMACPY_FLAG_TCIF DMA_LISR_TCIF0
+#define DMACPY_STREAM_REGS ((DMA_Stream_Regs *) DMA2_Stream0_BASE)
 
 /**
   * @brief  Deinitialize the DMAy Streamx registers to their default reset values.
@@ -60,4 +62,56 @@ FlagStatus DMA_GetFlagStatus(DMA_Stream_Regs* stream, unsigned int flag) {
   } else {
     return DMA_HIFCR(dma) & mask;
   }
+}
+
+void dmacpy_init(void) {
+  RCC->AHB1ENR |= RCC_AHB1Periph_DMA2;
+
+  irq_disable(NVIC_DMA2_STREAM0_IRQ);
+  DMA_Stream_Regs *regs = DMACPY_STREAM_REGS;
+  /* DMA disable */
+  regs->CR &= ~((unsigned int) DMA_SxCR_EN);
+  /* wait till cleared */
+  while(regs->CR & ((unsigned int) DMA_SxCR_EN));
+  /* DMA deConfig */
+  DMA_DeInit(DMACPY_STREAM_REGS);
+}
+
+void dmawait(void) {
+  while((DMA2_LISR & DMACPY_FLAG_TCIF) == 0);
+
+  DMA2_LIFCR |= DMA_LIFCR_CFEIF0 | DMA_LIFCR_CDMEIF0 |
+                DMA_LIFCR_CTEIF0 | DMA_LIFCR_CHTIF0 |
+                DMA_LIFCR_CTCIF0;
+}
+
+static void dma(void* dest, const void *buf, unsigned short len, unsigned int cfg) {
+  DMA_Stream_Regs *regs = DMACPY_STREAM_REGS;
+  /* DMA Config */
+  regs->CR = cfg;
+  // setup DMA
+  /* memory source address */
+  regs->PAR = (uint32_t) buf;
+  regs->NDTR = len;
+  /* dest address */
+  regs->M0AR = (uint32_t) dest;
+  /* DMA enable */
+  regs->CR |= DMA_SxCR_EN;
+}
+
+void dmacpy32(void* dest, const void *buf, unsigned short len) {
+  dma(dest, buf, len, (DMACPY_CHANNEL | DMA_SxCR_DIR_MEM_TO_MEM |
+                          DMA_SxCR_MINC | DMA_SxCR_PINC |
+                          DMA_SxCR_PSIZE_32BIT | DMA_SxCR_MSIZE_32BIT |
+                          //DMA_SxCR_TCIE | DMA_SxCR_HTIE | DMA_SxCR_TEIE | DMA_SxCR_DMEIE |/* enable tx complete interrupt */
+                          DMA_SxCR_TCIE |
+                          DMA_SxCR_PL_VERY_HIGH ));
+}
+
+void dmaset32(void* dest, const int val, unsigned short len) {
+  dma(dest, &val, len, (DMACPY_CHANNEL | DMA_SxCR_DIR_MEM_TO_MEM |
+                        DMA_SxCR_MINC |
+                        DMA_SxCR_PSIZE_32BIT | DMA_SxCR_MSIZE_32BIT |
+                        DMA_SxCR_TCIE |
+                        DMA_SxCR_PL_VERY_HIGH ));
 }
