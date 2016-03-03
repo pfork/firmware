@@ -1,10 +1,14 @@
 /**
   ************************************************************************************
-  * @file    dma.c @author  stf @version V0.0.1 @date    05-December-2013
+  * @file    dma.c
+  * @author  stf
+  * @version V0.0.1
+  * @date    05-December-2013 - 03-March-2016
   * @brief   This file provides DMA reset and supplementary functions
   ************************************************************************************
   */
-#include "stm32f.h" #include <stdint.h>
+#include "stm32f.h"
+#include <stdint.h>
 
 // dma2, stream0, channel1
 #define DMACPY_CHANNEL DMA_SxCR_CHSEL_1
