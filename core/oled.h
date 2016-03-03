@@ -12,6 +12,7 @@ void oled_refresh(void);
 void oled_setpixel(uint8_t x, uint8_t y);
 void oled_delpixel(uint8_t x, uint8_t y);
 void oled_print(uint8_t x, uint8_t y, char* text, struct FONT_DEF font);
+void oled_print_inv(uint8_t x, uint8_t y, char* text, struct FONT_DEF font);
 void oled_cmd(uint8_t reg);
 
 #endif //OLED_H
