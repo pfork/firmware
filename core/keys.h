@@ -41,6 +41,11 @@
 
 #define KEYBOARD_CLK         BTN_0_CLK | BTN_1_CLK | BTN_2_CLK | BTN_3_CLK
 
+#define BUTTON_LEFT 8
+#define BUTTON_DOWN 4
+#define BUTTON_UP 2
+#define BUTTON_RIGHT 1
+
 void keys_init(void);
 char key_pressed(unsigned int port, unsigned int key);
 unsigned char keys_pressed(void);
