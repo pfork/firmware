@@ -96,7 +96,7 @@ void oled_delpixel(uint8_t x, uint8_t y) {
   frame_buffer[x+ (y/8)*128] &= ~(1 << y%8);
 }
 
-static void oled_drawchar1(uint8_t x, uint8_t y, uint8_t c, struct FONT_DEF font, char inverted) {
+void oled_drawchar(uint8_t x, uint8_t y, uint8_t c, struct FONT_DEF font, char inverted) {
   uint8_t col, column[font.u8Width];
 
   // Check if the requested character is available
@@ -134,7 +134,7 @@ static void oled_drawchar1(uint8_t x, uint8_t y, uint8_t c, struct FONT_DEF font
 void oled_print_inv(uint8_t x, uint8_t y, char* text, struct FONT_DEF font) {
   uint8_t l;
   for (l = 0; l < strlen(text); l++) {
-    oled_drawchar1(x + (l * (font.u8Width)), y, text[l], font, 1);
+    oled_drawchar(x + (l * (font.u8Width)), y, text[l], font, 1);
   }
   oled_refresh();
 }
@@ -142,7 +142,7 @@ void oled_print_inv(uint8_t x, uint8_t y, char* text, struct FONT_DEF font) {
 void oled_print(uint8_t x, uint8_t y, char* text, struct FONT_DEF font) {
   uint8_t l;
   for (l = 0; l < strlen(text); l++) {
-    oled_drawchar1(x + (l * (font.u8Width)), y, text[l], font, 0);
+    oled_drawchar(x + (l * (font.u8Width)), y, text[l], font, 0);
   }
   oled_refresh();
 }

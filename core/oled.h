@@ -11,6 +11,7 @@ void oled_clear(void);
 void oled_refresh(void);
 void oled_setpixel(uint8_t x, uint8_t y);
 void oled_delpixel(uint8_t x, uint8_t y);
+void oled_drawchar(uint8_t x, uint8_t y, uint8_t c, struct FONT_DEF font, char inverted);
 void oled_print(uint8_t x, uint8_t y, char* text, struct FONT_DEF font);
 void oled_print_inv(uint8_t x, uint8_t y, char* text, struct FONT_DEF font);
 void oled_cmd(uint8_t reg);
