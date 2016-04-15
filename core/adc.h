@@ -12,4 +12,5 @@
 void adc_init ( void );
 unsigned short read_temp( void );
 unsigned short read_vref( void );
+unsigned short read_vbat( void );
 #endif

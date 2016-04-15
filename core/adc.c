@@ -39,6 +39,7 @@ void adc_init ( void ) {
   // set sampling time
   ADC_SMPR1(ADC1) |= (ADC_SMPR_SMP_1DOT5CYC << ((ADC_CHANNEL16 - 10) * 3)) |
                      (ADC_SMPR_SMP_1DOT5CYC << ((ADC_CHANNEL17 - 10) * 3));
+                     //(ADC_SMPR_SMP_1DOT5CYC << ((ADC_CHANNEL18 - 10) * 3));
   ADC_SQR1(ADC1) = 0; // only one entry
 }
 
@@ -51,7 +52,7 @@ void adc_init ( void ) {
 * @param  chan: channel to read
 * @retval sampled value
 */
-unsigned short read_chan( unsigned char chan ) {
+static unsigned short read_chan( unsigned char chan ) {
   unsigned int res = 0x800;
 
   // set chan
@@ -92,8 +93,23 @@ unsigned short read_temp( void ) {
 *         read vref, wrapper for read_chan
 *
 * @param  None
-* @retval sampled CPU temperature
+* @retval sampled CPU internal ref voltage
 */
 unsigned short read_vref( void ) {
   return read_chan(ADC_CHANNEL17);
 }
+
+/**
+* @brief  read_vbat
+*
+*         read vbat, wrapper for read_chan
+*
+* @param  None
+* @retval sampled VBAT voltage
+*/
+//unsigned short read_vbat( void ) {
+  // todo
+  // needs to enable ADC_CCR |= ADC_CCR_VBATE;
+  // instead of adc_ccr_ts
+//  return read_chan(ADC_CHANNEL18);
+//}
