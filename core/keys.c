@@ -38,8 +38,6 @@ void enable_key(unsigned int base, unsigned int port) {
 char key_pressed(unsigned int port, unsigned int key) {
   unsigned int keyState;
   while(1) {
-    keyState = 0;
-
     keyState = gpio_get(port, key);
     uDelay(4);
     if(keyState == (gpio_get(port, key))) {
