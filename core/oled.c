@@ -18,10 +18,13 @@
 #define DCPIN 4
 #define RSTPIN 5
 #define CSPIN 6
-//#define SDCLKPIN 13
-//#define SDINPIN 15
+#ifdef HWrev1
 #define SDCLKPIN 15
 #define SDINPIN 13
+#else
+#define SDCLKPIN 13
+#define SDINPIN 15
+#endif // HWrev1
 
 #define DC(x)					x ? (gpio_set(GPIOB_BASE, 1 << DCPIN)) : (gpio_reset(GPIOB_BASE, 1 << DCPIN));
 #define CS(x)					x ? (gpio_set(GPIOB_BASE, 1 << CSPIN)) : (gpio_reset(GPIOB_BASE, 1 << CSPIN));
