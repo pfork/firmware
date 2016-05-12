@@ -62,6 +62,8 @@
 #define __ALIGN_END
 
 /* __packed keyword used to decrease the data type alignment to 1-byte */
+#ifndef __packed
 #define __packed    __attribute__ ((__packed__))
+#endif
 
 #endif //usb_conf_h
