@@ -56,7 +56,8 @@ unsigned char keys_pressed(void) {
     return key_pressed(BTN_0) |
            key_pressed(BTN_1) << 1 |
            key_pressed(BTN_2) << 2 |
-           key_pressed(BTN_3) << 3;
+           key_pressed(BTN_3) << 3 |
+           key_pressed(BTN_4) << 4;
 }
 
 unsigned char prevmask = 0;
@@ -89,4 +90,5 @@ void keys_init(void) {
   enable_key(BTN_1_PORT,BTN_1_PINNO);
   enable_key(BTN_2_PORT,BTN_2_PINNO);
   enable_key(BTN_3_PORT,BTN_3_PINNO);
+  enable_key(BTN_4_PORT,BTN_4_PINNO);
 }
