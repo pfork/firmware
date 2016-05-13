@@ -7,6 +7,8 @@
   ************************************************************************************
   */
 
+#include <stdint.h>
+
 #ifndef stm32f_h
 #define stm32f_h
 
@@ -56,10 +58,31 @@ unsigned int ASM_DELAY ( unsigned int );
 #define spi_read(spi) (spi)->DR
 #define spi_send(spi,val) (spi)->DR = val
 
+#define nrf24l0_SPIx ((SPI_Regs*) SPI1_BASE)
+
 typedef enum {DISABLE = 0, ENABLE = !DISABLE} FunctionalState;
 typedef enum {RESET = 0, SET = !RESET} FlagStatus, ITStatus;
 
-#define nrf24l0_SPIx ((SPI_Regs*) SPI1_BASE)
+
+/*
+ * inline assembly
+ */
+
+static inline void __enable_irq()               { asm volatile ("cpsie i"); }
+static inline void __disable_irq()              { asm volatile ("cpsid i"); }
+
+static inline void __enable_fault_irq()         { asm volatile ("cpsie f"); }
+static inline void __disable_fault_irq()        { asm volatile ("cpsid f"); }
+
+static inline void __NOP()                      { asm volatile ("nop"); }
+static inline void __WFI()                      { asm volatile ("wfi"); }
+static inline void __WFE()                      { asm volatile ("wfe"); }
+static inline void __SEV()                      { asm volatile ("sev"); }
+static inline void __ISB()                      { asm volatile ("isb"); }
+static inline void __DSB()                      { asm volatile ("dsb"); }
+static inline void __DMB()                      { asm volatile ("dmb"); }
+static inline void __CLREX()                    { asm volatile ("clrex"); }
+
 //-------------------------------------------------------------------
 #ifndef PERIPH_BASE
 # define PERIPH_BASE			   ((unsigned int)0x40000000)
@@ -302,7 +325,6 @@ typedef struct
 //-------------------------------------------------------------------
 #define SYSCLCK 120000000
 //-------------------------------------------------------------------
-
 #define ADC1_BASE			(PERIPH_BASE_APB2 + 0x2000)
 #define ADC1				ADC1_BASE
 /* ADC control register 1 (ADC_CR1) */
@@ -339,6 +361,7 @@ typedef struct
 #define ADC_CR2_ADON			(1 << 0)
 /* to enable temp sensor */
 #define ADC_CCR_TSVREFE			(1 << 23)
+#define ADC_CCR_VBATEN        (1 << 24)
 /* SWSTART: */ /** Start conversion of regular channels. */
 #define ADC_CR2_SWSTART			(1 << 30)
 
@@ -360,6 +383,7 @@ typedef struct
 
 #define ADC_CHANNEL16		0x10
 #define ADC_CHANNEL17		0x11
+#define ADC_CHANNEL18      0x12
 
 /* ADC regular sequence register 1 (ADC_SQR1) */
 #define ADC_SQR1(block)			MMIO32(block + 0x2c)
@@ -990,6 +1014,12 @@ being at the same relative location */
 #define SCB_SCR_SLEEPONEXIT_Pos             1                                   /*!< SCB SCR: SLEEPONEXIT Position */
 #define SCB_SCR_SLEEPONEXIT_Msk            (1ul << SCB_SCR_SLEEPONEXIT_Pos)     /*!< SCB SCR: SLEEPONEXIT Mask */
 
+#define SCB_SHCSR_MEMFAULTENA_Pos          16                                             /*!< SCB SHCSR: MEMFAULTENA Position */
+#define SCB_SHCSR_MEMFAULTENA_Msk          (1ul << SCB_SHCSR_MEMFAULTENA_Pos)             /*!< SCB SHCSR: MEMFAULTENA Mask */
+
+#define NVIC_AIRCR_VECTKEY    (0x5FA << 16)   /*!< AIRCR Key for write access   */
+#define NVIC_SYSRESETREQ            2         /*!< System Reset Request */
+
 typedef struct {
   volatile const  unsigned int CPUID;        /*!< Offset: 0x00  CPU ID Base Register                                  */
   volatile unsigned int ICSR;                /*!< Offset: 0x04  Interrupt Control State Register                      */
@@ -1169,7 +1199,6 @@ typedef struct {
 #endif
 
 //-------------------------------------------------------------------
-
 #define NVIC_SDIO_IRQn 49
 #define SDIO_BASE             (PERIPH_BASE_APB2 + 0x2C00)
 
@@ -1390,7 +1419,7 @@ typedef struct {
 #define FSMC_WriteBurst_Enable                          ((unsigned int)0x00080000)
 
 #define FSMC_AccessMode_A                               ((unsigned int)0x00000000)
-#define FSMC_AccessMode_B                               ((unsigned int)0x10000000) 
+#define FSMC_AccessMode_B                               ((unsigned int)0x10000000)
 #define FSMC_AccessMode_C                               ((unsigned int)0x20000000)
 #define FSMC_AccessMode_D                               ((unsigned int)0x30000000)
 
@@ -1410,5 +1439,460 @@ typedef struct {
 
 #define BCR_MBKEN_Set                       ((unsigned int)0x00000001)
 #define BCR_MBKEN_Reset                     ((unsigned int)0x000FFFFE)
+
+/*******************  Definitions for EXTI  *******************/
+
+#define EXTI_BASE             (PERIPH_BASE_APB2 + 0x3C00)
+
+typedef struct {
+  volatile unsigned int IMR;
+  volatile unsigned int EMR;
+  volatile unsigned int RTSR;
+  volatile unsigned int FTSR;
+  volatile unsigned int SWIER;
+  volatile unsigned int PR;
+} EXTI_Regs;
+
+/*******************  Bit definition for EXTI_IMR register  *******************/
+#define  EXTI_IMR_MR0                        ((unsigned int)0x00000001)        /*!< Interrupt Mask on line 0 */
+#define  EXTI_IMR_MR1                        ((unsigned int)0x00000002)        /*!< Interrupt Mask on line 1 */
+#define  EXTI_IMR_MR2                        ((unsigned int)0x00000004)        /*!< Interrupt Mask on line 2 */
+#define  EXTI_IMR_MR3                        ((unsigned int)0x00000008)        /*!< Interrupt Mask on line 3 */
+#define  EXTI_IMR_MR4                        ((unsigned int)0x00000010)        /*!< Interrupt Mask on line 4 */
+#define  EXTI_IMR_MR5                        ((unsigned int)0x00000020)        /*!< Interrupt Mask on line 5 */
+#define  EXTI_IMR_MR6                        ((unsigned int)0x00000040)        /*!< Interrupt Mask on line 6 */
+#define  EXTI_IMR_MR7                        ((unsigned int)0x00000080)        /*!< Interrupt Mask on line 7 */
+#define  EXTI_IMR_MR8                        ((unsigned int)0x00000100)        /*!< Interrupt Mask on line 8 */
+#define  EXTI_IMR_MR9                        ((unsigned int)0x00000200)        /*!< Interrupt Mask on line 9 */
+#define  EXTI_IMR_MR10                       ((unsigned int)0x00000400)        /*!< Interrupt Mask on line 10 */
+#define  EXTI_IMR_MR11                       ((unsigned int)0x00000800)        /*!< Interrupt Mask on line 11 */
+#define  EXTI_IMR_MR12                       ((unsigned int)0x00001000)        /*!< Interrupt Mask on line 12 */
+#define  EXTI_IMR_MR13                       ((unsigned int)0x00002000)        /*!< Interrupt Mask on line 13 */
+#define  EXTI_IMR_MR14                       ((unsigned int)0x00004000)        /*!< Interrupt Mask on line 14 */
+#define  EXTI_IMR_MR15                       ((unsigned int)0x00008000)        /*!< Interrupt Mask on line 15 */
+#define  EXTI_IMR_MR16                       ((unsigned int)0x00010000)        /*!< Interrupt Mask on line 16 */
+#define  EXTI_IMR_MR17                       ((unsigned int)0x00020000)        /*!< Interrupt Mask on line 17 */
+#define  EXTI_IMR_MR18                       ((unsigned int)0x00040000)        /*!< Interrupt Mask on line 18 */
+#define  EXTI_IMR_MR19                       ((unsigned int)0x00080000)        /*!< Interrupt Mask on line 19 */
+
+/*******************  Bit definition for EXTI_EMR register  *******************/
+#define  EXTI_EMR_MR0                        ((unsigned int)0x00000001)        /*!< Event Mask on line 0 */
+#define  EXTI_EMR_MR1                        ((unsigned int)0x00000002)        /*!< Event Mask on line 1 */
+#define  EXTI_EMR_MR2                        ((unsigned int)0x00000004)        /*!< Event Mask on line 2 */
+#define  EXTI_EMR_MR3                        ((unsigned int)0x00000008)        /*!< Event Mask on line 3 */
+#define  EXTI_EMR_MR4                        ((unsigned int)0x00000010)        /*!< Event Mask on line 4 */
+#define  EXTI_EMR_MR5                        ((unsigned int)0x00000020)        /*!< Event Mask on line 5 */
+#define  EXTI_EMR_MR6                        ((unsigned int)0x00000040)        /*!< Event Mask on line 6 */
+#define  EXTI_EMR_MR7                        ((unsigned int)0x00000080)        /*!< Event Mask on line 7 */
+#define  EXTI_EMR_MR8                        ((unsigned int)0x00000100)        /*!< Event Mask on line 8 */
+#define  EXTI_EMR_MR9                        ((unsigned int)0x00000200)        /*!< Event Mask on line 9 */
+#define  EXTI_EMR_MR10                       ((unsigned int)0x00000400)        /*!< Event Mask on line 10 */
+#define  EXTI_EMR_MR11                       ((unsigned int)0x00000800)        /*!< Event Mask on line 11 */
+#define  EXTI_EMR_MR12                       ((unsigned int)0x00001000)        /*!< Event Mask on line 12 */
+#define  EXTI_EMR_MR13                       ((unsigned int)0x00002000)        /*!< Event Mask on line 13 */
+#define  EXTI_EMR_MR14                       ((unsigned int)0x00004000)        /*!< Event Mask on line 14 */
+#define  EXTI_EMR_MR15                       ((unsigned int)0x00008000)        /*!< Event Mask on line 15 */
+#define  EXTI_EMR_MR16                       ((unsigned int)0x00010000)        /*!< Event Mask on line 16 */
+#define  EXTI_EMR_MR17                       ((unsigned int)0x00020000)        /*!< Event Mask on line 17 */
+#define  EXTI_EMR_MR18                       ((unsigned int)0x00040000)        /*!< Event Mask on line 18 */
+#define  EXTI_EMR_MR19                       ((unsigned int)0x00080000)        /*!< Event Mask on line 19 */
+
+/******************  Bit definition for EXTI_RTSR register  *******************/
+#define  EXTI_RTSR_TR0                       ((unsigned int)0x00000001)        /*!< Rising trigger event configuration bit of line 0 */
+#define  EXTI_RTSR_TR1                       ((unsigned int)0x00000002)        /*!< Rising trigger event configuration bit of line 1 */
+#define  EXTI_RTSR_TR2                       ((unsigned int)0x00000004)        /*!< Rising trigger event configuration bit of line 2 */
+#define  EXTI_RTSR_TR3                       ((unsigned int)0x00000008)        /*!< Rising trigger event configuration bit of line 3 */
+#define  EXTI_RTSR_TR4                       ((unsigned int)0x00000010)        /*!< Rising trigger event configuration bit of line 4 */
+#define  EXTI_RTSR_TR5                       ((unsigned int)0x00000020)        /*!< Rising trigger event configuration bit of line 5 */
+#define  EXTI_RTSR_TR6                       ((unsigned int)0x00000040)        /*!< Rising trigger event configuration bit of line 6 */
+#define  EXTI_RTSR_TR7                       ((unsigned int)0x00000080)        /*!< Rising trigger event configuration bit of line 7 */
+#define  EXTI_RTSR_TR8                       ((unsigned int)0x00000100)        /*!< Rising trigger event configuration bit of line 8 */
+#define  EXTI_RTSR_TR9                       ((unsigned int)0x00000200)        /*!< Rising trigger event configuration bit of line 9 */
+#define  EXTI_RTSR_TR10                      ((unsigned int)0x00000400)        /*!< Rising trigger event configuration bit of line 10 */
+#define  EXTI_RTSR_TR11                      ((unsigned int)0x00000800)        /*!< Rising trigger event configuration bit of line 11 */
+#define  EXTI_RTSR_TR12                      ((unsigned int)0x00001000)        /*!< Rising trigger event configuration bit of line 12 */
+#define  EXTI_RTSR_TR13                      ((unsigned int)0x00002000)        /*!< Rising trigger event configuration bit of line 13 */
+#define  EXTI_RTSR_TR14                      ((unsigned int)0x00004000)        /*!< Rising trigger event configuration bit of line 14 */
+#define  EXTI_RTSR_TR15                      ((unsigned int)0x00008000)        /*!< Rising trigger event configuration bit of line 15 */
+#define  EXTI_RTSR_TR16                      ((unsigned int)0x00010000)        /*!< Rising trigger event configuration bit of line 16 */
+#define  EXTI_RTSR_TR17                      ((unsigned int)0x00020000)        /*!< Rising trigger event configuration bit of line 17 */
+#define  EXTI_RTSR_TR18                      ((unsigned int)0x00040000)        /*!< Rising trigger event configuration bit of line 18 */
+#define  EXTI_RTSR_TR19                      ((unsigned int)0x00080000)        /*!< Rising trigger event configuration bit of line 19 */
+
+/******************  Bit definition for EXTI_FTSR register  *******************/
+#define  EXTI_FTSR_TR0                       ((unsigned int)0x00000001)        /*!< Falling trigger event configuration bit of line 0 */
+#define  EXTI_FTSR_TR1                       ((unsigned int)0x00000002)        /*!< Falling trigger event configuration bit of line 1 */
+#define  EXTI_FTSR_TR2                       ((unsigned int)0x00000004)        /*!< Falling trigger event configuration bit of line 2 */
+#define  EXTI_FTSR_TR3                       ((unsigned int)0x00000008)        /*!< Falling trigger event configuration bit of line 3 */
+#define  EXTI_FTSR_TR4                       ((unsigned int)0x00000010)        /*!< Falling trigger event configuration bit of line 4 */
+#define  EXTI_FTSR_TR5                       ((unsigned int)0x00000020)        /*!< Falling trigger event configuration bit of line 5 */
+#define  EXTI_FTSR_TR6                       ((unsigned int)0x00000040)        /*!< Falling trigger event configuration bit of line 6 */
+#define  EXTI_FTSR_TR7                       ((unsigned int)0x00000080)        /*!< Falling trigger event configuration bit of line 7 */
+#define  EXTI_FTSR_TR8                       ((unsigned int)0x00000100)        /*!< Falling trigger event configuration bit of line 8 */
+#define  EXTI_FTSR_TR9                       ((unsigned int)0x00000200)        /*!< Falling trigger event configuration bit of line 9 */
+#define  EXTI_FTSR_TR10                      ((unsigned int)0x00000400)        /*!< Falling trigger event configuration bit of line 10 */
+#define  EXTI_FTSR_TR11                      ((unsigned int)0x00000800)        /*!< Falling trigger event configuration bit of line 11 */
+#define  EXTI_FTSR_TR12                      ((unsigned int)0x00001000)        /*!< Falling trigger event configuration bit of line 12 */
+#define  EXTI_FTSR_TR13                      ((unsigned int)0x00002000)        /*!< Falling trigger event configuration bit of line 13 */
+#define  EXTI_FTSR_TR14                      ((unsigned int)0x00004000)        /*!< Falling trigger event configuration bit of line 14 */
+#define  EXTI_FTSR_TR15                      ((unsigned int)0x00008000)        /*!< Falling trigger event configuration bit of line 15 */
+#define  EXTI_FTSR_TR16                      ((unsigned int)0x00010000)        /*!< Falling trigger event configuration bit of line 16 */
+#define  EXTI_FTSR_TR17                      ((unsigned int)0x00020000)        /*!< Falling trigger event configuration bit of line 17 */
+#define  EXTI_FTSR_TR18                      ((unsigned int)0x00040000)        /*!< Falling trigger event configuration bit of line 18 */
+#define  EXTI_FTSR_TR19                      ((unsigned int)0x00080000)        /*!< Falling trigger event configuration bit of line 19 */
+
+/******************  Bit definition for EXTI_SWIER register  ******************/
+#define  EXTI_SWIER_SWIER0                   ((unsigned int)0x00000001)        /*!< Software Interrupt on line 0 */
+#define  EXTI_SWIER_SWIER1                   ((unsigned int)0x00000002)        /*!< Software Interrupt on line 1 */
+#define  EXTI_SWIER_SWIER2                   ((unsigned int)0x00000004)        /*!< Software Interrupt on line 2 */
+#define  EXTI_SWIER_SWIER3                   ((unsigned int)0x00000008)        /*!< Software Interrupt on line 3 */
+#define  EXTI_SWIER_SWIER4                   ((unsigned int)0x00000010)        /*!< Software Interrupt on line 4 */
+#define  EXTI_SWIER_SWIER5                   ((unsigned int)0x00000020)        /*!< Software Interrupt on line 5 */
+#define  EXTI_SWIER_SWIER6                   ((unsigned int)0x00000040)        /*!< Software Interrupt on line 6 */
+#define  EXTI_SWIER_SWIER7                   ((unsigned int)0x00000080)        /*!< Software Interrupt on line 7 */
+#define  EXTI_SWIER_SWIER8                   ((unsigned int)0x00000100)        /*!< Software Interrupt on line 8 */
+#define  EXTI_SWIER_SWIER9                   ((unsigned int)0x00000200)        /*!< Software Interrupt on line 9 */
+#define  EXTI_SWIER_SWIER10                  ((unsigned int)0x00000400)        /*!< Software Interrupt on line 10 */
+#define  EXTI_SWIER_SWIER11                  ((unsigned int)0x00000800)        /*!< Software Interrupt on line 11 */
+#define  EXTI_SWIER_SWIER12                  ((unsigned int)0x00001000)        /*!< Software Interrupt on line 12 */
+#define  EXTI_SWIER_SWIER13                  ((unsigned int)0x00002000)        /*!< Software Interrupt on line 13 */
+#define  EXTI_SWIER_SWIER14                  ((unsigned int)0x00004000)        /*!< Software Interrupt on line 14 */
+#define  EXTI_SWIER_SWIER15                  ((unsigned int)0x00008000)        /*!< Software Interrupt on line 15 */
+#define  EXTI_SWIER_SWIER16                  ((unsigned int)0x00010000)        /*!< Software Interrupt on line 16 */
+#define  EXTI_SWIER_SWIER17                  ((unsigned int)0x00020000)        /*!< Software Interrupt on line 17 */
+#define  EXTI_SWIER_SWIER18                  ((unsigned int)0x00040000)        /*!< Software Interrupt on line 18 */
+#define  EXTI_SWIER_SWIER19                  ((unsigned int)0x00080000)        /*!< Software Interrupt on line 19 */
+
+/*******************  Bit definition for EXTI_PR register  ********************/
+#define  EXTI_PR_PR0                         ((unsigned int)0x00000001)        /*!< Pending bit for line 0 */
+#define  EXTI_PR_PR1                         ((unsigned int)0x00000002)        /*!< Pending bit for line 1 */
+#define  EXTI_PR_PR2                         ((unsigned int)0x00000004)        /*!< Pending bit for line 2 */
+#define  EXTI_PR_PR3                         ((unsigned int)0x00000008)        /*!< Pending bit for line 3 */
+#define  EXTI_PR_PR4                         ((unsigned int)0x00000010)        /*!< Pending bit for line 4 */
+#define  EXTI_PR_PR5                         ((unsigned int)0x00000020)        /*!< Pending bit for line 5 */
+#define  EXTI_PR_PR6                         ((unsigned int)0x00000040)        /*!< Pending bit for line 6 */
+#define  EXTI_PR_PR7                         ((unsigned int)0x00000080)        /*!< Pending bit for line 7 */
+#define  EXTI_PR_PR8                         ((unsigned int)0x00000100)        /*!< Pending bit for line 8 */
+#define  EXTI_PR_PR9                         ((unsigned int)0x00000200)        /*!< Pending bit for line 9 */
+#define  EXTI_PR_PR10                        ((unsigned int)0x00000400)        /*!< Pending bit for line 10 */
+#define  EXTI_PR_PR11                        ((unsigned int)0x00000800)        /*!< Pending bit for line 11 */
+#define  EXTI_PR_PR12                        ((unsigned int)0x00001000)        /*!< Pending bit for line 12 */
+#define  EXTI_PR_PR13                        ((unsigned int)0x00002000)        /*!< Pending bit for line 13 */
+#define  EXTI_PR_PR14                        ((unsigned int)0x00004000)        /*!< Pending bit for line 14 */
+#define  EXTI_PR_PR15                        ((unsigned int)0x00008000)        /*!< Pending bit for line 15 */
+#define  EXTI_PR_PR16                        ((unsigned int)0x00010000)        /*!< Pending bit for line 16 */
+#define  EXTI_PR_PR17                        ((unsigned int)0x00020000)        /*!< Pending bit for line 17 */
+#define  EXTI_PR_PR18                        ((unsigned int)0x00040000)        /*!< Pending bit for line 18 */
+#define  EXTI_PR_PR19                        ((unsigned int)0x00080000)        /*!< Pending bit for line 19 */
+
+#define SYSCFG_BASE           (PERIPH_BASE_APB2 + 0x3800)
+
+typedef struct {
+  volatile unsigned int MEMRMP;       /*!< SYSCFG memory remap register,                      Address offset: 0x00      */
+  volatile unsigned int PMC;          /*!< SYSCFG peripheral mode configuration register,     Address offset: 0x04      */
+  volatile unsigned int EXTICR[4];    /*!< SYSCFG external interrupt configuration registers, Address offset: 0x08-0x14 */
+  unsigned int      RESERVED[2];  /*!< Reserved, 0x18-0x1C                                                          */ 
+  volatile unsigned int CMPCR;        /*!< SYSCFG Compensation cell control register,         Address offset: 0x20      */
+} SYSCFG_Regs;
+
+/*****************  Bit definition for SYSCFG_EXTICR1 register  ***************/
+#define SYSCFG_EXTICR1_EXTI0            ((unsigned short)0x000F) /*!<EXTI 0 configuration */
+#define SYSCFG_EXTICR1_EXTI1            ((unsigned short)0x00F0) /*!<EXTI 1 configuration */
+#define SYSCFG_EXTICR1_EXTI2            ((unsigned short)0x0F00) /*!<EXTI 2 configuration */
+#define SYSCFG_EXTICR1_EXTI3            ((unsigned short)0xF000) /*!<EXTI 3 configuration */
+/**
+  * @brief   EXTI0 configuration
+  */
+#define SYSCFG_EXTICR1_EXTI0_PA         ((unsigned short)0x0000) /*!<PA[0] pin */
+#define SYSCFG_EXTICR1_EXTI0_PB         ((unsigned short)0x0001) /*!<PB[0] pin */
+#define SYSCFG_EXTICR1_EXTI0_PC         ((unsigned short)0x0002) /*!<PC[0] pin */
+#define SYSCFG_EXTICR1_EXTI0_PD         ((unsigned short)0x0003) /*!<PD[0] pin */
+#define SYSCFG_EXTICR1_EXTI0_PE         ((unsigned short)0x0004) /*!<PE[0] pin */
+#define SYSCFG_EXTICR1_EXTI0_PF         ((unsigned short)0x0005) /*!<PF[0] pin */
+#define SYSCFG_EXTICR1_EXTI0_PG         ((unsigned short)0x0006) /*!<PG[0] pin */
+#define SYSCFG_EXTICR1_EXTI0_PH         ((unsigned short)0x0007) /*!<PH[0] pin */
+#define SYSCFG_EXTICR1_EXTI0_PI         ((unsigned short)0x0008) /*!<PI[0] pin */
+/**
+  * @brief   EXTI1 configuration
+  */
+#define SYSCFG_EXTICR1_EXTI1_PA         ((unsigned short)0x0000) /*!<PA[1] pin */
+#define SYSCFG_EXTICR1_EXTI1_PB         ((unsigned short)0x0010) /*!<PB[1] pin */
+#define SYSCFG_EXTICR1_EXTI1_PC         ((unsigned short)0x0020) /*!<PC[1] pin */
+#define SYSCFG_EXTICR1_EXTI1_PD         ((unsigned short)0x0030) /*!<PD[1] pin */
+#define SYSCFG_EXTICR1_EXTI1_PE         ((unsigned short)0x0040) /*!<PE[1] pin */
+#define SYSCFG_EXTICR1_EXTI1_PF         ((unsigned short)0x0050) /*!<PF[1] pin */
+#define SYSCFG_EXTICR1_EXTI1_PG         ((unsigned short)0x0060) /*!<PG[1] pin */
+#define SYSCFG_EXTICR1_EXTI1_PH         ((unsigned short)0x0070) /*!<PH[1] pin */
+#define SYSCFG_EXTICR1_EXTI1_PI         ((unsigned short)0x0080) /*!<PI[1] pin */
+/**
+  * @brief   EXTI2 configuration
+  */
+#define SYSCFG_EXTICR1_EXTI2_PA         ((unsigned short)0x0000) /*!<PA[2] pin */
+#define SYSCFG_EXTICR1_EXTI2_PB         ((unsigned short)0x0100) /*!<PB[2] pin */
+#define SYSCFG_EXTICR1_EXTI2_PC         ((unsigned short)0x0200) /*!<PC[2] pin */
+#define SYSCFG_EXTICR1_EXTI2_PD         ((unsigned short)0x0300) /*!<PD[2] pin */
+#define SYSCFG_EXTICR1_EXTI2_PE         ((unsigned short)0x0400) /*!<PE[2] pin */
+#define SYSCFG_EXTICR1_EXTI2_PF         ((unsigned short)0x0500) /*!<PF[2] pin */
+#define SYSCFG_EXTICR1_EXTI2_PG         ((unsigned short)0x0600) /*!<PG[2] pin */
+#define SYSCFG_EXTICR1_EXTI2_PH         ((unsigned short)0x0700) /*!<PH[2] pin */
+#define SYSCFG_EXTICR1_EXTI2_PI         ((unsigned short)0x0800) /*!<PI[2] pin */
+/**
+  * @brief   EXTI3 configuration
+  */
+#define SYSCFG_EXTICR1_EXTI3_PA         ((unsigned short)0x0000) /*!<PA[3] pin */
+#define SYSCFG_EXTICR1_EXTI3_PB         ((unsigned short)0x1000) /*!<PB[3] pin */
+#define SYSCFG_EXTICR1_EXTI3_PC         ((unsigned short)0x2000) /*!<PC[3] pin */
+#define SYSCFG_EXTICR1_EXTI3_PD         ((unsigned short)0x3000) /*!<PD[3] pin */
+#define SYSCFG_EXTICR1_EXTI3_PE         ((unsigned short)0x4000) /*!<PE[3] pin */
+#define SYSCFG_EXTICR1_EXTI3_PF         ((unsigned short)0x5000) /*!<PF[3] pin */
+#define SYSCFG_EXTICR1_EXTI3_PG         ((unsigned short)0x6000) /*!<PG[3] pin */
+#define SYSCFG_EXTICR1_EXTI3_PH         ((unsigned short)0x7000) /*!<PH[3] pin */
+#define SYSCFG_EXTICR1_EXTI3_PI         ((unsigned short)0x8000) /*!<PI[3] pin */
+
+/*****************  Bit definition for SYSCFG_EXTICR2 register  ***************/
+#define SYSCFG_EXTICR2_EXTI4            ((unsigned short)0x000F) /*!<EXTI 4 configuration */
+#define SYSCFG_EXTICR2_EXTI5            ((unsigned short)0x00F0) /*!<EXTI 5 configuration */
+#define SYSCFG_EXTICR2_EXTI6            ((unsigned short)0x0F00) /*!<EXTI 6 configuration */
+#define SYSCFG_EXTICR2_EXTI7            ((unsigned short)0xF000) /*!<EXTI 7 configuration */
+/**
+  * @brief   EXTI4 configuration
+  */
+#define SYSCFG_EXTICR2_EXTI4_PA         ((unsigned short)0x0000) /*!<PA[4] pin */
+#define SYSCFG_EXTICR2_EXTI4_PB         ((unsigned short)0x0001) /*!<PB[4] pin */
+#define SYSCFG_EXTICR2_EXTI4_PC         ((unsigned short)0x0002) /*!<PC[4] pin */
+#define SYSCFG_EXTICR2_EXTI4_PD         ((unsigned short)0x0003) /*!<PD[4] pin */
+#define SYSCFG_EXTICR2_EXTI4_PE         ((unsigned short)0x0004) /*!<PE[4] pin */
+#define SYSCFG_EXTICR2_EXTI4_PF         ((unsigned short)0x0005) /*!<PF[4] pin */
+#define SYSCFG_EXTICR2_EXTI4_PG         ((unsigned short)0x0006) /*!<PG[4] pin */
+#define SYSCFG_EXTICR2_EXTI4_PH         ((unsigned short)0x0007) /*!<PH[4] pin */
+#define SYSCFG_EXTICR2_EXTI4_PI         ((unsigned short)0x0008) /*!<PI[4] pin */
+/**
+  * @brief   EXTI5 configuration
+  */
+#define SYSCFG_EXTICR2_EXTI5_PA         ((unsigned short)0x0000) /*!<PA[5] pin */
+#define SYSCFG_EXTICR2_EXTI5_PB         ((unsigned short)0x0010) /*!<PB[5] pin */
+#define SYSCFG_EXTICR2_EXTI5_PC         ((unsigned short)0x0020) /*!<PC[5] pin */
+#define SYSCFG_EXTICR2_EXTI5_PD         ((unsigned short)0x0030) /*!<PD[5] pin */
+#define SYSCFG_EXTICR2_EXTI5_PE         ((unsigned short)0x0040) /*!<PE[5] pin */
+#define SYSCFG_EXTICR2_EXTI5_PF         ((unsigned short)0x0050) /*!<PF[5] pin */
+#define SYSCFG_EXTICR2_EXTI5_PG         ((unsigned short)0x0060) /*!<PG[5] pin */
+#define SYSCFG_EXTICR2_EXTI5_PH         ((unsigned short)0x0070) /*!<PH[5] pin */
+#define SYSCFG_EXTICR2_EXTI5_PI         ((unsigned short)0x0080) /*!<PI[5] pin */
+/**
+  * @brief   EXTI6 configuration
+  */
+#define SYSCFG_EXTICR2_EXTI6_PA         ((unsigned short)0x0000) /*!<PA[6] pin */
+#define SYSCFG_EXTICR2_EXTI6_PB         ((unsigned short)0x0100) /*!<PB[6] pin */
+#define SYSCFG_EXTICR2_EXTI6_PC         ((unsigned short)0x0200) /*!<PC[6] pin */
+#define SYSCFG_EXTICR2_EXTI6_PD         ((unsigned short)0x0300) /*!<PD[6] pin */
+#define SYSCFG_EXTICR2_EXTI6_PE         ((unsigned short)0x0400) /*!<PE[6] pin */
+#define SYSCFG_EXTICR2_EXTI6_PF         ((unsigned short)0x0500) /*!<PF[6] pin */
+#define SYSCFG_EXTICR2_EXTI6_PG         ((unsigned short)0x0600) /*!<PG[6] pin */
+#define SYSCFG_EXTICR2_EXTI6_PH         ((unsigned short)0x0700) /*!<PH[6] pin */
+#define SYSCFG_EXTICR2_EXTI6_PI         ((unsigned short)0x0800) /*!<PI[6] pin */
+/**
+  * @brief   EXTI7 configuration
+  */
+#define SYSCFG_EXTICR2_EXTI7_PA         ((unsigned short)0x0000) /*!<PA[7] pin */
+#define SYSCFG_EXTICR2_EXTI7_PB         ((unsigned short)0x1000) /*!<PB[7] pin */
+#define SYSCFG_EXTICR2_EXTI7_PC         ((unsigned short)0x2000) /*!<PC[7] pin */
+#define SYSCFG_EXTICR2_EXTI7_PD         ((unsigned short)0x3000) /*!<PD[7] pin */
+#define SYSCFG_EXTICR2_EXTI7_PE         ((unsigned short)0x4000) /*!<PE[7] pin */
+#define SYSCFG_EXTICR2_EXTI7_PF         ((unsigned short)0x5000) /*!<PF[7] pin */
+#define SYSCFG_EXTICR2_EXTI7_PG         ((unsigned short)0x6000) /*!<PG[7] pin */
+#define SYSCFG_EXTICR2_EXTI7_PH         ((unsigned short)0x7000) /*!<PH[7] pin */
+#define SYSCFG_EXTICR2_EXTI7_PI         ((unsigned short)0x8000) /*!<PI[7] pin */
+
+/*****************  Bit definition for SYSCFG_EXTICR3 register  ***************/
+#define SYSCFG_EXTICR3_EXTI8            ((unsigned short)0x000F) /*!<EXTI 8 configuration */
+#define SYSCFG_EXTICR3_EXTI9            ((unsigned short)0x00F0) /*!<EXTI 9 configuration */
+#define SYSCFG_EXTICR3_EXTI10           ((unsigned short)0x0F00) /*!<EXTI 10 configuration */
+#define SYSCFG_EXTICR3_EXTI11           ((unsigned short)0xF000) /*!<EXTI 11 configuration */
+
+/**
+  * @brief   EXTI8 configuration
+  */
+#define SYSCFG_EXTICR3_EXTI8_PA         ((unsigned short)0x0000) /*!<PA[8] pin */
+#define SYSCFG_EXTICR3_EXTI8_PB         ((unsigned short)0x0001) /*!<PB[8] pin */
+#define SYSCFG_EXTICR3_EXTI8_PC         ((unsigned short)0x0002) /*!<PC[8] pin */
+#define SYSCFG_EXTICR3_EXTI8_PD         ((unsigned short)0x0003) /*!<PD[8] pin */
+#define SYSCFG_EXTICR3_EXTI8_PE         ((unsigned short)0x0004) /*!<PE[8] pin */
+#define SYSCFG_EXTICR3_EXTI8_PF         ((unsigned short)0x0005) /*!<PF[8] pin */
+#define SYSCFG_EXTICR3_EXTI8_PG         ((unsigned short)0x0006) /*!<PG[8] pin */
+#define SYSCFG_EXTICR3_EXTI8_PH         ((unsigned short)0x0007) /*!<PH[8] pin */
+#define SYSCFG_EXTICR3_EXTI8_PI         ((unsigned short)0x0008) /*!<PI[8] pin */
+/**
+  * @brief   EXTI9 configuration
+  */
+#define SYSCFG_EXTICR3_EXTI9_PA         ((unsigned short)0x0000) /*!<PA[9] pin */
+#define SYSCFG_EXTICR3_EXTI9_PB         ((unsigned short)0x0010) /*!<PB[9] pin */
+#define SYSCFG_EXTICR3_EXTI9_PC         ((unsigned short)0x0020) /*!<PC[9] pin */
+#define SYSCFG_EXTICR3_EXTI9_PD         ((unsigned short)0x0030) /*!<PD[9] pin */
+#define SYSCFG_EXTICR3_EXTI9_PE         ((unsigned short)0x0040) /*!<PE[9] pin */
+#define SYSCFG_EXTICR3_EXTI9_PF         ((unsigned short)0x0050) /*!<PF[9] pin */
+#define SYSCFG_EXTICR3_EXTI9_PG         ((unsigned short)0x0060) /*!<PG[9] pin */
+#define SYSCFG_EXTICR3_EXTI9_PH         ((unsigned short)0x0070) /*!<PH[9] pin */
+#define SYSCFG_EXTICR3_EXTI9_PI         ((unsigned short)0x0080) /*!<PI[9] pin */
+/**
+  * @brief   EXTI10 configuration
+  */
+#define SYSCFG_EXTICR3_EXTI10_PA        ((unsigned short)0x0000) /*!<PA[10] pin */
+#define SYSCFG_EXTICR3_EXTI10_PB        ((unsigned short)0x0100) /*!<PB[10] pin */
+#define SYSCFG_EXTICR3_EXTI10_PC        ((unsigned short)0x0200) /*!<PC[10] pin */
+#define SYSCFG_EXTICR3_EXTI10_PD        ((unsigned short)0x0300) /*!<PD[10] pin */
+#define SYSCFG_EXTICR3_EXTI10_PE        ((unsigned short)0x0400) /*!<PE[10] pin */
+#define SYSCFG_EXTICR3_EXTI10_PF        ((unsigned short)0x0500) /*!<PF[10] pin */
+#define SYSCFG_EXTICR3_EXTI10_PG        ((unsigned short)0x0600) /*!<PG[10] pin */
+#define SYSCFG_EXTICR3_EXTI10_PH        ((unsigned short)0x0700) /*!<PH[10] pin */
+#define SYSCFG_EXTICR3_EXTI10_PI        ((unsigned short)0x0800) /*!<PI[10] pin */
+/**
+  * @brief   EXTI11 configuration
+  */
+#define SYSCFG_EXTICR3_EXTI11_PA        ((unsigned short)0x0000) /*!<PA[11] pin */
+#define SYSCFG_EXTICR3_EXTI11_PB        ((unsigned short)0x1000) /*!<PB[11] pin */
+#define SYSCFG_EXTICR3_EXTI11_PC        ((unsigned short)0x2000) /*!<PC[11] pin */
+#define SYSCFG_EXTICR3_EXTI11_PD        ((unsigned short)0x3000) /*!<PD[11] pin */
+#define SYSCFG_EXTICR3_EXTI11_PE        ((unsigned short)0x4000) /*!<PE[11] pin */
+#define SYSCFG_EXTICR3_EXTI11_PF        ((unsigned short)0x5000) /*!<PF[11] pin */
+#define SYSCFG_EXTICR3_EXTI11_PG        ((unsigned short)0x6000) /*!<PG[11] pin */
+#define SYSCFG_EXTICR3_EXTI11_PH        ((unsigned short)0x7000) /*!<PH[11] pin */
+#define SYSCFG_EXTICR3_EXTI11_PI        ((unsigned short)0x8000) /*!<PI[11] pin */
+
+/*****************  Bit definition for SYSCFG_EXTICR4 register  ***************/
+#define SYSCFG_EXTICR4_EXTI12           ((unsigned short)0x000F) /*!<EXTI 12 configuration */
+#define SYSCFG_EXTICR4_EXTI13           ((unsigned short)0x00F0) /*!<EXTI 13 configuration */
+#define SYSCFG_EXTICR4_EXTI14           ((unsigned short)0x0F00) /*!<EXTI 14 configuration */
+#define SYSCFG_EXTICR4_EXTI15           ((unsigned short)0xF000) /*!<EXTI 15 configuration */
+/**
+  * @brief   EXTI12 configuration
+  */
+#define SYSCFG_EXTICR4_EXTI12_PA        ((unsigned short)0x0000) /*!<PA[12] pin */
+#define SYSCFG_EXTICR4_EXTI12_PB        ((unsigned short)0x0001) /*!<PB[12] pin */
+#define SYSCFG_EXTICR4_EXTI12_PC        ((unsigned short)0x0002) /*!<PC[12] pin */
+#define SYSCFG_EXTICR4_EXTI12_PD        ((unsigned short)0x0003) /*!<PD[12] pin */
+#define SYSCFG_EXTICR4_EXTI12_PE        ((unsigned short)0x0004) /*!<PE[12] pin */
+#define SYSCFG_EXTICR4_EXTI12_PF        ((unsigned short)0x0005) /*!<PF[12] pin */
+#define SYSCFG_EXTICR4_EXTI12_PG        ((unsigned short)0x0006) /*!<PG[12] pin */
+#define SYSCFG_EXTICR3_EXTI12_PH        ((unsigned short)0x0007) /*!<PH[12] pin */
+/**
+  * @brief   EXTI13 configuration
+  */
+#define SYSCFG_EXTICR4_EXTI13_PA        ((unsigned short)0x0000) /*!<PA[13] pin */
+#define SYSCFG_EXTICR4_EXTI13_PB        ((unsigned short)0x0010) /*!<PB[13] pin */
+#define SYSCFG_EXTICR4_EXTI13_PC        ((unsigned short)0x0020) /*!<PC[13] pin */
+#define SYSCFG_EXTICR4_EXTI13_PD        ((unsigned short)0x0030) /*!<PD[13] pin */
+#define SYSCFG_EXTICR4_EXTI13_PE        ((unsigned short)0x0040) /*!<PE[13] pin */
+#define SYSCFG_EXTICR4_EXTI13_PF        ((unsigned short)0x0050) /*!<PF[13] pin */
+#define SYSCFG_EXTICR4_EXTI13_PG        ((unsigned short)0x0060) /*!<PG[13] pin */
+#define SYSCFG_EXTICR3_EXTI13_PH        ((unsigned short)0x0070) /*!<PH[13] pin */
+/**
+  * @brief   EXTI14 configuration
+  */
+#define SYSCFG_EXTICR4_EXTI14_PA        ((unsigned short)0x0000) /*!<PA[14] pin */
+#define SYSCFG_EXTICR4_EXTI14_PB        ((unsigned short)0x0100) /*!<PB[14] pin */
+#define SYSCFG_EXTICR4_EXTI14_PC        ((unsigned short)0x0200) /*!<PC[14] pin */
+#define SYSCFG_EXTICR4_EXTI14_PD        ((unsigned short)0x0300) /*!<PD[14] pin */
+#define SYSCFG_EXTICR4_EXTI14_PE        ((unsigned short)0x0400) /*!<PE[14] pin */
+#define SYSCFG_EXTICR4_EXTI14_PF        ((unsigned short)0x0500) /*!<PF[14] pin */
+#define SYSCFG_EXTICR4_EXTI14_PG        ((unsigned short)0x0600) /*!<PG[14] pin */
+#define SYSCFG_EXTICR3_EXTI14_PH        ((unsigned short)0x0700) /*!<PH[14] pin */
+/**
+  * @brief   EXTI15 configuration
+  */
+#define SYSCFG_EXTICR4_EXTI15_PA        ((unsigned short)0x0000) /*!<PA[15] pin */
+#define SYSCFG_EXTICR4_EXTI15_PB        ((unsigned short)0x1000) /*!<PB[15] pin */
+#define SYSCFG_EXTICR4_EXTI15_PC        ((unsigned short)0x2000) /*!<PC[15] pin */
+#define SYSCFG_EXTICR4_EXTI15_PD        ((unsigned short)0x3000) /*!<PD[15] pin */
+#define SYSCFG_EXTICR4_EXTI15_PE        ((unsigned short)0x4000) /*!<PE[15] pin */
+#define SYSCFG_EXTICR4_EXTI15_PF        ((unsigned short)0x5000) /*!<PF[15] pin */
+#define SYSCFG_EXTICR4_EXTI15_PG        ((unsigned short)0x6000) /*!<PG[15] pin */
+#define SYSCFG_EXTICR3_EXTI15_PH        ((unsigned short)0x7000) /*!<PH[15] pin */
+
+#define EXTI0_IRQn      6      /*!< EXTI Line0 Interrupt                                              */
+#define EXTI1_IRQn      7      /*!< EXTI Line1 Interrupt                                              */
+#define EXTI2_IRQn      8      /*!< EXTI Line2 Interrupt                                              */
+#define EXTI3_IRQn      9      /*!< EXTI Line3 Interrupt                                              */
+#define EXTI4_IRQn      10     /*!< EXTI Line4 Interrupt                                              */
+#define EXTI9_5_IRQn    23     /*!< External Line[5:9] Interrupts                                     */
+#define EXTI15_10_IRQn  40     /*!< External Line[15:10] Interrupts                                   */
+
+/*
+ * MPU section
+ */
+
+typedef struct {
+  volatile const  uint32_t TYPE;                  /*!< Offset: 0x00  MPU Type Register                              */
+  volatile uint32_t CTRL;                         /*!< Offset: 0x04  MPU Control Register                           */
+  volatile uint32_t RNR;                          /*!< Offset: 0x08  MPU Region RNRber Register                     */
+  volatile uint32_t RBAR;                         /*!< Offset: 0x0C  MPU Region Base Address Register               */
+  volatile uint32_t RASR;                         /*!< Offset: 0x10  MPU Region Attribute and Size Register         */
+  volatile uint32_t RBAR_A1;                      /*!< Offset: 0x14  MPU Alias 1 Region Base Address Register       */
+  volatile uint32_t RASR_A1;                      /*!< Offset: 0x18  MPU Alias 1 Region Attribute and Size Register */
+  volatile uint32_t RBAR_A2;                      /*!< Offset: 0x1C  MPU Alias 2 Region Base Address Register       */
+  volatile uint32_t RASR_A2;                      /*!< Offset: 0x20  MPU Alias 2 Region Attribute and Size Register */
+  volatile uint32_t RBAR_A3;                      /*!< Offset: 0x24  MPU Alias 3 Region Base Address Register       */
+  volatile uint32_t RASR_A3;                      /*!< Offset: 0x28  MPU Alias 3 Region Attribute and Size Register */
+} MPU_Regs;
+
+#define MPU_BASE          (SCS_BASE +  0x0D90)
+#define MPU               ((MPU_Regs*) MPU_BASE)
+
+#define MPU_CTRL_PRIVDEFENA_Pos             2                                             /*!< MPU CTRL: PRIVDEFENA Position */
+#define MPU_CTRL_PRIVDEFENA_Msk            (1ul << MPU_CTRL_PRIVDEFENA_Pos)               /*!< MPU CTRL: PRIVDEFENA Mask */
+
+#define MPU_CTRL_HFNMIENA_Pos               1                                             /*!< MPU CTRL: HFNMIENA Position */
+#define MPU_CTRL_HFNMIENA_Msk              (1ul << MPU_CTRL_HFNMIENA_Pos)                 /*!< MPU CTRL: HFNMIENA Mask */
+
+#define MPU_CTRL_ENABLE_Pos                 0                                             /*!< MPU CTRL: ENABLE Position */
+#define MPU_CTRL_ENABLE_Msk                (1ul << MPU_CTRL_ENABLE_Pos)                   /*!< MPU CTRL: ENABLE Mask */
+
+#define MPU_REGION_32B     (0b00100 << 1)
+#define MPU_REGION_64B     (0b00101 << 1)
+#define MPU_REGION_128B    (0b00110 << 1)
+#define MPU_REGION_256B    (0b00111 << 1)
+#define MPU_REGION_512B    (0b01000 << 1)
+#define MPU_REGION_1KB     (0b01001 << 1)
+#define MPU_REGION_2KB     (0b01010 << 1)
+#define MPU_REGION_4KB     (0b01011 << 1)
+#define MPU_REGION_8KB     (0b01100 << 1)
+#define MPU_REGION_16KB    (0b01101 << 1)
+#define MPU_REGION_32KB    (0b01110 << 1)
+#define MPU_REGION_64KB    (0b01111 << 1)
+#define MPU_REGION_128KB   (0b10000 << 1)
+#define MPU_REGION_256KB   (0b10001 << 1)
+#define MPU_REGION_512KB   (0b10010 << 1)
+#define MPU_REGION_1MB     (0b10011 << 1)
+#define MPU_REGION_2MB     (0b10100 << 1)
+#define MPU_REGION_4MB     (0b10101 << 1)
+#define MPU_REGION_8MB     (0b10110 << 1)
+#define MPU_REGION_16MB    (0b10111 << 1)
+#define MPU_REGION_32MB    (0b11000 << 1)
+#define MPU_REGION_64MB    (0b11001 << 1)
+#define MPU_REGION_128MB   (0b11010 << 1)
+#define MPU_REGION_256MB   (0b11011 << 1)
+#define MPU_REGION_512MB   (0b11100 << 1)
+#define MPU_REGION_1GB     (0b11101 << 1)
+#define MPU_REGION_2GB     (0b11110 << 1)
+#define MPU_REGION_4GB     (0b11111 << 1)
+
+#define MPU_REGION_Valid   (1U << 4)
+
+#define MPU_REGION_Enabled 1U
+#define MPU_NO_EXEC (1U << 28)
+
+#define MPU_No_access (0U << 24)
+#define MPU_RW_No_access (1U << 24)
+#define MPU_RW_RO (2U << 24)
+#define MPU_RW (3U << 24)
+#define MPU_RO_No_access (5U << 24)
+#define MPU_RO (6U << 24)
+
+//#define MEMMNGFAULTREG MMIO32(0xE000ED34) // MMAR
+//#define MEMMNGFAULTSTAT MMIO8(0xE000ED28) // MMAS
+//#define MMARVALID  (1 << 7)
+//#define MSTKERR    (1 << 4)
+//#define MUNSTKERR  (1 << 3)
+//#define DACCVIOL   (1 << 1)
+//#define IACCVIOL   (1 << 0)
 
 #endif
