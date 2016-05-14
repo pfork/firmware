@@ -7,7 +7,9 @@ OC=$(PREFIX)-objcopy
 OD=$(PREFIX)-objdump
 AS=$(PREFIX)-as
 
-INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Icrypto/ -Iutils/ -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
+INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Icrypto/ -Iutils/ \
+			  -Ilib/sphincs256 -Ilib/blake -Ilib/newhope -Ilib/chacha20 \
+			  -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
 LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3_stm32f2.a
 CFLAGS = -mno-unaligned-access -g -Wall -Werror -Os \
 	-mfix-cortex-m3-ldrd -msoft-float -mthumb -Wno-strict-aliasing \
@@ -18,7 +20,7 @@ CFLAGS = -mno-unaligned-access -g -Wall -Werror -Os \
 
 LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-sections -Wl,-z,relro
 
-objs = utils/utils.o main.o core/rng.o core/adc.o core/ssp.o \
+objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/ssp.o \
 	core/clock.o core/systimer.o core/mpu.o core/init.o core/usb.o core/irq.o \
 	core/dma.o sdio/sdio.o sdio/sd.o core/led.o core/keys.o core/delay.o \
 	core/startup.o usb/dual.o crypto/mixer.o crypto/ecdho.o crypto/master.o core/storage.o \
@@ -27,8 +29,12 @@ objs = utils/utils.o main.o core/rng.o core/adc.o core/ssp.o \
    usb/msc/usbd_msc_core.o usb/msc/usbd_msc_scsi.o usb/msc/usbd_storage_msd.o \
 	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
 	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork_irq.o \
-	crypto/pitchfork_handler.o core/smallfonts.o core/oled.o utils/lzg/decode.o utils/lzg/checksum.o \
-	utils/widgets.o utils/itoa.o utils/flashdbg.o utils/chords.o core/nrf.o 
+	crypto/pitchfork_handler.o core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o \
+	lib/newhope/poly.o lib/newhope/ntt.o lib/newhope/precomp.o \
+	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/reduce.o \
+	lib/newhope/fips202.o lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
+	utils/widgets.o utils/itoa.o utils/flashdbg.o utils/chords.o core/nrf.o \
+	utils/ntohex.o
 
 all : main.bin
 full: clean main.bin doc tags
