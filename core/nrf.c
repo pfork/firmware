@@ -199,6 +199,13 @@ char nrf_recv(unsigned char * buf, unsigned char buflen) {
 
   if((nrf_read_reg(FIFO_STATUS) & RX_EMPTY) == 0) {
     // still stuff in the fifo
+    nrf_read_buf(RD_RX_PLOAD_WID,(unsigned char*) &len,1);
+    if(len>32 || len==0) {
+      nrf_write_reg(STATUS, RX_DR | TX_DS | MAX_RT);
+      CSN(0); SPI_send(nrf24l0_SPIx, FLUSH_RX); CSN(1);
+      CSN(0); SPI_send(nrf24l0_SPIx, FLUSH_TX); CSN(1);
+      return 0;
+    }
     nrf_read_buf(RD_RX_PLOAD, buf, len);// read receive payload from RX_FIFO buffer
     status = nrf_read_reg(STATUS);
     nrf_write_reg(STATUS, RX_DR | TX_DS | MAX_RT);
@@ -215,7 +222,7 @@ char nrf_recv(unsigned char * buf, unsigned char buflen) {
             CSN(0); SPI_send(nrf24l0_SPIx, FLUSH_TX); CSN(1);
           } else {
             nrf_read_buf(RD_RX_PLOAD_WID,(unsigned char*) &len,1);
-            if(len>32 || len==0 || len>buflen) {
+            if(len>32 || len==0) {
               nrf_write_reg(STATUS, RX_DR | TX_DS | MAX_RT);
               CSN(0); SPI_send(nrf24l0_SPIx, FLUSH_RX); CSN(1);
               CSN(0); SPI_send(nrf24l0_SPIx, FLUSH_TX); CSN(1);
