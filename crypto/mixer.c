@@ -114,16 +114,25 @@ struct entropy_store* init_pool(void) {
   */
 void seed_pool(void) {
   unsigned int i;
-  unsigned short val16;
+  /* unsigned short val16; */
   unsigned int val32;
-  for (i = 0; i < TEMP_COLLECT_ITER; ++i) {
-    val16=read_temp();
-    mix_pool_bytes(&input_pool, (const void *) &val16, 2);
-  }
-  for (i = 0; i < VREF_COLLECT_ITER; ++i) {
-    val16=read_vref();
-    mix_pool_bytes(&input_pool, (const void *) &val16, 2);
-  }
+
+  // TODO implement external RNG instead of disabled internal ADC entropy sources
+
+  /* for (i = 0; i < TEMP_COLLECT_ITER; ++i) { */
+  /*   val16=read_temp(); */
+  /*   mix_pool_bytes(&input_pool, (const void *) &val16, 2); */
+  /* } */
+  /* for (i = 0; i < VREF_COLLECT_ITER; ++i) { */
+  /*   val16=read_vref(); */
+  /*   mix_pool_bytes(&input_pool, (const void *) &val16, 2); */
+  /* } */
+
+  // todo calculate VBAT_COLLECT_ITER
+  //for (i = 0; i < VBAT_COLLECT_ITER; ++i) {
+  //  val16=read_vbat();
+  //  mix_pool_bytes(&input_pool, (const void *) &val16, 2);
+  //}
   for (i = 0; i < RNG_COLLECT_ITER; ++i) {
     val32=next_rand();
     mix_pool_bytes(&input_pool, (const void *) &val32, 4);
