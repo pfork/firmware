@@ -41,6 +41,22 @@ void topeerid(unsigned char* peer,
 }
 
 /**
+  * @brief  get_ekid: calculates temp key id
+  * @param  keyid: pointer to keyid name
+  * @param  nonce: pointer to nonce
+  * @param  ekid: pointer to buffer receiving ekid
+  * @retval None
+  */
+void get_ekid(unsigned char* keyid,
+              unsigned char* nonce,
+              unsigned char* ekid) {
+  randombytes_salsa20_random_buf((void *) nonce, (size_t) EKID_NONCE_LEN);
+  crypto_generichash(ekid, EKID_LEN,           // output
+                     nonce, EKID_NONCE_LEN,    // output
+                     keyid, STORAGE_ID_LEN);   // salt
+}
+
+/**
   * @brief  get_seedrec: returns a seedrecord matching the search parameters.
   * @param  type: SEED or SEED|DELETED
   * @param  peerid: pointer to peerid to search for or 0 (keyid overrides if specified)
@@ -48,14 +64,23 @@ void topeerid(unsigned char* peer,
   * @param  ptr: pointer to starting record in storage or 0 if searching from start
   * @retval pointer to found seed or 0
   */
-SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid, unsigned int ptr) {
+SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid, unsigned int ptr, unsigned char is_ephemeral) {
   SeedRecord *seedrec, *curseedrec, *seed = 0;
+  unsigned char ekid[EKID_LEN+EKID_NONCE_LEN];
 
   curseedrec = (SeedRecord*) find(ptr,type);
   while((unsigned int) curseedrec >= FLASH_BASE && (unsigned int) curseedrec < FLASH_BASE+FLASH_SECTOR_SIZE) {
-    seedrec = curseedrec;
-    if((peerid != 0 && sodium_memcmp(peerid,seedrec->peerid, STORAGE_ID_LEN) == 0) ||
-       (keyid != 0 && sodium_memcmp(keyid,seedrec->keyid, STORAGE_ID_LEN) == 0)) seed = seedrec;
+    seedrec = curseedrec; // TODO refactor curseedrec is redundant
+    if(is_ephemeral != 0) {
+      // calculate ephemeral keyid
+      crypto_generichash(ekid, EKID_LEN,                                     // output
+                         keyid+EKID_LEN, EKID_NONCE_LEN,                     // nonce
+                         (unsigned char*) seedrec->keyid, STORAGE_ID_LEN);   // key
+      if(sodium_memcmp(ekid,keyid,EKID_LEN) == 0)
+        return seedrec;
+    } else if((peerid != 0 && sodium_memcmp(peerid,seedrec->peerid, STORAGE_ID_LEN) == 0) ||
+              (keyid != 0 && sodium_memcmp(keyid,seedrec->keyid, STORAGE_ID_LEN) == 0))
+      seed = seedrec;
     curseedrec = (SeedRecord*) find((unsigned int) seedrec, type);
   }
   return seed;
@@ -154,7 +179,7 @@ unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char 
                      seed, crypto_secretbox_KEYBYTES);                   // key
 
   // skip storing if already existing record
-  if( (ptr = get_seedrec(SEED, 0, (unsigned char*) rec.keyid, 0)) != 0 )
+  if( (ptr = get_seedrec(SEED, 0, (unsigned char*) rec.keyid, 0, 0)) != 0 )
     return (unsigned int) ptr;
   // calculate nonce
   crypto_generichash(nonce, sizeof(nonce),                               // output
@@ -187,7 +212,7 @@ unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char 
 unsigned int del_seed(unsigned char* peerid, unsigned char* keyid) {
   DeletedSeed rec;
   unsigned int ptr;
-  if((ptr = (unsigned int) get_seedrec(SEED|DELETED, peerid, keyid, 0))!=0)
+  if((ptr = (unsigned int) get_seedrec(SEED|DELETED, peerid, keyid, 0, 0))!=0)
     return ptr;
   rec.type = SEED | DELETED;
   memcpy(rec.peerid, peerid, STORAGE_ID_LEN);
@@ -196,7 +221,7 @@ unsigned int del_seed(unsigned char* peerid, unsigned char* keyid) {
 }
 
 /**
-  * @brief  next_rex: advances the record ptr base on the size of the current record
+  * @brief  next_rec: advances the record ptr base on the size of the current record
   * @param  ptr: pointer to current record
   * @retval pointer to next record or -1
   */
@@ -297,12 +322,18 @@ UserRecord* get_userrec(void) {
   */
 UserRecord* init_user(unsigned char* name, unsigned char name_len) {
   // todo test this!!!
+  // todo check for max size of name
   unsigned char rec[255];
   UserRecord *userrec = get_userrec();
-  if(userrec == 0) return 0; // userdata not found
-  if(memcmp(userrec->name, name, name_len) == 0) {
-    // already existing user record returning it
-    return userrec;
+  if(userrec != 0) { // userdata uninitialized
+    if((uint32_t)userrec < FLASH_BASE || (uint32_t)userrec >= FLASH_BASE + FLASH_SECTOR_SIZE) {
+      // userrec pointing outside of flash sector
+      return 0;
+    }
+    if(memcmp(userrec->name, name, name_len) == 0) {
+      // already existing user record returning it
+      return userrec;
+    }
   }
   ((UserRecord*) &rec)->type = USERDATA;
   ((UserRecord*) &rec)->len = USERDATA_HEADER_LEN+name_len;
@@ -321,7 +352,7 @@ UserRecord* init_user(unsigned char* name, unsigned char name_len) {
 
 /**
   * @brief  clear_flash: erases given sector
-  * @param  sector_id: id of sector to delete (e.g. FLASH_SECTOR00)
+  * @param  sector_id: # of sector to delete
   * @retval None
   */
 void clear_flash(unsigned int sector_id) {
@@ -340,13 +371,13 @@ void clear_flash(unsigned int sector_id) {
   * @param  keyid: pointer to buffer containing keyid
   * @retval pointer to seedrecord for found seed or 0.
   */
-int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid) {
+int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid, unsigned char is_ephemeral) {
   unsigned char nonce[crypto_secretbox_NONCEBYTES];
   unsigned char cipher[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
   unsigned int i;
   unsigned char plain[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
 
-  SeedRecord* seedrec = get_seedrec(SEED, peerid, keyid, 0);
+  SeedRecord* seedrec = get_seedrec(SEED, peerid, keyid, 0, is_ephemeral);
   if(seedrec == 0) return 0; // seed not found
 
   UserRecord *userdata = get_userrec();
@@ -401,7 +432,7 @@ MapRecord* get_maprec(unsigned char* peerid) {
 int get_peer_seed(unsigned char *seed, unsigned char* peer, unsigned char len) {
   unsigned char peerid[STORAGE_ID_LEN];
   topeerid(peer, len, peerid);
-  return get_seed(seed, peerid, 0);
+  return get_seed(seed, peerid, 0, 0);
 }
 
 /**

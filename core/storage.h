@@ -26,6 +26,9 @@ typedef enum {
 #define DeletedEntry(ptr) (ptr->type & 0x80)
 
 #define STORAGE_ID_LEN 16
+#define EKID_LEN 16
+#define EKID_NONCE_LEN 15
+#define EKID_SIZE (EKID_LEN+EKID_NONCE_LEN)
 #define USER_SALT_LEN 32
 #define PEER_NAME_MAX 32
 #define PEERMAP_MAC_PREFIX_LEN (PEERMAP_HEADER_LEN - crypto_secretbox_MACBYTES)
@@ -52,6 +55,19 @@ typedef enum {
 #define FLASH_BASE FLASH_SECTOR04
 #define FLASH_SECTOR_SIZE FLASH_SECTOR04_SIZE
 #define FLASH_SECTOR_ID 4
+
+#define FLASH_CR_SECTOR_0               (0x00 << 3)
+#define FLASH_CR_SECTOR_1               (0x01 << 3)
+#define FLASH_CR_SECTOR_2               (0x02 << 3)
+#define FLASH_CR_SECTOR_3               (0x03 << 3)
+#define FLASH_CR_SECTOR_4               (0x04 << 3)
+#define FLASH_CR_SECTOR_5               (0x05 << 3)
+#define FLASH_CR_SECTOR_6               (0x06 << 3)
+#define FLASH_CR_SECTOR_7               (0x07 << 3)
+#define FLASH_CR_SECTOR_8               (0x08 << 3)
+#define FLASH_CR_SECTOR_9               (0x09 << 3)
+#define FLASH_CR_SECTOR_10              (0x0a << 3)
+#define FLASH_CR_SECTOR_11              (0x0b << 3)
 
 #define FLASH_CR_PROGRAM_X8      (0x00 << 8)
 #define FLASH_CR_PROGRAM_X16     (0x01 << 8)
@@ -98,10 +114,11 @@ unsigned int find(unsigned int ptr, unsigned char type);
 unsigned int find_last(unsigned int ptr, unsigned char type);
 
 unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
-int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid);
+int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid, unsigned char is_ephemeral);
 int get_peer_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
-SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid, unsigned int ptr);
+SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid, unsigned int ptr, unsigned char is_ephemeral);
 unsigned int del_seed(unsigned char* peerid, unsigned char* keyid);
+void get_ekid(unsigned char* keyid, unsigned char* nonce, unsigned char* ekid);
 
 // reverse mapping of peerids
 MapRecord* store_map(unsigned char* name, unsigned char len, unsigned char* peerid);

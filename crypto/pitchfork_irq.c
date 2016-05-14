@@ -68,13 +68,18 @@ unsigned char check_seed(unsigned int sptr) {
   * @retval 0 on error, 1 on success
   */
 unsigned char peer_to_seed(unsigned char* dst, unsigned char* src, unsigned char len) {
+  unsigned char ekid[EKID_LEN+EKID_NONCE_LEN];
+
   if( len == 0 || len >= PEER_NAME_MAX) {
     usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
     return 0;
   }
   unsigned int sptr = get_peer_seed(dst, src, len);
   if(check_seed(sptr) == 0) return 0;
-  usb_write( ((unsigned char*) ((SeedRecord*) sptr)->keyid), STORAGE_ID_LEN, 32, USB_CRYPTO_EP_CTRL_OUT);
+
+  // calculate ephemeral keyid
+  get_ekid(((unsigned char*) ((SeedRecord*) sptr)->keyid), ekid+EKID_LEN, ekid);
+  usb_write( ekid, sizeof(ekid), sizeof(ekid), USB_CRYPTO_EP_CTRL_OUT);
   return 1;
 }
 
@@ -113,7 +118,7 @@ void handle_data(usbd_device *usbd_dev, uint8_t ep) {
   unsigned char tmpbuf[64];
   if(modus>USB_CRYPTO_CMD_VERIFY) {
     // we are not in any modus that needs a buffer
-    len = usb_read(tmpbuf); // sink it
+    usb_read(tmpbuf); // sink it
     // todo overwrite this so attacker cannot get reliably data written to stack?
     usb_write((unsigned char*) "err: no op", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     return;
@@ -181,12 +186,12 @@ void handle_ctl(usbd_device *usbd_dev, uint8_t ep) {
         break;
       }
       case USB_CRYPTO_CMD_DECRYPT: {
-        if(len!=STORAGE_ID_LEN+1) {
+        if(len!=EKID_SIZE+1) {
           usb_write((unsigned char*) "err: no keyid", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
           return;
         }
         // keyid 2 seed
-        unsigned int sptr = get_seed(params, 0, (unsigned char*) buf+1);
+        unsigned int sptr = get_seed(params, 0, (unsigned char*) buf+1, 1);
         if(check_seed(sptr) == 0) return;
         modus = USB_CRYPTO_CMD_DECRYPT;
         break;
@@ -200,13 +205,13 @@ void handle_ctl(usbd_device *usbd_dev, uint8_t ep) {
         break;
       }
       case USB_CRYPTO_CMD_VERIFY: {
-        if(len!=crypto_generichash_BYTES+STORAGE_ID_LEN+1) {
+        if(len!=crypto_generichash_BYTES+EKID_SIZE+1) {
           usb_write((unsigned char*) "err: bad args", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
           return;
         }
         // get seed via keyid
         unsigned char seed[crypto_generichash_KEYBYTES];
-        if(check_seed(get_seed(seed,0,(unsigned char*) buf+1+crypto_generichash_BYTES)) == 0)
+        if(check_seed(get_seed(seed,0,(unsigned char*) buf+1+crypto_generichash_BYTES, 1)) == 0)
           return;
         hash_init(seed);
         // copy signature for final verification

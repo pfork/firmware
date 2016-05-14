@@ -98,7 +98,7 @@ int finish_ecdh(unsigned char* peer,
   unsigned char peerid[STORAGE_ID_LEN];
   unsigned int ptr;
 
-  if(get_seed(e, 0, keyid) != 1) {
+  if(get_seed(e, 0, keyid, 0) != 1) {
     // not found or integrity fault
     return -2;
   }
