@@ -11,9 +11,6 @@
 #include "usb.h"
 #include "stm32f.h"
 #include "clock.h"
-#ifdef USE_UART2
-#  include "uart.h"
-#endif
 #include "rng.h"
 #include "adc.h"
 #include "systimer.h"
@@ -24,6 +21,7 @@
 #include "led.h"
 #include "keys.h"
 #include "oled.h"
+#include "mpu.h"
 
 /**
   * @brief  main initialization routine
@@ -31,11 +29,11 @@
   * @retval None
   */
 void init(void) {
+#ifdef USE_MPU
+  mpu_init();
+#endif // USE_MPU
   clock_init();
   //led_init();
-#ifdef USE_UART2
-  uart_init();
-#endif
   rnd_init();
   adc_init();
   sysctr = 0;
