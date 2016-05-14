@@ -18,6 +18,7 @@
 #include <utils.h>
 #include <string.h>
 #include "led.h"
+#include "dma.h"
 #include "ecdho.h"
 #include "storage.h"
 #include "master.h"
@@ -58,7 +59,10 @@ unsigned char blocked = 0;
 void encrypt_block(Buffer *buf) {
   int i, len, size = buf->size;
   // zero out beginning of plaintext as demanded by nacl
-  for(i=0;i<(crypto_secretbox_ZEROBYTES>>2);i++) ((unsigned int*) buf->buf)[i]=0;
+  //for(i=0;i<(crypto_secretbox_ZEROBYTES>>2);i++) ((unsigned int*) buf->buf)[i]=0;
+  dmaset32(buf->buf, 0, crypto_secretbox_ZEROBYTES>>2);
+  //dmawait();
+
   // get nonce
   randombytes_salsa20_random_buf(outbuf, crypto_secretbox_NONCEBYTES);
   // encrypt (key is stored in beginning of params)
@@ -74,10 +78,10 @@ void encrypt_block(Buffer *buf) {
     irq_disable(NVIC_OTG_FS_IRQ);
     usb_write(outstart+i, len, 0, USB_CRYPTO_EP_DATA_OUT);
     irq_enable(NVIC_OTG_FS_IRQ);
-    // final packet
-    if(len<64) {
-      break;
-    }
+    // final packet TODO test without this! then remove
+    //if(len<64) {
+    //  break;
+    //}
   }
 }
 
@@ -116,10 +120,10 @@ void decrypt_block(Buffer* buf) {
     irq_disable(NVIC_OTG_FS_IRQ);
     usb_write(outstart32+i, len, 0, USB_CRYPTO_EP_DATA_OUT);
     irq_enable(NVIC_OTG_FS_IRQ);
-    // final packet
-    if(len<64) {
-      break;
-    }
+    // final packet TODO test without this! then remove
+    //if(len<64) {
+    //  break;
+    //}
   }
 }
 
@@ -160,7 +164,7 @@ void verify_msg(void) {
   */
 void rng_handler(void) {
   int i;
-  set_write_led;
+  //set_write_led;
   randombytes_salsa20_random_buf((void *) outbuf, BUF_SIZE);
   irq_disable(NVIC_OTG_FS_IRQ); // TODO needed?
   for(i=0;i<BUF_SIZE && (modus == USB_CRYPTO_CMD_RNG);i+=64) {
@@ -169,7 +173,7 @@ void rng_handler(void) {
       usbd_poll(usbd_dev);
   }
   irq_enable(NVIC_OTG_FS_IRQ);
-  reset_write_led;
+  //reset_write_led;
 }
 
 /**
@@ -214,7 +218,7 @@ void ecdh_end_handler(void) {
   unsigned char peer[32];
   unsigned char keyid[16];
   ECDH_End_Params* args = (ECDH_End_Params*) params;
-  SeedRecord* seedptr = get_seedrec(SEED,0,args->keyid, 0);
+  SeedRecord* seedptr = get_seedrec(SEED,0,args->keyid, 0, 0);
   unsigned char peer_len = get_peer(peer, (unsigned char*) seedptr->peerid);
   if(seedptr > 0 && peer_len > 0)
     finish_ecdh(peer, peer_len, args->keyid, args->pub, keyid);
@@ -254,10 +258,9 @@ void listkeys(unsigned char *peerid) {
     }
 
     // check if deleted?
-    delrec = (DeletedSeed*) get_seedrec(SEED | DELETED,
-                                        0,
+    delrec = (DeletedSeed*) get_seedrec(SEED | DELETED, 0,
                                         (unsigned char*) (((SeedRecord*) ptr)->keyid),
-                                        ptr);
+                                        ptr, 0);
     if(delrec!=0 &&
        memcmp(delrec->peerid, ((SeedRecord*) ptr)->peerid, STORAGE_ID_LEN)==0) {
       deleted++;
@@ -286,16 +289,19 @@ void listkeys(unsigned char *peerid) {
                        (unsigned char*) ((SeedRecord*) ptr)->peerid, STORAGE_ID_LEN<<1, // input
                        (unsigned char*) userdata->salt, USER_SALT_LEN);      // key
     // decrypt
+    // todo erase plain in any case! leaks keymaterial
     if(crypto_secretbox_open(plain,                 // ciphertext output
                              cipher,                // plaintext input
                              crypto_scalarmult_curve25519_BYTES+crypto_secretbox_ZEROBYTES, // plain length
                              nonce,                 // nonce
                              get_master_key())      // key
        == -1) {
+      memset(plain, 0, crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES);
       // rewind name of corrupt seed
       corrupt++;
       goto endloop;
     }
+    memset(plain, 0, crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES);
     outptr+=nlen;
     // copy keyid
     memcpy(outptr, ((SeedRecord*) ptr)->keyid, STORAGE_ID_LEN);
