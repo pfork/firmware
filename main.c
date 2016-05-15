@@ -223,7 +223,12 @@ static void app(void) {
   case Flashstats: { if(flashstats()==0) appmode=None; break; }
   case Flashdump: { if(flashdump()==0) appmode=None; break; }
   case Listseeds: { if(listseeds()==0) appmode=None; break; }
-  case Chord_train: { if(chord_train()==0) appmode=None; break; }
+  case Chord_train: { if(chord_train()==0) {
+        appmode=None;
+        gui_refresh=1;
+        break;
+      }
+  }
   case KEXMenu: { if(kex_menu()==0) appmode=None; break; }
   }
 }
