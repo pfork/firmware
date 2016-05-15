@@ -28,6 +28,7 @@ uint8_t *msgs;
 uint8_t *pgpwords=NULL;
 uint8_t **menuitems=NULL;
 uint8_t menuitems_len = 0;
+bool show_verifier=0;
 u8 key[32];
 u8 peer[33], peer_len=0;
 
@@ -441,8 +442,6 @@ static int find_peer(uint8_t* msg) {
   return -1;
 }
 
-int (*app)(void) = 0;
-
 static void accept_secret(char ignored) {
   unsigned int ptr;
   ptr = store_seed(key, peer, peer_len);
@@ -454,7 +453,7 @@ static void accept_secret(char ignored) {
     return;
   }
   mode=KEXTYPE;
-  app=NULL;
+  show_verifier=0;
   gui_refresh=1;
 }
 
@@ -463,7 +462,7 @@ int show_pgpwords() {
   if(ret == 0) {
     memset(key,0, 32);
     mode=KEXTYPE;
-    app=NULL;
+    show_verifier=0;
     gui_refresh=1;
   }
   return ret;
@@ -556,7 +555,7 @@ static void kex_cb(char menuidx) {
   to_pgpwords(verifier, sizeof(verifier));
   gui_refresh=1;
   appctx.idx=0; appctx.top=0;
-  app=show_pgpwords;
+  show_verifier=1;
 }
 
 static int show_peers() {
@@ -649,7 +648,7 @@ static void discover() {
       to_pgpwords(verifier, sizeof(verifier));
       gui_refresh=1;
       appctx.idx=0; appctx.top=0;
-      app=show_pgpwords;
+      show_verifier=1;
     }
   }
 }
@@ -692,15 +691,15 @@ int kex_menu(void) {
   }
   case ECDH: {
     discover();
-    if(app==NULL) return show_peers();
+    if(show_verifier==0) return show_peers();
     break;
   }
   case NEW_HOPE: {
     discover();
-    if(app==NULL) return show_peers();
+    if(show_verifier==0) return show_peers();
     break;
   }
   }
-  if(app!=NULL) return app();
+  if(show_verifier==1) return show_pgpwords();
   return 1;
 }
