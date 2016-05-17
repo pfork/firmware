@@ -34,7 +34,9 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/reduce.o \
 	lib/newhope/fips202.o lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
 	utils/widgets.o utils/itoa.o utils/flashdbg.o utils/chords.o core/nrf.o \
-	utils/ntohex.o
+	utils/ntohex.o lib/scalarmult/cortex_m0_mpy121666.o \
+	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
+	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o
 
 all : main.bin
 full: clean main.bin doc tags
