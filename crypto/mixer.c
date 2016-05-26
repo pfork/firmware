@@ -9,11 +9,14 @@
   */
 
 #include "adc.h"
+#include "xentropy.h"
 #include "rng.h"
 #include "mixer.h"
 
-#define TEMP_COLLECT_ITER (8/5)*INPUT_POOL_WORDS*32 << 1 // measured entropy / byte = 5.7
-#define VREF_COLLECT_ITER (8/2)*INPUT_POOL_WORDS*32 << 1 // measured entropy / byte = 2.8
+//#define TEMP_COLLECT_ITER (8/5)*INPUT_POOL_WORDS*32 << 1 // measured entropy / byte = 5.7
+//#define VREF_COLLECT_ITER (8/2)*INPUT_POOL_WORDS*32 << 1 // measured entropy / byte = 2.8
+#define ADC_COLLECT_ITER 8192
+#define XESRC_COLLECT_ITER 1024
 #define RNG_COLLECT_ITER INPUT_POOL_WORDS << 1 // advertised 32 bit rng
 
 // ported from
@@ -114,25 +117,27 @@ struct entropy_store* init_pool(void) {
   */
 void seed_pool(void) {
   unsigned int i;
-  /* unsigned short val16; */
+  unsigned char val8;
   unsigned int val32;
 
   // TODO implement external RNG instead of disabled internal ADC entropy sources
 
-  /* for (i = 0; i < TEMP_COLLECT_ITER; ++i) { */
-  /*   val16=read_temp(); */
-  /*   mix_pool_bytes(&input_pool, (const void *) &val16, 2); */
-  /* } */
-  /* for (i = 0; i < VREF_COLLECT_ITER; ++i) { */
-  /*   val16=read_vref(); */
-  /*   mix_pool_bytes(&input_pool, (const void *) &val16, 2); */
-  /* } */
-
-  // todo calculate VBAT_COLLECT_ITER
-  //for (i = 0; i < VBAT_COLLECT_ITER; ++i) {
-  //  val16=read_vbat();
-  //  mix_pool_bytes(&input_pool, (const void *) &val16, 2);
-  //}
+  for (i = 0; i < ADC_COLLECT_ITER; ++i) {
+    val8=(uint8_t) (0xff & read_temp());
+    mix_pool_bytes(&input_pool, (const void *) &val8, 1);
+  }
+  for (i = 0; i < ADC_COLLECT_ITER; ++i) {
+    val8=(uint8_t) (0xff & read_vref());
+    mix_pool_bytes(&input_pool, (const void *) &val8, 1);
+  }
+  for (i = 0; i < ADC_COLLECT_ITER; ++i) {
+    val8=(uint8_t) (0xff & read_vbat());
+    mix_pool_bytes(&input_pool, (const void *) &val8, 1);
+  }
+  for (i = 0; i < XESRC_COLLECT_ITER; ++i) {
+    get_entropy((uint8_t*) &val32,4);
+    mix_pool_bytes(&input_pool, (const void *) &val32, 4);
+  }
   for (i = 0; i < RNG_COLLECT_ITER; ++i) {
     val32=next_rand();
     mix_pool_bytes(&input_pool, (const void *) &val32, 4);

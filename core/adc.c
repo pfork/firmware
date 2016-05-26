@@ -26,6 +26,8 @@ void adc_init ( void ) {
 
   // disable temperature/vref sensor
   ADC_CCR &= ~ADC_CCR_TSVREFE;
+  // disable vbat sensor
+  ADC_CCR &= ~ADC_CCR_VBATEN;
   // adc off
   ADC_CR2(ADC1) &= ~ADC_CR2_ADON;
   // scanmode off
@@ -38,8 +40,10 @@ void adc_init ( void ) {
   ADC_CR2(ADC1) &= ~ADC_CR2_ALIGN;
   // set sampling time
   ADC_SMPR1(ADC1) |= (ADC_SMPR_SMP_1DOT5CYC << ((ADC_CHANNEL16 - 10) * 3)) |
-                     (ADC_SMPR_SMP_1DOT5CYC << ((ADC_CHANNEL17 - 10) * 3));
-                     //(ADC_SMPR_SMP_1DOT5CYC << ((ADC_CHANNEL18 - 10) * 3));
+                     (ADC_SMPR_SMP_1DOT5CYC << ((ADC_CHANNEL17 - 10) * 3)) |
+                     (ADC_SMPR_SMP_1DOT5CYC << ((ADC_CHANNEL18 - 10) * 3));
+  // enable EOC irq
+  ADC_CR1(ADC1) |= ADC_CR1_EOCIE;
   ADC_SQR1(ADC1) = 0; // only one entry
 }
 
@@ -60,7 +64,8 @@ static unsigned short read_chan( unsigned char chan ) {
 
   while(res==0x800) {
     // start conversion
-    ADC_CCR |= ADC_CCR_TSVREFE;
+    if(chan==ADC_CHANNEL16 || chan==ADC_CHANNEL17) ADC_CCR |= ADC_CCR_TSVREFE;
+    else if(chan==ADC_CHANNEL18) ADC_CCR |= ADC_CCR_VBATEN;
     ADC_CR2(ADC1) |= ADC_CR2_ADON;
     ADC_CR2(ADC1) |= ADC_CR2_SWSTART;
 
@@ -107,9 +112,6 @@ unsigned short read_vref( void ) {
 * @param  None
 * @retval sampled VBAT voltage
 */
-//unsigned short read_vbat( void ) {
-  // todo
-  // needs to enable ADC_CCR |= ADC_CCR_VBATE;
-  // instead of adc_ccr_ts
-//  return read_chan(ADC_CHANNEL18);
-//}
+unsigned short read_vbat( void ) {
+  return read_chan(ADC_CHANNEL18);
+}

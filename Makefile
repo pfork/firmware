@@ -22,7 +22,7 @@ LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-se
 
 objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/ssp.o \
 	core/clock.o core/systimer.o core/mpu.o core/init.o core/usb.o core/irq.o \
-	core/dma.o sdio/sdio.o sdio/sd.o core/led.o core/keys.o core/delay.o \
+	core/dma.o sdio/sdio.o sdio/sd.o core/led.o core/keys.o core/delay.o core/xentropy.o \
 	core/startup.o usb/dual.o crypto/mixer.o crypto/ecdho.o crypto/master.o core/storage.o \
 	crypto/randombytes_salsa20_random.o utils/memcpy.o utils/memset.o utils/memcmp.o \
 	usb/msc/usb_bsp.o usb/msc/usb_dcd.o usb/msc/usbd_core.o usb/msc/usbd_ioreq.o \
