@@ -361,11 +361,12 @@ typedef struct
 #define ADC_CR2_ADON			(1 << 0)
 /* to enable temp sensor */
 #define ADC_CCR_TSVREFE			(1 << 23)
-#define ADC_CCR_VBATEN        (1 << 24)
+#define ADC_CCR_VBATEN        (1 << 22)
 /* SWSTART: */ /** Start conversion of regular channels. */
 #define ADC_CR2_SWSTART			(1 << 30)
 
 #define ADC_CR1_SCAN			(1 << 8)
+#define ADC_CR1_EOCIE		(1 << 5)
 #define ADC_CR2_EXTTRIG			(1 << 28)
 
 #define ADC_SR_EOC			(1 << 1)
