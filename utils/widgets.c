@@ -16,9 +16,9 @@ void getstr(char *prompt, uint8_t *name, int *len) {
   while(1) {
     oled_clear();
     oled_print(0,0,(char*) prompt,Font_8x8);
-    oled_print(0,8,(char*) "<+> select",Font_8x8);
-    oled_print(0,16,(char*) "j+k delete",Font_8x8);
-    oled_print(0,24,(char*) "<+j+k+> submit",Font_8x8);
+    oled_print(0,8,(char*) "enter select",Font_8x8);
+    oled_print(0,16,(char*) "enter+< delete",Font_8x8);
+    oled_print(0,24,(char*) "enter+> submit",Font_8x8);
     oled_print(0,40,(char*) "press any key",Font_8x8);
     oled_print(0,48,(char*) "to continue..",Font_8x8);
     while((keys=keys_pressed())==0);
@@ -47,14 +47,14 @@ void getstr(char *prompt, uint8_t *name, int *len) {
       mDelay(10);
       keys = keys_pressed();
 
-      if(keys == (BUTTON_LEFT | BUTTON_RIGHT | BUTTON_UP | BUTTON_DOWN)) { // submit
+      if(keys == (BUTTON_ENTER | BUTTON_RIGHT)) { // submit
         break;
-      } else if(keys ==  (BUTTON_LEFT | BUTTON_RIGHT)) { // enter
+      } else if(keys ==  (BUTTON_ENTER)) { // enter
         if(*len<32) {
           name[*len]=cur;
           (*len)++;
         }
-      } else if (keys == (BUTTON_DOWN| BUTTON_UP)) { // delete
+      } else if (keys == (BUTTON_ENTER | BUTTON_LEFT)) { // delete
         if(*len>0) {
           (*len)--;
         }
@@ -68,7 +68,7 @@ void getstr(char *prompt, uint8_t *name, int *len) {
         cur+=16;
       }
       if(cur<32) {
-        cur=cur+32;
+        cur=128+cur-32;
       } else if(cur>128) {
         cur=cur-128+32;
       }
