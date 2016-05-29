@@ -10,7 +10,7 @@ gpio A 5|6|7 -> sck, miso, mosi
 #define CHANNEL 81
 #define nrf_write_buf(a,b,c) nrf_cmd_buf(a + WRITE_REG_NRF24L01,b,c)
 
-const uint32_t max_tx_retries = 10;
+const uint32_t max_tx_retries = 64;
 const uint32_t rx_retries=16384;
 
 static void SPI_send(SPI_Regs* SPIx, const unsigned char data) {
@@ -121,7 +121,7 @@ void nrf24_init(void) {
   // enhanced shockburst
   nrf_write_reg(EN_AA, 0x3f);    // Enable all auto acks
   nrf_write_reg(DYNPD, 3);       // Enables DYNAMIC_PAYLOAD for pipes 0&1
-  nrf_write_reg(FEATURE, 5);     // Enables the W_TX_PAYLOAD_NOACK + DYNAMIC_PAYLOAD command
+  nrf_write_reg(FEATURE, 7);     // Enables the W_TX_PAYLOAD_NOACK + WR_ACK_PLOAD + DYNAMIC_PAYLOAD command
   //nrf_write_reg(FEATURE, 1);     // Enables the W_TX_PAYLOAD_NOACK command
 
   // shockburst
@@ -177,6 +177,7 @@ char nrf_send(const unsigned char* address, const unsigned char * tx_buf, const 
 
 void nrf_open_rx(const unsigned char *addr) {
   CE(0);
+  nrf_write_buf(TX_ADDR, addr, ADDR_WIDTH);
   nrf_write_buf(RX_ADDR_P0, addr, ADDR_WIDTH);
   nrf_write_buf(RX_ADDR_P1, BCAST, ADDR_WIDTH);
 
