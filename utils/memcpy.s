@@ -46,6 +46,8 @@
 
         .syntax         unified
 
+.cpu cortex-m3
+
 #if defined (__thumb__)
         .thumb
         .thumb_func
