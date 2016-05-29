@@ -2,10 +2,10 @@
 #include "stm32f.h"
 #include "nrf.h"
 #include "pitchfork.h"
+#include "itoa.h"
 #include <string.h>
 #include <stddef.h>
 #include <delay.h>
-#include <led.h>
 #include <oled.h>
 #include <widgets.h>
 #include "utils/lzg/lzg.h"
@@ -14,25 +14,28 @@
 #include "newhope.h"
 #include "poly.h"
 #include "error_correction.h"
-#include "ntohex.h"
 #include "storage.h"
+#include <crypto_generichash.h>
 
-typedef enum {KEXTYPE=0, ECDH, NEW_HOPE} KEXmodes;
+typedef enum {KEXTYPE=0, ECDH, NEW_HOPE, MPECDH} KEXmodes;
 
 extern unsigned char outbuf[crypto_secretbox_NONCEBYTES+crypto_secretbox_ZEROBYTES+BUF_SIZE];
 extern MenuCtx appctx;
 
 static KEXmodes mode = KEXTYPE;
-size_t peers=0;
-uint8_t *msgs;
-uint8_t *pgpwords=NULL;
-uint8_t **menuitems=NULL;
-uint8_t menuitems_len = 0;
-bool show_verifier=0;
-u8 key[32];
-u8 peer[33], peer_len=0;
+static size_t peers=0;
+static uint8_t *msgs;
+static uint8_t *pgpwords=NULL;
+static uint8_t **menuitems=NULL;
+static uint8_t menuitems_len = 0;
+static Options *options;
+static bool show_verifier=0;
+static int ii=0;
+static u8 key[32];
+static u8 peer[33];
+static int peer_len=0;
 
-static const char *kexmenuitems[]={"ECDH", "New Hope (PQ)"};
+static const char *kexmenuitems[]={"ECDH", "New Hope (PQ)", "Group ECDH" };
 
 // used pgpwords.py >pgpwords.0offset
 // ./src/tools/lzg -9 pgpwords.0offset pgpwords.lzg
@@ -437,13 +440,15 @@ static const char* pgpword(uint16_t *wordlist, uint8_t n, size_t idx) {
 static int find_peer(uint8_t* msg) {
   size_t i;
   for(i=0;i<peers;i++) {
-    if(memcmp((void*) msgs+i*32+5, (void*) msg+5, 32-5)==0) return i;
+    if(memcmp((void*) msgs+i*33+5, (void*) msg+5, 32-5)==0) return i;
   }
   return -1;
 }
 
 static void accept_secret(char ignored) {
   unsigned int ptr;
+  if(peer_len<1)
+    getstr("pls name key", peer, &peer_len);
   ptr = store_seed(key, peer, peer_len);
   memset(key, 0, 32);
   if(ptr<1) {
@@ -457,7 +462,7 @@ static void accept_secret(char ignored) {
   gui_refresh=1;
 }
 
-int show_pgpwords() {
+static int show_pgpwords() {
   int ret = menu(&appctx, (const uint8_t**) menuitems,menuitems_len,accept_secret);
   if(ret == 0) {
     memset(key,0, 32);
@@ -495,16 +500,13 @@ static void kex_cb(char menuidx) {
     oled_print(0,32, (char*) "calc pub" , Font_8x8);
     crypto_scalarmult_curve25519_base(pub, e);
     oled_print(0,40, (char*) "send pub" , Font_8x8);
-    while(nrf_send(msgs+32*menuidx,pub,32)==0);
-    nrf_open_rx(msgs+32*menuidx);
+    while(nrf_send(msgs+33*menuidx,pub,32)==0);
+    nrf_open_rx(msgs+33*menuidx);
     uDelay(120);
     oled_print(0,48, (char*) "get pub" , Font_8x8);
     while((nrf_recv(pub, PLOAD_WIDTH) & 0x7f) != 32 );
     oled_print(0,56, (char*) "calc shared key" , Font_8x8);
     crypto_scalarmult_curve25519(key, e, pub);
-    // todo derive verifier token
-    // find out name of peer
-    // store seed
   } else if(mode==NEW_HOPE) {
     poly sk;
     //u8 send[POLY_BYTES];
@@ -516,22 +518,15 @@ static void kex_cb(char menuidx) {
     newhope_keygen(send, &sk);
     // send send
     oled_print(0,32, (char*) "send pub" , Font_8x8);
-    //uint8_t cnt[]="  ";
     for(i=0;i<POLY_BYTES;i+=32) {
-      while(nrf_send(msgs+32*menuidx,send+i,32)==0);
-      //ntohex(cnt, (uint8_t) ((i/32)>>4));
-      //ntohex(cnt+1, (uint8_t) (i/32));
-      //oled_print(72,32, (char*) cnt, Font_8x8);
+      while(nrf_send(msgs+33*menuidx,send+i,32)==0);
     }
     // receive send
     oled_print(0,40, (char*) "recv pub" , Font_8x8);
-    nrf_open_rx(msgs+32*menuidx);
+    nrf_open_rx(msgs+33*menuidx);
     for(i=0;i<POLY_BYTES;i+=32) {
       while(((res=nrf_recv(send+i, 32)) & 0x7f) != 32 ||
             ((res & 0x80) == 1)); // broadcast
-      //ntohex(cnt, (uint8_t) ((i/32)>>4));
-      //ntohex(cnt+1, (uint8_t) (i/32));
-      //oled_print(72,40, (char*) cnt, Font_8x8);
     }
     mDelay(1); // wtf? todo/fixme. without this delay doesn't work
     nrf_open_rx(msgs);
@@ -542,14 +537,14 @@ static void kex_cb(char menuidx) {
   }
 
   // send name
-  while(nrf_send(msgs+32*menuidx,msgs+5,32-5)==0);
+  while(nrf_send(msgs+33*menuidx,msgs+5,32-5)==0);
 
   u8 verifier[16];
   crypto_generichash(verifier, sizeof(verifier),                               // output
                      (unsigned char*) "PITCHFORK KEX Verifier          ", 32,  // input
                      (unsigned char*) key, 32);                                // key
-  for(i=0;i<(32-5) && msgs[32*menuidx+5+i]!=0;i++) {
-    peer[i]=msgs[(32*menuidx)+5+i];
+  for(i=0;i<(32-5) && msgs[33*menuidx+5+i]!=0;i++) {
+    peer[i]=msgs[(33*menuidx)+5+i];
   }
   peer_len=i;
   to_pgpwords(verifier, sizeof(verifier));
@@ -558,13 +553,227 @@ static void kex_cb(char menuidx) {
   show_verifier=1;
 }
 
-static int show_peers() {
-  int i;
-  for(i=0;i<peers;i++) menuitems[i]=msgs+i*32+5;
-  return menu(&appctx, (const uint8_t**) menuitems,peers,kex_cb);
+static void bubble_sort(u8 **ptr,int s) {
+  int i,j;
+  u8* temp;
+  for(i=1;i<s;i++) {
+    for(j=0;j<s-i;j++) {
+      //if(*(ptr+j)>*(ptr+j+1)) {
+      if(memcmp((char*) ptr[j], (char*) ptr[j+1],32)==1) {
+        temp=ptr[j];
+        ptr[j]=ptr[j+1];
+        ptr[j+1]=temp;
+      }
+    }
+  }
 }
 
-static int ii=0;
+void mpkex_cb(char menulen) {
+  size_t peer_cnt=0, i, self;
+  u8 **parties = (u8**) (options + (menulen*sizeof(Options)));
+  //if(menulen<3) return;
+  oled_clear();
+  char tmp[16];
+  oled_print(0, 0, "group", Font_8x8);
+  for(i=0;i<menulen;i++) {
+    if(options[i].selected) {
+      parties[i]=options[i].str-5;
+      peer_cnt++;
+    }
+  }
+  itos(tmp,peer_cnt-1);
+  oled_print(6*8, 0, tmp, Font_8x8);
+
+  bubble_sort(parties, peer_cnt);
+
+  for(self=0;self<peer_cnt;self++) {
+    if(memcmp(msgs,parties[self],32)==0) break;
+  }
+  if(self>=peer_cnt) {
+    // error couldn't find self
+    // abort
+    oled_print(0, 8, "err: no self", Font_8x8);
+    while(1);
+  }
+  itos(tmp,self);
+  oled_print(11*8, 0, tmp, Font_8x8);
+
+  crypto_generichash_state hash_state;
+  u8 grouphash[32];
+  crypto_generichash_init(&hash_state, NULL, 0, 32);
+  for(i=0;i<peer_cnt;i++) {
+    // maybe not only the name, but also the 5 byte address? all 32 bytes sent?
+    crypto_generichash_update(&hash_state, parties[i], 32);
+  }
+  crypto_generichash_final(&hash_state, grouphash, 32);
+
+  // make a list of all peers, and set the value to true if agrees with our grouphash
+  // only continue if all agree, or signal who is disagreeing
+  oled_print(0, 8, "consensus", Font_8x8);
+  size_t j;
+  // some bit arrays for tracking who we confirmed
+  int checked[peer_cnt/sizeof(int)+1];
+  int sent[peer_cnt/sizeof(int)+1];
+  memset((void*) checked, 0xff,  sizeof(checked));
+  memset((void*) sent, 0xff,  sizeof(sent));
+  for(j=0;j<peer_cnt;j++) {
+    if(j==self) continue;
+    checked[j/32]&=~(1<<(j%32));
+    sent[j/32]&=~(1<<(j%32));
+  }
+  i=0;
+  uint8_t imsg[32], omsg[32];
+  // prepare packet to be sent out
+  memcpy(omsg, grouphash, 32);
+  for(j=0;j<5;j++) {
+    // xor our own id into the grouphash
+    omsg[j]^=msgs[j];
+  }
+
+  int done=peer_cnt*4;
+  while(1) {
+    nrf_open_rx(msgs);
+    uDelay(200);
+    while(nrf_recv(imsg, PLOAD_WIDTH)==32) {
+      if(memcmp(imsg+5,grouphash+5,32-5)==0) {
+        // last 27 bytes correct, find out who sent it
+        int n;
+        for(j=0;j<peer_cnt;j++) {
+          if(j==self) continue;
+          // removed xored in prefix from packet, should be == grouphash
+          for(n=0;n<5 && ((imsg[n]^(parties[j][n])) == grouphash[n]);n++);
+          if(n==5) {
+            checked[j/32] |= (1<<(j%32));
+            break;
+          }
+        }
+      }
+    }
+
+    if(i!=self && nrf_send(parties[i], omsg,32)==1) {
+      sent[i/32] |= (1<<(i%32));
+    }
+    if(++i>=peer_cnt) i=0;
+
+    for(j=0;j<(peer_cnt/32+1) && sent[j]==0xffffffff && checked[j]==0xffffffff;j++);
+    if(j>=(peer_cnt/32+1) && --done<=0) break;
+  }
+
+  // python impl
+  // def mpecdh0(self, keyring = []):
+  //     self.key = nacl.randombytes(nacl.crypto_scalarmult_curve25519_BYTES)
+  //     keyring = [nacl.crypto_scalarmult_curve25519(self.key, public)
+  //                for public in keyring]
+  //     keyring.append(nacl.crypto_scalarmult_curve25519_base(self.key))
+  //     if len(keyring) == int(self.peers): # we are last, remove our own secret
+  //         self.secret = keyring[0]
+  //         keyring = keyring[1:]
+  //     return keyring
+  //
+  // def mpecdh2(self, keyring):
+  //     self.secret = nacl.crypto_scalarmult_curve25519(self.key, keyring[0])
+  //     keyring = [nacl.crypto_scalarmult_curve25519(self.key, public)
+  //                for public in keyring[1:]]
+  //     return keyring
+
+  uint8_t inaddr[5], outaddr[5];
+  for(i=0;i<5;i++) {
+    // reverse the self and next peer addresses for this part of the protocol
+    inaddr[i]=msgs[4-i];
+    outaddr[i]=parties[(self+1)%peer_cnt][4-i];
+  }
+
+  nrf_open_rx(inaddr);
+  uDelay(120);
+
+  unsigned char keyring_[crypto_scalarmult_curve25519_BYTES*peer_cnt],
+    e[crypto_scalarmult_curve25519_BYTES], *s, *keyring=(uint8_t*)keyring_;
+
+  randombytes_salsa20_random_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
+
+  // receive pubs from earlier peers
+  oled_print(0, 16, "recv 1st", Font_8x8);
+  for(i=0;i<self;i++) {
+    while(nrf_recv(keyring+(i*crypto_scalarmult_curve25519_BYTES), PLOAD_WIDTH)!=PLOAD_WIDTH);
+  }
+
+  // multiply our own e into all received pubs
+  for(i=0;i<self;i++) {
+    crypto_scalarmult_curve25519(keyring+(i*crypto_scalarmult_curve25519_BYTES), e, keyring+(i*crypto_scalarmult_curve25519_BYTES));
+  }
+
+  // append our own pub to the list
+  crypto_scalarmult_curve25519_base(keyring+(self*crypto_scalarmult_curve25519_BYTES), e);
+  size_t items=self+1;
+
+  if(self!=peer_cnt-1) {// special case last one in list only interacts once
+    // send list
+    oled_print(0, 24, "send 1st", Font_8x8);
+    for(i=0;i<items;i++) {
+      while(nrf_send(outaddr, keyring+(i*crypto_scalarmult_curve25519_BYTES), crypto_scalarmult_curve25519_BYTES)!=1);
+    }
+
+    nrf_open_rx(inaddr);
+    uDelay(120);
+    items=peer_cnt-1-self;
+    oled_print(0, 32, "recv 2nd", Font_8x8);
+    for(i=0;i<items;i++) {
+      while(nrf_recv(keyring+(i*crypto_scalarmult_curve25519_BYTES), PLOAD_WIDTH)!=PLOAD_WIDTH);
+    }
+    oled_print(0, 40, "mult 2nd", Font_8x8);
+    // multiply our secret into the last batch of pubs
+    for(i=0;i<items;i++) {
+      crypto_scalarmult_curve25519(keyring+(i*crypto_scalarmult_curve25519_BYTES), e, keyring+(i*crypto_scalarmult_curve25519_BYTES));
+    }
+  }
+
+  // 1st pub is our secret
+  s=keyring;
+  keyring=&keyring[crypto_scalarmult_curve25519_BYTES];
+  items--;
+
+  //send of remaining pubs
+  oled_print(0, 48, "send 2nd", Font_8x8);
+  for(i=0;i<items;i++) {
+    while(nrf_send(outaddr, keyring+(i*crypto_scalarmult_curve25519_BYTES), crypto_scalarmult_curve25519_BYTES)!=1);
+  }
+
+  u8 verifier[16];
+  crypto_generichash(verifier, sizeof(verifier),                               // output
+                     (unsigned char*) "PITCHFORK KEX Verifier          ", 32,  // input
+                     (unsigned char*) s, 32);                                  // key
+  to_pgpwords(verifier, 16);
+  gui_refresh=1;
+  appctx.idx=0; appctx.top=0;
+  show_verifier=1;
+  peer_len=0;
+}
+
+static int select_peers() {
+  int i, ret;
+  for(i=0;i<peers;i++)
+    options[i].str=msgs+i*33+5;
+  ret = selector(&appctx,options,peers,mpkex_cb);
+  if(ret == 0) {
+    mode=KEXTYPE;
+    show_verifier=0;
+    gui_refresh=1;
+  }
+  return ret;
+}
+
+static int show_peers() {
+  int i, ret;
+  for(i=0;i<peers;i++) menuitems[i]=msgs+i*33+5;
+  ret = menu(&appctx, (const uint8_t**) menuitems,peers,kex_cb);
+  if(ret == 0) {
+    mode=KEXTYPE;
+    show_verifier=0;
+    gui_refresh=1;
+  }
+  return ret;
+}
+
 static void discover() {
   char res;
   int i;
@@ -583,11 +792,14 @@ static void discover() {
       // process msg
       if(find_peer(msg) == -1 && peers < 64) {
         // insert into list
-        memcpy((void*) (msgs+peers*32),msg,32);
+        memcpy((void*) (msgs+peers*33),msg,32);
+        msgs[peers*33+32]=0;
+        options[peers].selected=0;
         peers++;
         gui_refresh=1;
       }
     } else { // private stuff
+      if(mode==MPECDH) return;
       oled_clear();
       statusline();
       if(mode==ECDH) {
@@ -611,13 +823,9 @@ static void discover() {
         oled_print(0,16, (char*) "Incoming New Hope" , Font_8x8);
         // receive remaining packets
         oled_print(0,24, (char*) "recv pub" , Font_8x8);
-        //uint8_t cnt[]="  ";
         for(i=32;i<POLY_BYTES;i+=32) {
           while(((res=nrf_recv(senda+i, 32)) & 0x7f) != 32 ||
                 ((res & 0x80) == 1));
-          //ntohex(cnt, (uint8_t) ((i/32)>>4));
-          //ntohex(cnt+1, (uint8_t) (i/32));
-          //oled_print(72,24, (char*) cnt, Font_8x8);
         }
         memcpy(senda,msg,32);
         oled_print(0,32, (char*) "calc response" , Font_8x8);
@@ -626,9 +834,6 @@ static void discover() {
         oled_print(0,40, (char*) "send resp" , Font_8x8);
         for(i=0;i<POLY_BYTES;i+=32) {
           while(nrf_send(msgs,sendb+i,32)==0);
-          //ntohex(cnt, (uint8_t) ((i/32)>>4));
-          //ntohex(cnt+1, (uint8_t) (i/32));
-          //oled_print(80,40, (char*) cnt, Font_8x8);
         }
       } else {
         return;
@@ -657,9 +862,10 @@ static void kexmenu_cb(char menuidx) {
   switch(menuidx) {
   case 0: { mode=ECDH; break; }
   case 1: { mode=NEW_HOPE; break; }
+  case 2: { mode=MPECDH; break; }
   }
   gui_refresh=1;
-  appctx.idx=0;
+  appctx.idx=1;
   appctx.top=0;
   nrf_open_rx(msgs);
 }
@@ -667,6 +873,7 @@ static void kexmenu_cb(char menuidx) {
 int kex_menu_init(void) {
   msgs=(uint8_t*) ((((uint32_t) outbuf)+3) & 0xfffffffc);
   menuitems = (uint8_t **) bufs[1].buf;
+  options = (Options*) bufs[1].buf;
   // add self
   UserRecord* userec = get_userrec();
   if(userec) {
@@ -680,6 +887,7 @@ int kex_menu_init(void) {
   }
   // set random address
   randombytes_salsa20_random_buf((void *) msgs, 5);
+  options[0].selected=1;
   peers=1;
   return 1;
 }
@@ -687,7 +895,7 @@ int kex_menu_init(void) {
 int kex_menu(void) {
   switch(mode) {
   case KEXTYPE: {
-    return menu(&appctx, (const uint8_t **) kexmenuitems,2,kexmenu_cb);
+    return menu(&appctx, (const uint8_t **) kexmenuitems,3,kexmenu_cb);
   }
   case ECDH: {
     discover();
@@ -697,6 +905,12 @@ int kex_menu(void) {
   case NEW_HOPE: {
     discover();
     if(show_verifier==0) return show_peers();
+    break;
+  }
+  case MPECDH: {
+    discover();
+    //if(app==NULL) select_peers();
+    if(show_verifier==0) return select_peers();
     break;
   }
   }
