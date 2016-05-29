@@ -117,9 +117,7 @@ void statusline(void) {
     mode=DISK;
   }
 
-  // todo this chrg_stat info is unreliable/inconclusive?
-  // e.g. does show c even if not on usb
-  tmp=gpio_get(GPIOA_BASE, 2);
+  tmp=gpio_get(GPIOA_BASE, 1 << 2);
   if(tmp && chrg==0) {
     refresh=1;
     chrg=1;
@@ -128,7 +126,7 @@ void statusline(void) {
     chrg=0;
   }
 
-  tmp=gpio_get(GPIOC_BASE, 13);
+  tmp=gpio_get(GPIOC_BASE, 1 << 13);
   if(tmp && sdcd==0) {
     refresh=1;
     sdcd=1;
@@ -143,9 +141,9 @@ void statusline(void) {
       oled_print(0,56, (char*) "r", Font_8x8);
     }
     if(chrg) {
-      oled_print(8,56, (char*) "c", Font_8x8);
-    } else {
       oled_print(8,56, (char*) "d", Font_8x8);
+    } else {
+      oled_print(8,56, (char*) "c", Font_8x8);
     }
     if(sdcd) {
       oled_print(16,56, (char*) "s", Font_8x8);
@@ -200,6 +198,58 @@ int menu(MenuCtx *ctx, const uint8_t *menuitems[], const size_t menulen, void fn
     statusline();
     for(i=ctx->top;i<ctx->top+4 && i<menulen;i++) {
       oled_print(12,8*(i-ctx->top)+16, (char*) menuitems[i], Font_8x8);
+      if(i==ctx->idx) {
+        oled_print_inv(0,8*(i-ctx->top)+16, (char*) ">", Font_8x8);
+      } else {
+        oled_print(0,8*(i-ctx->top)+16, (char*) " ", Font_8x8);
+      }
+    }
+    gui_refresh=0;
+  }
+  return 1;
+}
+
+// todo merge with menu() for code size
+// returns 0 if <- has been pressed, else 1
+int selector(MenuCtx *ctx, Options *opts, const size_t menulen, void fn(char)) {
+  uint8_t keys;
+  int i;
+
+  // menu
+  keys = key_handler();
+  if((keys & BUTTON_UP) && (ctx->idx>0)) {
+    ctx->idx--;
+    if(ctx->idx<ctx->top) ctx->top--;
+    gui_refresh=1;
+  }
+  if((keys & BUTTON_DOWN) && (ctx->idx<menulen-1)) {
+    ctx->idx++;
+    if(ctx->idx>=ctx->top+4) ctx->top++;
+    gui_refresh=1;
+  }
+  if(keys & BUTTON_ENTER) {
+    opts[ctx->idx].selected ^= 1;
+    gui_refresh=1;
+  }
+
+  if(keys & BUTTON_RIGHT) {
+    if(fn!=NULL) fn(menulen);
+    return 1;
+  }
+  if(keys & BUTTON_LEFT) {
+    oled_clear();
+    gui_refresh=1;
+    return 0;
+  }
+
+  if(gui_refresh) {
+    oled_clear();
+    statusline();
+    for(i=ctx->top;i<ctx->top+4 && i<menulen;i++) {
+      if(opts[i].selected != 0)
+        oled_print_inv(12,8*(i-ctx->top)+16, (char*) opts[i].str, Font_8x8);
+      else
+        oled_print(12,8*(i-ctx->top)+16, (char*) opts[i].str, Font_8x8);
       if(i==ctx->idx) {
         oled_print_inv(0,8*(i-ctx->top)+16, (char*) ">", Font_8x8);
       } else {
