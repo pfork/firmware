@@ -14,9 +14,7 @@ LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3_stm32f2.a
 CFLAGS = -mno-unaligned-access -g -Wall -Werror -Os \
 	-mfix-cortex-m3-ldrd -msoft-float -mthumb -Wno-strict-aliasing \
 	-fomit-frame-pointer -mthumb -mcpu=cortex-m3 $(INCLUDES) -DSTM32F2 -DHAVE_MSC \
-	-fstack-protector --param=ssp-buffer-size=4 # -DUSE_MPU
-#	-fomit-frame-pointer -mcpu=cortex-m3 $(INCLUDES) -DSTM32F2
-#	-fomit-frame-pointer -march=armv7 $(INCLUDES) -DSTM32F2 -DHAVE_MSC \
+	-fstack-protector --param=ssp-buffer-size=4 -DRAMLOAD
 
 LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-sections -Wl,-z,relro
 

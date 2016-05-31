@@ -29,9 +29,7 @@
   * @retval None
   */
 void init(void) {
-#ifdef USE_MPU
   mpu_init();
-#endif // USE_MPU
   clock_init();
   //led_init();
   rnd_init();

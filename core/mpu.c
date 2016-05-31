@@ -106,24 +106,19 @@ void mpu_init(void) {
     (0x20000000 | MPU_REGION_Valid | 1), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_INTERNAL_RAM | MPU_REGION_128KB | MPU_RW),
 #endif //RAMLOAD
     (0x40000000 | MPU_REGION_Valid | 2), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_PERIPHERIALS | MPU_REGION_512MB | MPU_RW),
-    // usb fs otg peripherials overlapped by normal peripherials 512MB
-    //(0x50000000 | REGION_Valid | x), (REGION_Enabled | MPU_NO_EXEC | MPU_PERIPHERIALS | REGION_256MB | MPU_RW), // P_RW_U_NA
-    (0x60000000 | MPU_REGION_Valid | 3), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_EXTERNAL_RAM | MPU_REGION_1GB | MPU_No_access),
-    // is overlapping with previous region (1GB)
-    //(0x80000000 | REGION_Valid | x), (REGION_Enabled | MPU_NO_EXEC | MPU_EXTERNAL_RAM | REGION_512MB | MPU_No_access),
-    (0xA0000000 | MPU_REGION_Valid | 4), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_PERIPHERIALS | MPU_REGION_512MB | MPU_No_access),
-    //(0xE0000000 | MPU_REGION_Valid | 5), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_PERIPHERIALS | MPU_REGION_512MB | MPU_RW_No_access),
-    (0xE0000000 | MPU_REGION_Valid | 5), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_PERIPHERIALS | MPU_REGION_512MB | MPU_RW),
+    (0x60000000 | MPU_REGION_Valid | 3), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_EXTERNAL_RAM | MPU_REGION_512MB | MPU_No_access),
+    (0x80000000 | MPU_REGION_Valid | 4), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_EXTERNAL_RAM | MPU_REGION_512MB | MPU_No_access),
+    (0xA0000000 | MPU_REGION_Valid | 5), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_PERIPHERIALS | MPU_REGION_512MB | MPU_No_access),
+    //(0xE0000000 | MPU_REGION_Valid | 6), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_PERIPHERIALS | MPU_REGION_512MB | MPU_RW_No_access),
+    (0xE0000000 | MPU_REGION_Valid | 6), (MPU_REGION_Enabled | MPU_NO_EXEC | MPU_PERIPHERIALS | MPU_REGION_512MB | MPU_RW),
   };
-
-#define MPU_ACTIVE_REGIONS 6
 
   int i;
   // not needed as irqs are initialized later
   //disable_irqs();
   /* Disable MPU */
   MPU->CTRL = 0;
-  for(i=0;i<(MPU_ACTIVE_REGIONS*2);i+=2) {
+  for(i=0;i<(sizeof(table)/sizeof(int));i+=2) {
     MPU->RBAR = table[i];
     MPU->RASR = table[i+1];
   }
