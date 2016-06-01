@@ -194,11 +194,15 @@ unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char 
                    crypto_scalarmult_curve25519_BYTES+crypto_secretbox_ZEROBYTES, // plain length
                    nonce,                 // nonce
                    get_master_key());     // key
+
+  // clear plaintext seed in RAM
+  memset(intmp,0,sizeof(intmp));
+  memset(seed,0,crypto_scalarmult_curve25519_BYTES);
+
   memcpy(rec.mac,
          outtmp+crypto_secretbox_BOXZEROBYTES,
          crypto_scalarmult_curve25519_BYTES+crypto_secretbox_MACBYTES);
 
-  // todo clear plaintext seed in RAM
   store_map(peer, len, (unsigned char*) rec.peerid);
   return data_store((unsigned char*) &rec, sizeof(SeedRecord));
 }
@@ -514,6 +518,8 @@ int get_peer(unsigned char* map, unsigned char* peerid) {
                            get_master_key())      // key
      == -1)
     return -1;
-  memcpy(map, plain+crypto_secretbox_ZEROBYTES,(maprec->len - PEERMAP_HEADER_LEN));
+  if(map!=NULL) memcpy(map, plain+crypto_secretbox_ZEROBYTES,(maprec->len - PEERMAP_HEADER_LEN));
+  // clear plaintext
+  memset(plain+crypto_secretbox_ZEROBYTES,0,(maprec->len - PEERMAP_HEADER_LEN));
   return (maprec->len - PEERMAP_HEADER_LEN);
 }
