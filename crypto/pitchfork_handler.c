@@ -128,7 +128,7 @@ void decrypt_block(Buffer* buf) {
 }
 
 /**
-  * @brief  sign_msg: handler for sign/verify ops (see ops array)
+  * @brief  hash_block: handler for sign/verify ops (see ops array)
   * @param  buf: ptr one of the input buffer structs
   * @retval None
   */
