@@ -184,7 +184,7 @@ void rng_handler(void) {
 void ecdh_start_handler(void) {
   ECDH_Start_Params* args = (ECDH_Start_Params*) params;
   unsigned char pub[crypto_scalarmult_curve25519_BYTES];
-  unsigned char keyid[16];
+  unsigned char keyid[STORAGE_ID_LEN];
   start_ecdh(args->name, args->len, pub, keyid);
   // output keyid, pub
   memcpy(outbuf,keyid,STORAGE_ID_LEN);
@@ -200,7 +200,7 @@ void ecdh_start_handler(void) {
   */
 void ecdh_respond_handler(void) {
   ECDH_Response_Params* args = (ECDH_Response_Params*) params;
-  unsigned char keyid[16];
+  unsigned char keyid[STORAGE_ID_LEN];
   respond_ecdh(args->name, args->len, args->pub, keyid);
   // output keyid, pub
   memcpy(outbuf,keyid,STORAGE_ID_LEN);
@@ -216,7 +216,7 @@ void ecdh_respond_handler(void) {
   */
 void ecdh_end_handler(void) {
   unsigned char peer[32];
-  unsigned char keyid[16];
+  unsigned char keyid[STORAGE_ID_LEN];
   ECDH_End_Params* args = (ECDH_End_Params*) params;
   SeedRecord* seedptr = get_seedrec(SEED,0,args->keyid, 0, 0);
   unsigned char peer_len = get_peer(peer, (unsigned char*) seedptr->peerid);
