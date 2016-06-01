@@ -128,5 +128,6 @@ UserRecord* init_user(unsigned char* name, unsigned char name_len);
 UserRecord* get_userrec(void);
 
 void topeerid(unsigned char* peer, unsigned char peer_len, unsigned char* peerid);
+MapRecord* get_maprec(unsigned char* peerid);
 
 #endif // storage_h
