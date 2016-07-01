@@ -99,7 +99,11 @@
 void mpu_init(void) {
   const uint32_t table[] = {
     // todo only allow exec on code area, not on storage area or system area
-    (0x08000000 | MPU_REGION_Valid | 0), (MPU_REGION_Enabled | MPU_FLASH_RAM | MPU_REGION_1MB | MPU_RO),
+    // also only allow write on storage area, not code area
+    // first 128K flash area is our firmware - RO
+    (0x08000000 | MPU_REGION_Valid | 0), (MPU_REGION_Enabled | MPU_FLASH_RAM | MPU_REGION_1MB | MPU_RO | (0xfe <<8)),
+    // 2nd 128K+ flash area is the key storage - NX + RW
+    (0x08000000 | MPU_REGION_Valid | 7), (MPU_REGION_Enabled |MPU_NO_EXEC | MPU_FLASH_RAM | MPU_REGION_1MB | MPU_RW | (1 << 8)),
 #ifdef RAMLOAD
     (0x20000000 | MPU_REGION_Valid | 1), (MPU_REGION_Enabled | MPU_INTERNAL_RAM | MPU_REGION_128KB | MPU_RW),
 #else

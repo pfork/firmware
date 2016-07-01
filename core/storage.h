@@ -65,9 +65,9 @@ typedef enum {
 #define FLASH_SECTOR05 0x08020000 // sector 5 (128KB)
 #define FLASH_SECTOR05_SIZE (128 << 10)
 
-#define FLASH_BASE FLASH_SECTOR04
-#define FLASH_SECTOR_SIZE FLASH_SECTOR04_SIZE
-#define FLASH_SECTOR_ID 4
+#define FLASH_BASE FLASH_SECTOR05
+#define FLASH_SECTOR_SIZE FLASH_SECTOR05_SIZE
+#define FLASH_SECTOR_ID 5
 
 #define FLASH_CR_SECTOR_0               (0x00 << 3)
 #define FLASH_CR_SECTOR_1               (0x01 << 3)
