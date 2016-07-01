@@ -15,15 +15,28 @@
 #define MIN(a, b)      (((a) < (b)) ? (a) : (b))
 #define crypto_secretbox_MACBYTES (crypto_secretbox_ZEROBYTES - crypto_secretbox_BOXZEROBYTES)
 
-typedef enum {
-  USERDATA,
-  SEED,
-  PEERMAP,
-  DELETED = 0x80,
-  EMPTY   = 0xff
-} StorageType;
+// every record starts with a type, due to the flash nature the following values exist:
+// 0xff - empty/unused
+// 0xf? - undeleted record
+// 0x0? - deleted record
 
-#define DeletedEntry(ptr) (ptr->type & 0x80)
+// for records the following types exist
+// 0x1 UserRecord
+// 0x2 SeedRecord
+// 0x3 MapRecord
+// 0x4-0xe unused
+// 0xf reserved for empty/unused
+
+typedef enum {
+  DELETED_USERDATA = 0x01,
+  DELETED_SEED     = 0x02,
+  DELETED_PEERMAP  = 0x03,
+
+  USERDATA         = 0xf1,
+  SEED             = 0xf2,
+  PEERMAP          = 0xf3,
+  EMPTY            = 0xff
+} StorageType;
 
 #define STORAGE_ID_LEN 16
 #define EKID_LEN 16
@@ -91,13 +104,6 @@ typedef struct {
   unsigned char value[crypto_scalarmult_curve25519_BYTES];
 } __attribute((packed)) SeedRecord;
 
-// deleted seed
-typedef struct {
-  unsigned char type;
-  unsigned int peerid[STORAGE_ID_LEN>>2];
-  unsigned int keyid[STORAGE_ID_LEN>>2];
-} __attribute((packed)) DeletedSeed;
-
 // name mapping - caution variable length record!
 typedef struct {
   unsigned char type;
@@ -113,11 +119,11 @@ unsigned int next_rec(unsigned int ptr);
 unsigned int find(unsigned int ptr, unsigned char type);
 unsigned int find_last(unsigned int ptr, unsigned char type);
 
-unsigned int store_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
-int get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid, unsigned char is_ephemeral);
-int get_peer_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
-SeedRecord* get_seedrec(unsigned char type, unsigned char* peerid, unsigned char* keyid, unsigned int ptr, unsigned char is_ephemeral);
-unsigned int del_seed(unsigned char* peerid, unsigned char* keyid);
+SeedRecord* store_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
+SeedRecord* get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* keyid, unsigned char is_ephemeral);
+SeedRecord* get_peer_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
+SeedRecord* get_seedrec(unsigned char* peerid, unsigned char* keyid, unsigned int ptr, unsigned char is_ephemeral);
+int del_seed(unsigned char* peerid, unsigned char* keyid);
 void get_ekid(unsigned char* keyid, unsigned char* nonce, unsigned char* ekid);
 
 // reverse mapping of peerids

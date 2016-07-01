@@ -446,12 +446,12 @@ static int find_peer(uint8_t* msg) {
 }
 
 static void accept_secret(char ignored) {
-  unsigned int ptr;
+  SeedRecord *ptr;
   if(peer_len<1)
     getstr("pls name key", peer, &peer_len);
   ptr = store_seed(key, peer, peer_len);
   memset(key, 0, 32);
-  if(ptr<1) {
+  if((int) ptr<1) {
     oled_clear();
     statusline();
     oled_print(0,16, "failed to store key", Font_8x8);

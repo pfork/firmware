@@ -16,7 +16,6 @@
 #include "storage.h"
 
 #define BUF_SIZE 32768
-#define outstart (outbuf+crypto_secretbox_BOXZEROBYTES)
 #define outstart32 (outbuf+crypto_secretbox_ZEROBYTES)
 
 /**

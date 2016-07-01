@@ -29,15 +29,16 @@ int start_ecdh(unsigned char* peer,
                unsigned char* keyid)    // output
 {
   unsigned char e[crypto_scalarmult_curve25519_BYTES];
-  unsigned int ptr;
+  SeedRecord* ptr;
 
   randombytes_salsa20_random_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
 
   ptr = store_seed(e, peer, peer_len);
-  if(ptr == -1 || ptr == -2)
+  memset(e,0,crypto_scalarmult_curve25519_BYTES);
+  if((int) ptr == -1 || (int) ptr == -2)
     return -1;
   // copy ? todo why not return the pointer itself?
-  memcpy(keyid, &(((SeedRecord*) ptr)->keyid), STORAGE_ID_LEN);
+  memcpy(keyid, &(ptr->keyid), STORAGE_ID_LEN);
   // calculate pub
   crypto_scalarmult_curve25519_base(pub, e);
   return 0;
@@ -58,7 +59,7 @@ int respond_ecdh(unsigned char* peer,
 {
   unsigned char e[crypto_scalarmult_curve25519_BYTES];
   unsigned char s[crypto_scalarmult_curve25519_BYTES];
-  unsigned int ptr;
+  SeedRecord *ptr;
 
   // calculate secret exp
   randombytes_salsa20_random_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
@@ -67,14 +68,16 @@ int respond_ecdh(unsigned char* peer,
   crypto_scalarmult_curve25519(s, e, pub);
 
   ptr = store_seed(s, peer, peer_len);
+  memset(s,0,crypto_scalarmult_curve25519_BYTES);
   // copy keyid to output
-  if(ptr == -1 || ptr == -2)
+  if((int) ptr == -1 || (int) ptr == -2)
     return -1;
   // copy ? todo why not return the pointer itself?
-  memcpy(keyid, &(((SeedRecord*) ptr)->keyid), STORAGE_ID_LEN);
+  memcpy(keyid, &(ptr->keyid), STORAGE_ID_LEN);
 
   // calculate public
   crypto_scalarmult_curve25519_base(pub, e);
+  memset(e,0,crypto_scalarmult_curve25519_BYTES);
   return 0;
 }
 
@@ -95,29 +98,28 @@ int finish_ecdh(unsigned char* peer,
 {
   unsigned char e[crypto_scalarmult_curve25519_BYTES];
   unsigned char s[crypto_scalarmult_curve25519_BYTES];
-  unsigned char peerid[STORAGE_ID_LEN];
-  unsigned int ptr;
+  SeedRecord *ptr;
 
-  if(get_seed(e, 0, keyid, 0) != 1) {
+  if(get_seed(e, 0, keyid, 0) == 0) {
     // not found or integrity fault
     return -2;
   }
 
   // calculate shared secret
   crypto_scalarmult_curve25519(s, e, pub);
+  memset(e,0,sizeof(e));
 
-  // todo replace peer with peerid!
+  // todo replace peer with peerid! why?
   ptr = store_seed(s, peer, peer_len);
   // copy keyid to output
-  if(ptr == -1 || ptr == -2)
+  if((int) ptr == -1 || (int) ptr == -2)
     return -1;
 
   // del seed containing e
-  topeerid(peer, peer_len, peerid);
-  del_seed(peerid, keyid);
+  del_seed(0, keyid);
 
   // copy ? todo why not return the pointer itself?
-  memcpy(seedid, &(((SeedRecord*) ptr)->keyid), STORAGE_ID_LEN);
+  memcpy(seedid, &(ptr->keyid), STORAGE_ID_LEN);
 
   return 0;
 }

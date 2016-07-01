@@ -58,30 +58,23 @@ unsigned char blocked = 0;
   */
 void encrypt_block(Buffer *buf) {
   int i, len, size = buf->size;
+  unsigned char nonce[crypto_secretbox_NONCEBYTES];
   // zero out beginning of plaintext as demanded by nacl
-  //for(i=0;i<(crypto_secretbox_ZEROBYTES>>2);i++) ((unsigned int*) buf->buf)[i]=0;
-  dmaset32(buf->buf, 0, crypto_secretbox_ZEROBYTES>>2);
-  //dmawait();
-
+  for(i=0;i<(crypto_secretbox_ZEROBYTES>>2);i++) ((unsigned int*) buf->buf)[i]=0;
   // get nonce
-  randombytes_salsa20_random_buf(outbuf, crypto_secretbox_NONCEBYTES);
+  randombytes_salsa20_random_buf(nonce, crypto_secretbox_NONCEBYTES);
   // encrypt (key is stored in beginning of params)
-  crypto_secretbox(outbuf+crypto_secretbox_NONCEBYTES, buf->buf, size+crypto_secretbox_ZEROBYTES, outbuf, params);
+  crypto_secretbox(outbuf+8, buf->buf, size+crypto_secretbox_ZEROBYTES, nonce, params);
   // move nonce over boxzerobytes - so it's
-  // concated to the ciphertext for sending
-  for(i=(crypto_secretbox_NONCEBYTES>>2)-1;i>=0;i--)
-    ((unsigned int*) outbuf)[(crypto_secretbox_BOXZEROBYTES>>2)+i] = ((unsigned int*) outbuf)[i];
-  size+=crypto_secretbox_NONCEBYTES + crypto_secretbox_ZEROBYTES -crypto_secretbox_BOXZEROBYTES ; // add nonce+mac size to total size
+  // prepended to the ciphertext for sending
+  memcpy(outbuf,nonce,crypto_secretbox_NONCEBYTES);
+  size+=crypto_secretbox_NONCEBYTES + (crypto_secretbox_MACBYTES ); // add nonce+mac size to total size
   // send usb packet sized result
   for(i=0;i<size;i+=len) {
     len = (size-i)>=64?64:(size-i);
     irq_disable(NVIC_OTG_FS_IRQ);
-    usb_write(outstart+i, len, 0, USB_CRYPTO_EP_DATA_OUT);
+    usb_write(outbuf+i, len, 0, USB_CRYPTO_EP_DATA_OUT);
     irq_enable(NVIC_OTG_FS_IRQ);
-    // final packet TODO test without this! then remove
-    //if(len<64) {
-    //  break;
-    //}
   }
 }
 
@@ -94,16 +87,13 @@ void encrypt_block(Buffer *buf) {
 void decrypt_block(Buffer* buf) {
   int i, len;
   // substract nonce size from total size (40B)
-  int size = buf->size - (crypto_secretbox_NONCEBYTES + crypto_secretbox_BOXZEROBYTES);
+  int size = buf->size - (crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES);
   unsigned char nonce[crypto_secretbox_NONCEBYTES];
   // get nonce from beginning of input buffer
   memcpy(nonce, buf->start, crypto_secretbox_NONCEBYTES);
   // zero out crypto_secretbox_BOXZEROBYTES preamble
   // overwriting tne end of the nonce
-  for(i=((crypto_secretbox_NONCEBYTES-crypto_secretbox_BOXZEROBYTES)>>2);
-      i<(crypto_secretbox_NONCEBYTES>>2);
-      i++)
-    ((unsigned int*) buf->start)[i]=0;
+  memset(buf->start + (crypto_secretbox_NONCEBYTES - crypto_secretbox_BOXZEROBYTES),0,crypto_secretbox_BOXZEROBYTES);
   // decrypt (key is stored in beginning of params)
   if(-1 == crypto_secretbox_open(outbuf,  // m
                                  (buf->start) + (crypto_secretbox_NONCEBYTES - crypto_secretbox_BOXZEROBYTES), // c + preamble
@@ -120,15 +110,11 @@ void decrypt_block(Buffer* buf) {
     irq_disable(NVIC_OTG_FS_IRQ);
     usb_write(outstart32+i, len, 0, USB_CRYPTO_EP_DATA_OUT);
     irq_enable(NVIC_OTG_FS_IRQ);
-    // final packet TODO test without this! then remove
-    //if(len<64) {
-    //  break;
-    //}
   }
 }
 
 /**
-  * @brief  hash_block: handler for sign/verify ops (see ops array)
+  * @brief  hash_block: handler for sign/verify ops
   * @param  buf: ptr one of the input buffer structs
   * @retval None
   */
@@ -218,7 +204,7 @@ void ecdh_end_handler(void) {
   unsigned char peer[32];
   unsigned char keyid[STORAGE_ID_LEN];
   ECDH_End_Params* args = (ECDH_End_Params*) params;
-  SeedRecord* seedptr = get_seedrec(SEED,0,args->keyid, 0, 0);
+  SeedRecord* seedptr = get_seedrec(0,args->keyid, 0, 0);
   unsigned char peer_len = get_peer(peer, (unsigned char*) seedptr->peerid);
   if(seedptr > 0 && peer_len > 0)
     finish_ecdh(peer, peer_len, args->keyid, args->pub, keyid);
@@ -241,10 +227,12 @@ void listkeys(unsigned char *peerid) {
   unsigned char cipher[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
   unsigned char plain[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
   unsigned short deleted = 0, corrupt = 0, unknown = 0;
-  DeletedSeed* delrec;
   UserRecord *userdata = get_userrec();
 
   while(ptr < FLASH_BASE + FLASH_SECTOR_SIZE && *((unsigned char*)ptr) != EMPTY ) {
+    if(*((unsigned char*)ptr) == DELETED_SEED) {
+      deleted++;
+    }
     if(*((unsigned char*)ptr) != SEED) { // only seeds
         goto endloop; // this seed has been deleted skip it.
     }
@@ -255,16 +243,6 @@ void listkeys(unsigned char *peerid) {
               STORAGE_ID_LEN) != 0) {
       // skip other peers
       goto endloop;
-    }
-
-    // check if deleted?
-    delrec = (DeletedSeed*) get_seedrec(SEED | DELETED, 0,
-                                        (unsigned char*) (((SeedRecord*) ptr)->keyid),
-                                        ptr, 0);
-    if(delrec!=0 &&
-       memcmp(delrec->peerid, ((SeedRecord*) ptr)->peerid, STORAGE_ID_LEN)==0) {
-      deleted++;
-      goto endloop; // this seed has been deleted skip it.
     }
 
     // try to unmask name
@@ -340,17 +318,6 @@ void listkeys(unsigned char *peerid) {
 }
 
 /**
-  * @brief  ops callback array for ops operating on the data buffer
-  *         order is according to the CRYPTO_CMD enum (en,de,si,ve)
-  */
-void (*ops[])(Buffer* buf) = {
-  &encrypt_block,
-  &decrypt_block,
-  &hash_block,
-  &hash_block,
-};
-
-/**
   * @brief  handle_buf: dispatches PITCHFORK operations
   *         and manages data buffer
   *         this function should be called from the
@@ -398,7 +365,15 @@ void handle_buf(void) {
 
   set_write_led;
   // finally do the processing
-  if(buf->size>0) ops[modus](buf);
+  if(buf->size>0) {
+     switch(modus) {
+        case USB_CRYPTO_CMD_ENCRYPT: { encrypt_block(buf); break; }
+        case USB_CRYPTO_CMD_DECRYPT: { decrypt_block(buf); break; }
+        case USB_CRYPTO_CMD_SIGN: { hash_block(buf); break; }
+        case USB_CRYPTO_CMD_VERIFY: { hash_block(buf); break; }
+        default: { /* should never get here */ while(1); } // todo error handling/reporting
+     }
+  }
   // some final loose ends to tend to
   if(buf->state == CLOSED ) {
     if(modus == USB_CRYPTO_CMD_SIGN) sign_msg();

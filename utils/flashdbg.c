@@ -60,22 +60,6 @@ int flashdump(void) {
       break;
     }
 
-    case (SEED | DELETED): {
-      *(outptr++) ='d';
-      *(outptr++) =' ';
-      nlen = get_peer(outptr, (unsigned char*) ((SeedRecord*) ptr)->peerid);
-      if(nlen==0 || nlen >= PEER_NAME_MAX) {
-        // couldn't map peerid to name
-        memcpy(outptr, "unknown", 7);
-        outptr+=7;
-        *(outptr++) =0;
-        break;
-      }
-      outptr[nlen] = 0; //terminate it
-      outptr+=nlen+1;
-      break;
-    }
-
     case PEERMAP: {
       *(outptr++) ='p';
       *(outptr++) =' ';
@@ -129,24 +113,16 @@ int flashstats(void) {
   unsigned char cipher[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
   unsigned char plain[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
   unsigned short seeds=0, deleted = 0, corrupt = 0, unknown = 0;
-  DeletedSeed* delrec;
   UserRecord *userdata = get_userrec();
 
   // todo/bug userdata==NULL not handled!!!!
 
   while(ptr < FLASH_BASE + FLASH_SECTOR_SIZE && *((unsigned char*)ptr) != EMPTY ) {
     if(*((unsigned char*)ptr) != SEED) { // only seeds
-        goto endloop; // this seed has been deleted skip it.
-    }
-
-    // check if deleted?
-    delrec = (DeletedSeed*) get_seedrec(SEED | DELETED, 0,
-                                        (unsigned char*) (((SeedRecord*) ptr)->keyid),
-                                        ptr, 0);
-    if(delrec!=0 &&
-       memcmp(delrec->peerid, ((SeedRecord*) ptr)->peerid, STORAGE_ID_LEN)==0) {
-      deleted++;
-      goto endloop; // this seed has been deleted skip it.
+        if((*((unsigned char*)ptr) & 0xf0) == 0) {
+           deleted++;
+        }
+        goto endloop; 
     }
 
     // try to unmask name
@@ -231,23 +207,13 @@ int listseeds(void) {
   unsigned char nonce[crypto_secretbox_NONCEBYTES];
   unsigned char cipher[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
   unsigned char plain[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
-  DeletedSeed* delrec;
   UserRecord *userdata = get_userrec();
 
   // todo/bug userdata==NULL not handled!!!!
 
   while(ptr < FLASH_BASE + FLASH_SECTOR_SIZE && *((unsigned char*)ptr) != EMPTY ) {
     if(*((unsigned char*)ptr) != SEED) { // only seeds
-        goto endloop; // this seed has been deleted skip it.
-    }
-
-    // check if deleted?
-    delrec = (DeletedSeed*) get_seedrec(SEED | DELETED, 0,
-                                        (unsigned char*) (((SeedRecord*) ptr)->keyid),
-                                        ptr, 0);
-    if(delrec!=0 &&
-       memcmp(delrec->peerid, ((SeedRecord*) ptr)->peerid, STORAGE_ID_LEN)==0) {
-      goto endloop; // this seed has been deleted skip it.
+        goto endloop;
     }
 
     // try to unmask name

@@ -47,13 +47,9 @@ void reset(void) {
   * @param  sptr: return value form get_seed
   * @retval 0 on error, 1 on success
   */
-unsigned char check_seed(unsigned int sptr) {
+static unsigned char check_seed(unsigned int sptr) {
   if (sptr == 0) {
     usb_write((unsigned char*) "err: no key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
-    return 0;
-  }
-  if (sptr == -1) {
-    usb_write((unsigned char*) "err: unavailable key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
     return 0;
   }
   return 1;
@@ -74,12 +70,15 @@ unsigned char peer_to_seed(unsigned char* dst, unsigned char* src, unsigned char
     usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
     return 0;
   }
-  unsigned int sptr = get_peer_seed(dst, src, len);
-  if(check_seed(sptr) == 0) return 0;
+  SeedRecord* sptr = get_peer_seed(dst, src, len);
+  if(check_seed((int)sptr) == 0) {
+     usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+     return 0;
+  }
 
   // calculate ephemeral keyid
-  get_ekid(((unsigned char*) ((SeedRecord*) sptr)->keyid), ekid+EKID_LEN, ekid);
-  usb_write( ekid, sizeof(ekid), sizeof(ekid), USB_CRYPTO_EP_CTRL_OUT);
+  get_ekid(((unsigned char*) sptr->keyid), ekid+EKID_LEN, ekid);
+  usb_write(ekid, sizeof(ekid), sizeof(ekid), USB_CRYPTO_EP_CTRL_OUT);
   return 1;
 }
 
@@ -180,6 +179,7 @@ void handle_ctl(usbd_device *usbd_dev, uint8_t ep) {
     }
     switch(buf[0] & 15) {
       case USB_CRYPTO_CMD_ENCRYPT: {
+        // todo extract seed only in _handler. not here
         if(peer_to_seed(params, (unsigned char*) buf+1, len-1)==0)
           return;
         modus = USB_CRYPTO_CMD_ENCRYPT;
@@ -191,14 +191,15 @@ void handle_ctl(usbd_device *usbd_dev, uint8_t ep) {
           return;
         }
         // keyid 2 seed
-        unsigned int sptr = get_seed(params, 0, (unsigned char*) buf+1, 1);
-        if(check_seed(sptr) == 0) return;
+        // todo extract seed only in _handler. not here
+        SeedRecord* sptr = get_seed(params, 0, (unsigned char*) buf+1, 1);
+        if(check_seed((int)sptr) == 0) return;
         modus = USB_CRYPTO_CMD_DECRYPT;
         break;
       }
       case USB_CRYPTO_CMD_SIGN: {
         unsigned char seed [crypto_generichash_KEYBYTES];
-        if(peer_to_seed(seed, (unsigned char*) buf+1, len-1)==0)
+        if((int) peer_to_seed(seed, (unsigned char*) buf+1, len-1)==0)
           return;
         hash_init(seed);
         modus = USB_CRYPTO_CMD_SIGN;
@@ -211,9 +212,10 @@ void handle_ctl(usbd_device *usbd_dev, uint8_t ep) {
         }
         // get seed via keyid
         unsigned char seed[crypto_generichash_KEYBYTES];
-        if(check_seed(get_seed(seed,0,(unsigned char*) buf+1+crypto_generichash_BYTES, 1)) == 0)
+        if(check_seed((int) get_seed(seed,0,(unsigned char*) buf+1+crypto_generichash_BYTES, 1)) == 0)
           return;
         hash_init(seed);
+        memset(seed,0,crypto_generichash_BYTES);
         // copy signature for final verification
         memcpy(params, buf+1, crypto_generichash_BYTES);
         modus = USB_CRYPTO_CMD_VERIFY;
