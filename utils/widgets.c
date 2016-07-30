@@ -151,9 +151,9 @@ void statusline(void) {
       oled_print(16,56, (char*) "S", Font_8x8);
     }
     if(mode==CRYPTO) {
-      oled_print_inv(32,56, (char*) " Crypto mode", Font_8x8);
+      oled_print(24,56, (char*) "C", Font_8x8);
     } else {
-      oled_print_inv(32,56, (char*) "   Disk mode", Font_8x8);
+      oled_print(24,56, (char*) "D", Font_8x8);
     }
     oled_print_inv(0,0, (char*) " PITCHFORK!!5!  ", Font_8x8);
     if(userec) {
