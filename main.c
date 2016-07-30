@@ -32,6 +32,7 @@
 #include "flashdbg.h"
 #include "chords.h"
 #include "kex.h"
+#include "storage.h"
 #include "main.h"
 
 void randombytes_salsa20_random_init(struct entropy_store* pool);
@@ -265,7 +266,7 @@ int main(void) {
 
 #ifdef HAVE_MSC
     // todo implement ifndef have_msc part ;)
-    if(dual_usb_mode == CRYPTO) handle_buf();
+    if(dual_usb_mode == CRYPTO) pitchfork_main();
 #endif // HAVE_MSC
 
     if(!(sysctr & 16383)) { // reseed about every 16s

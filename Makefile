@@ -26,8 +26,8 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	usb/msc/usb_bsp.o usb/msc/usb_dcd.o usb/msc/usbd_core.o usb/msc/usbd_ioreq.o \
    usb/msc/usbd_msc_core.o usb/msc/usbd_msc_scsi.o usb/msc/usbd_storage_msd.o \
 	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
-	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork_irq.o \
-	crypto/pitchfork_handler.o core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o \
+	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork.o \
+	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o \
 	lib/newhope/poly.o lib/newhope/ntt.o lib/newhope/precomp.o \
 	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/reduce.o \
 	lib/newhope/fips202.o lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
