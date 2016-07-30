@@ -4,6 +4,7 @@
 #include "master.h"
 #include "widgets.h"
 #include <string.h>
+#include <crypto_generichash.h>
 
 extern MenuCtx appctx;
 
