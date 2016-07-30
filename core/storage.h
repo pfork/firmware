@@ -12,8 +12,13 @@
 #include "crypto_scalarmult_curve25519.h"
 #include "crypto_secretbox.h"
 
+#ifndef MIN
 #define MIN(a, b)      (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef crypto_secretbox_MACBYTES
 #define crypto_secretbox_MACBYTES (crypto_secretbox_ZEROBYTES - crypto_secretbox_BOXZEROBYTES)
+#endif
 
 // every record starts with a type, due to the flash nature the following values exist:
 // 0xff - empty/unused
