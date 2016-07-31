@@ -22,12 +22,13 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	core/clock.o core/systimer.o core/mpu.o core/init.o core/usb.o core/irq.o \
 	core/dma.o sdio/sdio.o sdio/sd.o core/led.o core/keys.o core/delay.o core/xentropy.o \
 	core/startup.o usb/dual.o crypto/mixer.o crypto/ecdho.o crypto/master.o core/storage.o \
-	crypto/randombytes_salsa20_random.o utils/memcpy.o utils/memset.o utils/memcmp.o \
+	crypto/randombytes_pitchfork.o utils/memcpy.o utils/memset.o utils/memcmp.o \
 	usb/msc/usb_bsp.o usb/msc/usb_dcd.o usb/msc/usbd_core.o usb/msc/usbd_ioreq.o \
    usb/msc/usbd_msc_core.o usb/msc/usbd_msc_scsi.o usb/msc/usbd_storage_msd.o \
 	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
 	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork.o \
 	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o \
+	utils/abort.o \
 	lib/newhope/poly.o lib/newhope/ntt.o lib/newhope/precomp.o \
 	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/reduce.o \
 	lib/newhope/fips202.o lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
@@ -44,8 +45,8 @@ upload: main.bin
 
 main.bin : memmap $(objs)
 	$(CC) $(LDFLAGS) -o main.elf $(objs) $(LIBS)
-	$(OD) -Dl main.elf > main.list
 	$(OC) main.elf main.bin -O binary
+	$(OD) -Dl main.elf > main.list
 
 tags:
 	gtags
