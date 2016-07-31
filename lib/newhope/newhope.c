@@ -1,5 +1,5 @@
 #include "poly.h"
-#include "../../../crypto/randombytes_salsa20_random.h"
+#include "randombytes_pitchfork.h"
 #include "error_correction.h"
 #include "fips202.h"
 
@@ -62,8 +62,8 @@ void newhope_keygen(unsigned char *send, poly *sk)
   unsigned char seed[NEWHOPE_SEEDBYTES];
   unsigned char noiseseed[32];
 
-  randombytes_salsa20_random_buf(seed, NEWHOPE_SEEDBYTES);
-  randombytes_salsa20_random_buf(noiseseed, 32);
+  randombytes_buf(seed, NEWHOPE_SEEDBYTES);
+  randombytes_buf(noiseseed, 32);
 
   gen_a(&a, seed); //unsigned
 
@@ -85,7 +85,7 @@ void newhope_sharedb(unsigned char *sharedkey, unsigned char *send, const unsign
   unsigned char seed[NEWHOPE_SEEDBYTES];
   unsigned char noiseseed[32];
   
-  randombytes_salsa20_random_buf(noiseseed, 32);
+  randombytes_buf(noiseseed, 32);
 
   decode_a(&pka, seed, received);
   gen_a(&a, seed);

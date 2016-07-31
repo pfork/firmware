@@ -33,7 +33,7 @@
 #include "pitchfork.h"
 
 #include <crypto_generichash.h>
-#include "randombytes_salsa20_random.h"
+#include "randombytes_pitchfork.h"
 
 #define outstart32 (outbuf+crypto_secretbox_ZEROBYTES)
 
@@ -296,7 +296,7 @@ static void encrypt_block(Buffer *buf) {
   for(i=0;i<(crypto_secretbox_ZEROBYTES>>2);i++) ((unsigned int*) buf->buf)[i]=0;
   // get nonce
   // TODO make it incremental implicit nonces like in pbp!!
-  randombytes_salsa20_random_buf(nonce, crypto_secretbox_NONCEBYTES);
+  randombytes_buf(nonce, crypto_secretbox_NONCEBYTES);
   // encrypt (key is stored in beginning of params)
   crypto_secretbox(outbuf+8, buf->buf, size+crypto_secretbox_ZEROBYTES, nonce, params);
   // move nonce over boxzerobytes - so it's
@@ -386,7 +386,7 @@ static void verify_msg(void) {
 static void rng_handler(void) {
   int i;
   //set_write_led;
-  randombytes_salsa20_random_buf((void *) outbuf, BUF_SIZE);
+  randombytes_buf((void *) outbuf, BUF_SIZE);
   for(i=0;i<BUF_SIZE && (modus == PITCHFORK_CMD_RNG);i+=64) {
     while((usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_DATA_OUT, outbuf+i, 64) == 0) &&
           (modus == PITCHFORK_CMD_RNG))

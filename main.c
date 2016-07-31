@@ -16,7 +16,7 @@
 #include "init.h"
 #include "led.h"
 #include "keys.h"
-#include "randombytes_salsa20_random.h"
+#include "randombytes_pitchfork.h"
 #include "mixer.h"
 #include "pitchfork.h"
 #include "systimer.h"
@@ -35,7 +35,7 @@
 #include "storage.h"
 #include "main.h"
 
-void randombytes_salsa20_random_init(struct entropy_store* pool);
+void randombytes_pitchfork_init(struct entropy_store* pool);
 struct entropy_store* pool;
 
 void fancycls(void) {
@@ -237,7 +237,7 @@ static void app(void) {
 int main(void) {
   init();
   pool = init_pool();
-  randombytes_salsa20_random_init(pool);
+  randombytes_pitchfork_init(pool);
 
   bufs[0].start =  bufs[0].buf + crypto_secretbox_ZEROBYTES;
   bufs[1].start =  bufs[1].buf + crypto_secretbox_ZEROBYTES;
@@ -270,7 +270,7 @@ int main(void) {
 #endif // HAVE_MSC
 
     if(!(sysctr & 16383)) { // reseed about every 16s
-      randombytes_salsa20_random_stir();
+      randombytes_pitchfork_stir();
     }
     if(gui_refresh==0) statusline();
     app();

@@ -9,7 +9,7 @@
 #include <oled.h>
 #include <widgets.h>
 #include "utils/lzg/lzg.h"
-#include "randombytes_salsa20_random.h"
+#include "randombytes_pitchfork.h"
 #include "crypto_scalarmult_curve25519.h"
 #include "newhope.h"
 #include "poly.h"
@@ -496,7 +496,7 @@ static void kex_cb(char menuidx) {
 
     oled_print(0,16, (char*) "initiating ECDH kex" , Font_8x8);
     oled_print(0,24, (char*) "generate secret" , Font_8x8);
-    randombytes_salsa20_random_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
+    randombytes_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
     oled_print(0,32, (char*) "calc pub" , Font_8x8);
     crypto_scalarmult_curve25519_base(pub, e);
     oled_print(0,40, (char*) "send pub" , Font_8x8);
@@ -506,7 +506,13 @@ static void kex_cb(char menuidx) {
     oled_print(0,48, (char*) "get pub" , Font_8x8);
     while((nrf_recv(pub, PLOAD_WIDTH) & 0x7f) != 32 );
     oled_print(0,56, (char*) "calc shared key" , Font_8x8);
-    crypto_scalarmult_curve25519(key, e, pub);
+    if(crypto_scalarmult_curve25519(key, e, pub)!=0) {
+      // fail
+      oled_clear();
+      oled_print_inv(0,32,"failed",Font_8x8);
+      mode=KEXTYPE;
+      return;
+    };
   } else if(mode==NEW_HOPE) {
     poly sk;
     //u8 send[POLY_BYTES];
@@ -689,7 +695,7 @@ void mpkex_cb(char menulen) {
   unsigned char keyring_[crypto_scalarmult_curve25519_BYTES*peer_cnt],
     e[crypto_scalarmult_curve25519_BYTES], *s, *keyring=(uint8_t*)keyring_;
 
-  randombytes_salsa20_random_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
+  randombytes_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
 
   // receive pubs from earlier peers
   oled_print(0, 16, "recv 1st", Font_8x8);
@@ -699,7 +705,13 @@ void mpkex_cb(char menulen) {
 
   // multiply our own e into all received pubs
   for(i=0;i<self;i++) {
-    crypto_scalarmult_curve25519(keyring+(i*crypto_scalarmult_curve25519_BYTES), e, keyring+(i*crypto_scalarmult_curve25519_BYTES));
+    if(crypto_scalarmult_curve25519(keyring+(i*crypto_scalarmult_curve25519_BYTES), e, keyring+(i*crypto_scalarmult_curve25519_BYTES))!=0) {
+      // fail
+      oled_clear();
+      oled_print_inv(0,32,"failed",Font_8x8);
+      mode=KEXTYPE;
+      return;
+    };
   }
 
   // append our own pub to the list
@@ -723,7 +735,13 @@ void mpkex_cb(char menulen) {
     oled_print(0, 40, "mult 2nd", Font_8x8);
     // multiply our secret into the last batch of pubs
     for(i=0;i<items;i++) {
-      crypto_scalarmult_curve25519(keyring+(i*crypto_scalarmult_curve25519_BYTES), e, keyring+(i*crypto_scalarmult_curve25519_BYTES));
+      if(crypto_scalarmult_curve25519(keyring+(i*crypto_scalarmult_curve25519_BYTES), e, keyring+(i*crypto_scalarmult_curve25519_BYTES))!=0) {
+        // fail
+        oled_clear();
+        oled_print_inv(0,32,"failed",Font_8x8);
+        mode=KEXTYPE;
+        return;
+      }
     }
   }
 
@@ -807,10 +825,16 @@ static void discover() {
         unsigned char e[crypto_scalarmult_curve25519_BYTES];
         // calculate secret exp
         oled_print(0,24, (char*) "generate secret" , Font_8x8);
-        randombytes_salsa20_random_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
+        randombytes_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
         // calculate shared secret
         oled_print(0,32, (char*) "calc shared key" , Font_8x8);
-        crypto_scalarmult_curve25519(key, e, msg);
+        if(crypto_scalarmult_curve25519(key, e, msg)!=0) {
+          // fail
+          oled_clear();
+          oled_print_inv(0,32,"failed",Font_8x8);
+          mode=KEXTYPE;
+          return;
+        }
         // calculate public
         oled_print(0,40, (char*) "calc pub" , Font_8x8);
         crypto_scalarmult_curve25519_base(msg, e);
@@ -886,7 +910,7 @@ int kex_menu_init(void) {
     return 0;
   }
   // set random address
-  randombytes_salsa20_random_buf((void *) msgs, 5);
+  randombytes_buf((void *) msgs, 5);
   options[0].selected=1;
   peers=1;
   return 1;

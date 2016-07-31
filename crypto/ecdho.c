@@ -10,7 +10,7 @@
   */
 
 #include <string.h> //memcpy
-#include "randombytes_salsa20_random.h"
+#include "randombytes_pitchfork.h"
 #include "crypto_scalarmult_curve25519.h"
 #include <utils.h>
 #include "storage.h"
@@ -31,7 +31,7 @@ int start_ecdh(unsigned char* peer,
   unsigned char e[crypto_scalarmult_curve25519_BYTES];
   SeedRecord* ptr;
 
-  randombytes_salsa20_random_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
+  randombytes_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
 
   ptr = store_seed(e, peer, peer_len);
   memset(e,0,crypto_scalarmult_curve25519_BYTES);
@@ -62,10 +62,12 @@ int respond_ecdh(unsigned char* peer,
   SeedRecord *ptr;
 
   // calculate secret exp
-  randombytes_salsa20_random_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
+  randombytes_buf((void *) e, (size_t) crypto_scalarmult_curve25519_BYTES);
 
   // calculate shared secret
-  crypto_scalarmult_curve25519(s, e, pub);
+  if(crypto_scalarmult_curve25519(s, e, pub)!=0) {
+    return -1;
+  }
 
   ptr = store_seed(s, peer, peer_len);
   memset(s,0,crypto_scalarmult_curve25519_BYTES);
@@ -106,7 +108,9 @@ int finish_ecdh(unsigned char* peer,
   }
 
   // calculate shared secret
-  crypto_scalarmult_curve25519(s, e, pub);
+  if(crypto_scalarmult_curve25519(s, e, pub)!=0) {
+    return -1;
+  }
   memset(e,0,sizeof(e));
 
   // todo replace peer with peerid! why?

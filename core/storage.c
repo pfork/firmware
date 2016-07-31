@@ -12,7 +12,7 @@
 #include "storage.h"
 #include <string.h> //memcpy
 #include "libopencm3/stm32/flash.h"
-#include "randombytes_salsa20_random.h"
+#include "randombytes_pitchfork.h"
 #include "crypto_scalarmult_curve25519.h"
 #include "crypto_secretbox.h"
 #include <crypto_generichash.h>
@@ -49,7 +49,7 @@ void topeerid(unsigned char* peer,
 void get_ekid(unsigned char* keyid,
               unsigned char* nonce,
               unsigned char* ekid) {
-  randombytes_salsa20_random_buf((void *) nonce, (size_t) EKID_NONCE_LEN);
+  randombytes_buf((void *) nonce, (size_t) EKID_NONCE_LEN);
   crypto_generichash(ekid, EKID_LEN,           // output
                      nonce, EKID_NONCE_LEN,    // output
                      keyid, STORAGE_ID_LEN);   // salt
@@ -350,7 +350,7 @@ UserRecord* init_user(unsigned char* name, unsigned char name_len) {
   ((UserRecord*) &rec)->type = USERDATA;
   ((UserRecord*) &rec)->len = USERDATA_HEADER_LEN+name_len;
   // initialize salt
-  randombytes_salsa20_random_buf((void *) ((UserRecord*) &rec)->salt, (size_t) USER_SALT_LEN);
+  randombytes_buf((void *) ((UserRecord*) &rec)->salt, (size_t) USER_SALT_LEN);
   // set name
   memcpy(&(((UserRecord*) &rec)->name), name, name_len);
   // store the record

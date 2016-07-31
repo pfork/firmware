@@ -1,6 +1,6 @@
 /**
   ************************************************************************************
-  * @file    randombytes_salsa20_random.c
+  * @file    randombytes_pitchfork.c
   * @author  stf
   * @version V0.0.1
   * @date    05-December-2013
@@ -15,7 +15,7 @@
 #include <crypto_core_salsa20.h>
 #include <crypto_stream_salsa20.h>
 #include <randombytes.h>
-#include <randombytes_salsa20_random.h>
+#include <randombytes_pitchfork.h>
 #include <crypto_generichash.h>
 #include <utils.h>
 
@@ -28,7 +28,7 @@
 #define COMPILER_ASSERT(X) (void) sizeof(char[(X) ? 1 : -1])
 #define HASHSIZE (crypto_stream_salsa20_KEYBYTES >> 1)
 
-typedef struct Salsa20Random_ {
+typedef struct PitchforkRandom_ {
   unsigned char key[crypto_stream_salsa20_KEYBYTES];
   unsigned char rnd32[SALSA20_RANDOM_BLOCK_SIZE];
   unsigned char s[crypto_generichash_KEYBYTES];
@@ -37,16 +37,16 @@ typedef struct Salsa20Random_ {
   size_t        rnd32_outleft;
   int           initialized;
   struct entropy_store* pool;
-} Salsa20Random;
-Salsa20Random stream;
+} PitchforkRandom;
+PitchforkRandom stream;
 
 /**
-  * @brief  randombytes_salsa20_random_init: initializes the rng
+  * @brief  randombytes_pitchfork_init: initializes the rng
   *         by hashing the unique device id (96bits)
   * @param  pool: pointer to the entropy_store
   * @retval None
   */
-void randombytes_salsa20_random_init(struct entropy_store* pool) {
+void randombytes_pitchfork_init(struct entropy_store* pool) {
     unsigned int dev_uuid[4];
     stream.nonce = sysctr;
     stream.pool = pool;
@@ -63,12 +63,12 @@ void randombytes_salsa20_random_init(struct entropy_store* pool) {
 }
 
 /**
-  * @brief  randombytes_salsa20_random_stir: (re)seeds the rng from the entropy pool
+  * @brief  randombytes_pitchfork_stir: (re)seeds the rng from the entropy pool
   *         ported from the linux rng
   * @param  None
   * @retval None
   */
-void randombytes_salsa20_random_stir(void) {
+void randombytes_pitchfork_stir(void) {
   	int i;
    unsigned int w[HASHSIZE];
 
@@ -121,13 +121,13 @@ void randombytes_salsa20_random_stir(void) {
 }
 
 /**
-  * @brief  randombytes_salsa20_random_stir_if_needed: check if reseed the rng
+  * @brief  randombytes_pitchfork_stir_if_needed: check if reseed the rng
   * @param  None
   * @retval None
   */
-static void randombytes_salsa20_random_stir_if_needed(void) {
+static void randombytes_pitchfork_stir_if_needed(void) {
     if (stream.fresh == 0) {
-      randombytes_salsa20_random_stir();
+      randombytes_pitchfork_stir();
       stream.fresh = STIRPERIOD;
     } else {
       stream.fresh--;
@@ -135,15 +135,15 @@ static void randombytes_salsa20_random_stir_if_needed(void) {
 }
 
 /**
-  * @brief  randombytes_salsa20_random_buf: fills buf with random bytes
+  * @brief  randombytes_buf: fills buf with random bytes
   * @param  buf: pointer to output buf
   * @param  size: size of output buf
   * @retval None
   */
-void randombytes_salsa20_random_buf(void * const buf, const size_t size) {
+void randombytes_buf(void * const buf, const size_t size) {
   //int ret;
 
-    randombytes_salsa20_random_stir_if_needed();
+    randombytes_pitchfork_stir_if_needed();
     COMPILER_ASSERT(sizeof stream.nonce == crypto_stream_salsa20_NONCEBYTES);
 #ifdef ULONG_LONG_MAX
     //assert(size <= ULONG_LONG_MAX);
