@@ -90,6 +90,12 @@ SECTIONS
     _edata = .;        /* define a global symbol at data end */
   } >RAM
 
+  .sigSection 0x8020000 - 64 :
+  {
+    _firmware_sig = .;        /* create a global symbol at data start */
+     KEEP(*(.sigSection)) /* keep my variable even if not referenced */
+  } >FLASH
+
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :

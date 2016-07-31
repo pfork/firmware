@@ -34,6 +34,7 @@
 #include "kex.h"
 #include "storage.h"
 #include "main.h"
+#include "fwsig.h"
 
 void randombytes_pitchfork_init(struct entropy_store* pool);
 struct entropy_store* pool;
@@ -236,6 +237,8 @@ static void app(void) {
 
 int main(void) {
   init();
+  verify_fwsig();
+  mDelay(500);
   pool = init_pool();
   randombytes_pitchfork_init(pool);
 

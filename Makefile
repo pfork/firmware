@@ -7,7 +7,7 @@ OC=$(PREFIX)-objcopy
 OD=$(PREFIX)-objdump
 AS=$(PREFIX)-as
 
-INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Icrypto/ -Iutils/ \
+INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Ilib/ -Icrypto/ -Iutils/ \
 			  -Ilib/sphincs256 -Ilib/blake -Ilib/newhope -Ilib/chacha20 \
 			  -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
 LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3_stm32f2.a
@@ -28,7 +28,7 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
 	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork.o \
 	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o \
-	utils/abort.o \
+	utils/abort.o lib/open.o lib/blake512.o crypto/fwsig.o \
 	lib/newhope/poly.o lib/newhope/ntt.o lib/newhope/precomp.o \
 	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/reduce.o \
 	lib/newhope/fips202.o lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
@@ -37,16 +37,31 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
 	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o
 
-all : main.bin
+all : main.bin signer/signer
 full: clean main.bin doc tags
 
 upload: main.bin
 	dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D main.bin
 
-main.bin : memmap $(objs)
-	$(CC) $(LDFLAGS) -o main.elf $(objs) $(LIBS)
+main.bin : memmap $(objs) signature.o
+	$(CC) $(LDFLAGS) -o main.elf $(objs) signature.o $(LIBS)
 	$(OC) main.elf main.bin -O binary
 	$(OD) -Dl main.elf > main.list
+
+signature.c: $(objs) memmap signer/signer
+	$(CC) $(LDFLAGS) -o main.elf $(objs) $(LIBS)
+	$(OC) main.elf main.unsigned.bin -O binary
+	signer/signer main.unsigned.bin >signature.c
+	rm main.elf # main.unsigned.bin
+
+signer/signer: signer/sign.o signer/blake512.o signer/signer.c
+	gcc signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
+
+signer/blake512.o: signer/blake512.c
+	gcc -c -o signer/blake512.o signer/blake512.c
+
+signer/sign.o: signer/sign.c
+	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -o signer/sign.o signer/sign.c
 
 tags:
 	gtags
@@ -63,6 +78,7 @@ clean:
 	rm -f $(objs)
 	rm -f *.elf
 	rm -f *.list
+	rm signer/signer signer/*.o signature.[co]
 
 clean-all: clean
 	rm -rf doc/latex doc/html
