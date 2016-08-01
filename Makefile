@@ -45,12 +45,12 @@ upload: main.bin
 
 main.bin : memmap $(objs) signature.o
 	$(CC) $(LDFLAGS) -o main.elf $(objs) signature.o $(LIBS)
-	$(OC) main.elf main.bin -O binary
+	$(OC) --gap-fill 0xff main.elf main.bin -O binary
 	$(OD) -Dl main.elf > main.list
 
 signature.c: $(objs) memmap signer/signer
 	$(CC) $(LDFLAGS) -o main.elf $(objs) $(LIBS)
-	$(OC) main.elf main.unsigned.bin -O binary
+	$(OC) --gap-fill 0xff main.elf main.unsigned.bin -O binary
 	signer/signer main.unsigned.bin >signature.c
 	rm main.elf # main.unsigned.bin
 
