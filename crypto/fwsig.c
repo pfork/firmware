@@ -37,7 +37,7 @@ int verify_fwsig(void) {
   }
 
   oled_print(0,18,"hashing...", Font_8x8);
-  crypto_hash_blake512(digest, (uint8_t *)0x08000000, 0x20000-64);
+  crypto_hash_blake512(digest, (uint8_t *)0x08000000, 0x40000-64);
 
   oled_print(0,18,"hashing: done", Font_8x8);
 
