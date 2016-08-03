@@ -38,8 +38,8 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o \
 	iap/fwupdater.lzg.o
 
-all : main.bin signer/signer
-full: clean main.bin doc tags
+all : main.bin signer/signer tools/store-master-key.bin
+full: clean all doc main.check tags
 
 upload: main.bin
 	dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D main.bin
@@ -55,20 +55,28 @@ signature.c: $(objs) memmap signer/signer
 	signer/signer main.unsigned.bin >signature.c
 	rm main.elf # main.unsigned.bin
 
-#signer/checker: signer/sign.o signer/blake512.o signer/checker.c
-#	gcc signer/sign.o signer/blake512.o -o signer/checker signer/checker.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
-
 signer/signer: signer/sign.o signer/blake512.o signer/signer.c
-	gcc signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
+	gcc -Ilib signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
 
 signer/blake512.o: lib/blake512.c
 	gcc -c -o signer/blake512.o lib/blake512.c
 
 signer/sign.o: signer/sign.c
-	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -o signer/sign.o signer/sign.c
+	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib -o signer/sign.o signer/sign.c
 
 iap/fwupdater.lzg.o:
 	cd iap; make
+
+tools/store-master-key.bin: tools/store-key.c main.syms
+	$(CC) -mthumb -mcpu=cortex-m3 -fno-common -Ttools/store-key-memmap \
+			-DSTM32F2 -I/lib/libopencm3/include -Wl,--just-symbols=main.syms \
+	      -Icore -Ilib/libopencm3/include -nostartfiles -Wl,--gc-sections -Wl,-z,relro \
+	      -o tools/store-key.elf tools/store-key.c lib/libopencm3_stm32f2.a
+	$(OC) --gap-fill 0xff tools/store-key.elf tools/store-master-key.bin -O binary
+	$(OD) -Dl tools/store-key.elf > tools/store-key.list
+
+main.syms: main.elf
+	nm -g main.elf | sed 's/\([^ ]*\) [^ ]* \([^ ]*\)$$/\2 = 0x\1;/' >main.syms
 
 tags:
 	gtags
@@ -86,6 +94,7 @@ clean:
 	rm -f *.elf
 	rm -f *.list
 	rm signer/signer signer/*.o signature.[co]
+	rm tools/*.bin tools/*.elf tools/*.list
 	cd iap; make clean
 
 clean-all: clean
