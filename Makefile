@@ -55,11 +55,14 @@ signature.c: $(objs) memmap signer/signer
 	signer/signer main.unsigned.bin >signature.c
 	rm main.elf # main.unsigned.bin
 
+#signer/checker: signer/sign.o signer/blake512.o signer/checker.c
+#	gcc signer/sign.o signer/blake512.o -o signer/checker signer/checker.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
+
 signer/signer: signer/sign.o signer/blake512.o signer/signer.c
 	gcc signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
 
-signer/blake512.o: signer/blake512.c
-	gcc -c -o signer/blake512.o signer/blake512.c
+signer/blake512.o: lib/blake512.c
+	gcc -c -o signer/blake512.o lib/blake512.c
 
 signer/sign.o: signer/sign.c
 	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -o signer/sign.o signer/sign.c
