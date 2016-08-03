@@ -50,10 +50,10 @@ main.bin : memmap $(objs) signature.o
 	$(OD) -Dl main.elf > main.list
 
 signature.c: $(objs) memmap signer/signer
-	$(CC) $(LDFLAGS) -o main.elf $(objs) $(LIBS)
-	$(OC) --gap-fill 0xff main.elf main.unsigned.bin -O binary
+	$(CC) $(LDFLAGS) -o unsigned.main.elf $(objs) $(LIBS)
+	$(OC) --gap-fill 0xff unsigned.main.elf main.unsigned.bin -O binary
 	signer/signer main.unsigned.bin >signature.c
-	rm main.elf # main.unsigned.bin
+	rm unsigned.main.elf # main.unsigned.bin
 
 signer/signer: signer/sign.o signer/blake512.o signer/signer.c
 	gcc -Ilib signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
