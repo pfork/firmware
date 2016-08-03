@@ -35,7 +35,8 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	utils/widgets.o utils/itoa.o utils/flashdbg.o utils/chords.o core/nrf.o \
 	utils/ntohex.o lib/scalarmult/cortex_m0_mpy121666.o \
 	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
-	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o
+	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o \
+	iap/fwupdater.lzg.o
 
 all : main.bin signer/signer
 full: clean main.bin doc tags
@@ -63,6 +64,9 @@ signer/blake512.o: signer/blake512.c
 signer/sign.o: signer/sign.c
 	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -o signer/sign.o signer/sign.c
 
+iap/fwupdater.lzg.o:
+	cd iap; make
+
 tags:
 	gtags
 
@@ -79,6 +83,7 @@ clean:
 	rm -f *.elf
 	rm -f *.list
 	rm signer/signer signer/*.o signature.[co]
+	cd iap; make clean
 
 clean-all: clean
 	rm -rf doc/latex doc/html

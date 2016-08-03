@@ -129,9 +129,10 @@ static const unsigned char bitmap_lzg[] = {
 #define MENU_LIST_SEEDS 5
 #define MENU_DEL_RAM 6
 #define MENU_DEL_KEYS 7
-#define MENU_ABOUT 8
-#define MENU_LEN 9
-static const char *menuitems[]={"Switch Mode", "Key Exchange", "Train Chords", "Flash info", "Flash dump", "List Seeds", "Erase RAM", "Erase Keystore", "About"};
+#define MENU_UPDATE 8
+#define MENU_ABOUT 9
+#define MENU_LEN 10
+static const char *menuitems[]={"Switch Mode", "Key Exchange", "Train Chords", "Flash info", "Flash dump", "List Seeds", "Erase RAM", "Erase Keystore", "FW Update", "About"};
 typedef enum {None=0, Flashstats, Flashdump, Listseeds, Chord_train, KEXMenu} AppModes;
 AppModes appmode=None;
 
@@ -190,6 +191,22 @@ static void about(void) {
   oled_print(0,48, (char*) "     team" , Font_8x8);
 }
 
+extern int firmware_updater;
+extern int _binary_fwupdater_bin_size;
+extern int _binary_fwupdater_bin_lzg_size;
+extern unsigned char* _binary_fwupdater_bin_lzg_start;
+extern unsigned char* _load_addr;
+
+void fwupdate_trampoline(void) {
+  LZG_Decode((uint8_t*) &_binary_fwupdater_bin_lzg_start,
+             (int) &_binary_fwupdater_bin_lzg_size,
+             (void*) &_load_addr,
+             (int) &_binary_fwupdater_bin_size);
+  //fw_updater(usbd_dev);
+  asm volatile("mov r0, %[value]" ::[value] "r" (usbd_dev));
+  asm volatile("blx %[addr]" ::[addr] "r" (&firmware_updater));
+}
+
 static void menu_cb(char menuidx) {
   gui_refresh=1;
   switch(menuidx) {
@@ -215,6 +232,7 @@ static void menu_cb(char menuidx) {
   case MENU_TRAIN_CHORDS: { oled_clear(); chord_reset(); appmode=Chord_train; gui_refresh=0; break; }
   case MENU_DEL_RAM: { softreset(); break; }
   case MENU_DEL_KEYS: { erase_keystore(); softreset(); break; }
+  case MENU_UPDATE: { fwupdate_trampoline(); gui_refresh=0; break; }
   case MENU_ABOUT: { about(); gui_refresh=0; break; }
   }
 }
