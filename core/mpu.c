@@ -92,10 +92,6 @@
 //#define DACCVIOL   (1 << 1)
 //#define IACCVIOL   (1 << 0)
 
-/*  !!!!!!!!!
- *  IMPORTANT also update MPU_ACTIVE_REGIONS if you change the number of items in table
- *  !!!!!!!!!
- */
 void mpu_init(void) {
   const uint32_t table[] = {
     // todo only allow exec on code area, not on storage area or system area
