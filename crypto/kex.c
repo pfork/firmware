@@ -31,8 +31,8 @@ static uint8_t menuitems_len = 0;
 static Options *options;
 static bool show_verifier=0;
 static int ii=0;
-static u8 key[32];
-static u8 peer[33];
+static uint8_t key[32];
+static uint8_t peer[33];
 static int peer_len=0;
 
 static const char *kexmenuitems[]={"ECDH", "New Hope (PQ)", "Group ECDH" };
@@ -515,8 +515,8 @@ static void kex_cb(char menuidx) {
     };
   } else if(mode==NEW_HOPE) {
     poly sk;
-    //u8 send[POLY_BYTES];
-    u8 *send = bufs[0].buf;
+    //uint8_t send[POLY_BYTES];
+    uint8_t *send = bufs[0].buf;
     char res;
     //int i;
     oled_print(0,16, (char*) "init New Hope" , Font_8x8);
@@ -545,7 +545,7 @@ static void kex_cb(char menuidx) {
   // send name
   while(nrf_send(msgs+33*menuidx,msgs+5,32-5)==0);
 
-  u8 verifier[16];
+  uint8_t verifier[16];
   crypto_generichash(verifier, sizeof(verifier),                               // output
                      (unsigned char*) "PITCHFORK KEX Verifier          ", 32,  // input
                      (unsigned char*) key, 32);                                // key
@@ -559,9 +559,9 @@ static void kex_cb(char menuidx) {
   show_verifier=1;
 }
 
-static void bubble_sort(u8 **ptr,int s) {
+static void bubble_sort(uint8_t **ptr,int s) {
   int i,j;
-  u8* temp;
+  uint8_t* temp;
   for(i=1;i<s;i++) {
     for(j=0;j<s-i;j++) {
       //if(*(ptr+j)>*(ptr+j+1)) {
@@ -576,7 +576,7 @@ static void bubble_sort(u8 **ptr,int s) {
 
 void mpkex_cb(char menulen) {
   size_t peer_cnt=0, i, self;
-  u8 **parties = (u8**) (options + (menulen*sizeof(Options)));
+  uint8_t **parties = (uint8_t**) (options + (menulen*sizeof(Options)));
   //if(menulen<3) return;
   oled_clear();
   char tmp[16];
@@ -605,7 +605,7 @@ void mpkex_cb(char menulen) {
   oled_print(11*8, 0, tmp, Font_8x8);
 
   crypto_generichash_state hash_state;
-  u8 grouphash[32];
+  uint8_t grouphash[32];
   crypto_generichash_init(&hash_state, NULL, 0, 32);
   for(i=0;i<peer_cnt;i++) {
     // maybe not only the name, but also the 5 byte address? all 32 bytes sent?
@@ -756,7 +756,7 @@ void mpkex_cb(char menulen) {
     while(nrf_send(outaddr, keyring+(i*crypto_scalarmult_curve25519_BYTES), crypto_scalarmult_curve25519_BYTES)!=1);
   }
 
-  u8 verifier[16];
+  uint8_t verifier[16];
   crypto_generichash(verifier, sizeof(verifier),                               // output
                      (unsigned char*) "PITCHFORK KEX Verifier          ", 32,  // input
                      (unsigned char*) s, 32);                                  // key
@@ -841,9 +841,9 @@ static void discover() {
         oled_print(0,48, (char*) "send pub" , Font_8x8);
         while(!nrf_send(msgs,msg,32));
       } else if(mode==NEW_HOPE) {
-        u8 *senda = bufs[0].buf;
-        u8 *sendb = bufs[0].buf+POLY_BYTES;
-        //u8 senda[POLY_BYTES], sendb[POLY_BYTES];
+        uint8_t *senda = bufs[0].buf;
+        uint8_t *sendb = bufs[0].buf+POLY_BYTES;
+        //uint8_t senda[POLY_BYTES], sendb[POLY_BYTES];
         oled_print(0,16, (char*) "Incoming New Hope" , Font_8x8);
         // receive remaining packets
         oled_print(0,24, (char*) "recv pub" , Font_8x8);
@@ -867,7 +867,7 @@ static void discover() {
       // receive peer name
       while(((res=nrf_recv(peer, 32-5)) & 0x7f) != (32-5) || ((res & 0x80) == 1));
 
-      u8 verifier[16];
+      uint8_t verifier[16];
       crypto_generichash(verifier, sizeof(verifier),                               // output
                          (unsigned char*) "PITCHFORK KEX Verifier          ", 32,  // input
                          (unsigned char*) key, 32);                                // key
