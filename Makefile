@@ -49,10 +49,13 @@ main.bin : memmap $(objs) signature.o
 	$(OC) --gap-fill 0xff main.elf main.bin -O binary
 	$(OD) -Dl main.elf > main.list
 
-signature.c: $(objs) memmap signer/signer
+signature.o: $(objs) memmap signer/signer
 	$(CC) $(LDFLAGS) -o unsigned.main.elf $(objs) $(LIBS)
 	$(OC) --gap-fill 0xff unsigned.main.elf main.unsigned.bin -O binary
-	signer/signer main.unsigned.bin >signature.c
+	signer/signer signer/master.key main.unsigned.bin >signature
+	$(OC) --input binary --output elf32-littlearm \
+			--rename-section .data=.sigSection \
+	      --binary-architecture arm signature signature.o
 	rm unsigned.main.elf # main.unsigned.bin
 
 signer/signer: signer/sign.o signer/blake512.o signer/signer.c
