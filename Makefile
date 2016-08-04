@@ -29,16 +29,17 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork.o \
 	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o \
 	utils/abort.o lib/open.o lib/blake512.o crypto/fwsig.o \
-	lib/newhope/poly.o lib/newhope/ntt.o lib/newhope/precomp.o \
-	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/reduce.o \
-	lib/newhope/fips202.o lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
 	utils/widgets.o utils/itoa.o utils/flashdbg.o utils/chords.o core/nrf.o \
 	utils/ntohex.o lib/scalarmult/cortex_m0_mpy121666.o \
 	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
 	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o \
+	lib/newhope/newhope_asm.o lib/newhope/precomp.o lib/newhope/poly.o \
+	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/fips202.o \
+	lib/newhope/keccakf1600.o lib/newhope/chacha.o lib/newhope/crypto_stream_chacha20.o \
 	iap/fwupdater.lzg.o
 
 all : main.bin signer/signer tools/store-master-key.bin
+
 full: clean all doc main.check tags
 
 upload: main.bin
@@ -52,10 +53,10 @@ main.bin : memmap $(objs) signature.o
 signature.o: $(objs) memmap signer/signer
 	$(CC) $(LDFLAGS) -o unsigned.main.elf $(objs) $(LIBS)
 	$(OC) --gap-fill 0xff unsigned.main.elf main.unsigned.bin -O binary
-	signer/signer signer/master.key main.unsigned.bin >signature
+	signer/signer signer/master.key main.unsigned.bin >signature.bin
 	$(OC) --input binary --output elf32-littlearm \
 			--rename-section .data=.sigSection \
-	      --binary-architecture arm signature signature.o
+	      --binary-architecture arm signature.bin signature.o
 	rm unsigned.main.elf # main.unsigned.bin
 
 signer/signer: signer/sign.o signer/blake512.o signer/signer.c
@@ -91,12 +92,24 @@ main.check:
 	cppcheck --enable=all $(objs:.o=.c) $(INCLUDES) 2>main.check
 	flawfinder --quiet $(objs:.o=.c) >>main.check
 
+#%.bin: %.elf
+#	$(OC) -Obinary --gap-fill 0xff $(*).elf $(*).bin
+#
+# %.elf: %.o
+# 		$(LD) -o $(*).elf  $(*).o $(LDFLAGS) $(LIBS)
+#
+# %.o: %.c
+# 		$(CC) $(CFLAGS) -o $@ -c $<
+
+%.o: %.S
+	$(CC) $(CFLAGS) -o $@ -c $<
+
 clean:
 	rm -f *.bin
 	rm -f $(objs)
 	rm -f *.elf
 	rm -f *.list
-	rm signer/signer signer/*.o signature.[co]
+	rm signer/signer signer/*.o
 	rm tools/*.bin tools/*.elf tools/*.list
 	cd iap; make clean
 
