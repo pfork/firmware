@@ -1,7 +1,7 @@
 #include "inttypes.h"
 #include "params.h"
 #include "randombytes.h"
-#include "../sphincs/crypto_stream_chacha20.h"
+#include "crypto_stream_chacha20.h"
 #include "math.h"
 #include "poly.h"
 #include <stdio.h>

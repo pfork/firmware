@@ -3,7 +3,7 @@
 
 #include "poly.h"
 #include "randombytes.h"
-#include "../sphincs/crypto_stream_chacha20.h"
+#include "crypto_stream_chacha20.h"
 #include "error_correction.h"
 #include <math.h>
 #include <stdio.h>

@@ -9,4 +9,10 @@ void shake128_squeezeblocks(unsigned char *output, unsigned long long nblocks, u
 void shake128(unsigned char *output, unsigned int outputByteLen, const unsigned char *input, unsigned int inputByteLen);
 void sha3256(unsigned char *output, const unsigned char *input, unsigned int inputByteLen);
 
+
+void KeccakF1600_StatePermute(uint64_t *);
+void KeccakF1600_StateXORBytes(void *state, const unsigned char *data, unsigned int offset, unsigned int length);
+void KeccakF1600_StateExtractBytes(void *state, const unsigned char *data, unsigned int offset, unsigned int length);
+
+
 #endif

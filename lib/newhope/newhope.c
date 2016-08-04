@@ -3,50 +3,45 @@
 #include "error_correction.h"
 #include "fips202.h"
 
+ /*#define poly_getnoise poly_getnoise_fast*/
+
 static void encode_a(unsigned char *r, const poly *pk, const unsigned char *seed)
 {
-  int i,j;
+  int i;
   poly_tobytes(r, pk);
-  unsigned char t;
-
   for(i=0;i<NEWHOPE_SEEDBYTES;i++)
-  {
-    t = seed[i];
-    for(j=0;j<4;j++)
-    {
-      r[2*(4*i+j)+1] |= t << 6;
-      t >>= 2;
-    }
-  }
+    r[POLY_BYTES+i] = seed[i];
 }
 
 static void decode_a(poly *pk, unsigned char *seed, const unsigned char *r)
 {
-  int i,j;
+  int i;
   poly_frombytes(pk, r);
-  for(i=0;i<32;i++)
-  {
-    seed[i] = 0;
-    for(j=0;j<4;j++)
-      seed[i] |= (r[2*(4*i+j)+1] >> 6) << 2*j;
-  }
+  for(i=0;i<NEWHOPE_SEEDBYTES;i++)
+    seed[i] = r[POLY_BYTES+i];
 }
 
 static void encode_b(unsigned char *r, const poly *b, const poly *c)
 {
   int i;
   poly_tobytes(r,b);
-  for(i=0;i<1024;i++)
-    r[2*i+1] |= c->v[i] << 6;
+  for(i=0;i<PARAM_N/4;i++)
+    r[POLY_BYTES+i] = c->v[4*i] | (c->v[4*i+1] << 2) | (c->v[4*i+2] << 4) | (c->v[4*i+3] << 6);
 }
 
 static void decode_b(poly *b, poly *c, const unsigned char *r)
 {
   int i;
   poly_frombytes(b, r);
-  for(i=0;i<1024;i++)
-    c->v[i] = r[2*i+1] >> 6;
+  for(i=0;i<PARAM_N/4;i++)
+  {
+    c->v[4*i+0] =  r[POLY_BYTES+i]       & 0x03;
+    c->v[4*i+1] = (r[POLY_BYTES+i] >> 2) & 0x03;
+    c->v[4*i+2] = (r[POLY_BYTES+i] >> 4) & 0x03;
+    c->v[4*i+3] = (r[POLY_BYTES+i] >> 6);
+  }
 }
+
 
 static void gen_a(poly *a, const unsigned char *seed)
 {
@@ -58,7 +53,7 @@ static void gen_a(poly *a, const unsigned char *seed)
 
 void newhope_keygen(unsigned char *send, poly *sk)
 {
-  poly a, e, r, pk;
+  poly a, pk;
   unsigned char seed[NEWHOPE_SEEDBYTES];
   unsigned char noiseseed[32];
 
@@ -70,65 +65,62 @@ void newhope_keygen(unsigned char *send, poly *sk)
   poly_getnoise(sk,noiseseed,0);
   poly_ntt(sk); //unsigned
   
-  poly_getnoise(&e,noiseseed,1);
-  poly_ntt(&e); //unsigned
+  poly_getnoise(&pk,noiseseed,1);
+  poly_ntt(&pk); //unsigned
 
-  poly_pointwise(&r,sk,&a); //unsigned
-  poly_add(&pk,&e,&r); //unsigned
+  poly_pointwise(&a,&a,sk); //unsigned
+  poly_add(&pk,&a,&pk); //unsigned
   encode_a(send, &pk, seed);
 }
 
-
 void newhope_sharedb(unsigned char *sharedkey, unsigned char *send, const unsigned char *received)
 {
-  poly sp, ep, v, a, pka, c, epp, bp;
+  poly sp, v, a;
   unsigned char seed[NEWHOPE_SEEDBYTES];
   unsigned char noiseseed[32];
   
   randombytes_buf(noiseseed, 32);
 
-  decode_a(&pka, seed, received);
+  decode_a(&v, seed, received);
   gen_a(&a, seed);
 
   poly_getnoise(&sp,noiseseed,0);
   poly_ntt(&sp);
-  poly_getnoise(&ep,noiseseed,1);
-  poly_ntt(&ep);
-
-  poly_pointwise(&bp, &a, &sp);
-  poly_add(&bp, &bp, &ep);
+ 
+  poly_pointwise(&a, &a, &sp);
+  poly_pointwise(&v, &v, &sp);
   
-  poly_pointwise(&v, &pka, &sp);
+  poly_getnoise(&sp,noiseseed,1);
+  poly_ntt(&sp);
+
+  poly_add(&a, &a, &sp);
+  
   poly_bitrev(&v);
   poly_invntt(&v);
 
-  poly_getnoise(&epp,noiseseed,2);
-  poly_add(&v, &v, &epp);
+  poly_getnoise(&sp,noiseseed,2);
+  poly_add(&v, &v, &sp);
 
-  helprec(&c, &v, noiseseed, 3);
+  helprec(&sp, &v, noiseseed, 3);
 
-  encode_b(send, &bp, &c);
+  encode_b(send, &a, &sp);
   
-  rec(sharedkey, &v, &c);
+  rec(sharedkey, &v, &sp);
 
-#ifndef STATISTICAL_TEST 
   sha3256(sharedkey, sharedkey, 32);
-#endif
 }
 
 
 void newhope_shareda(unsigned char *sharedkey, const poly *sk, const unsigned char *received)
 {
-  poly v,bp, c;
+  poly v, c;
 
-  decode_b(&bp, &c, received);
+  decode_b(&v, &c, received);
 
-  poly_pointwise(&v,sk,&bp);
+  poly_pointwise(&v,sk,&v);
   poly_bitrev(&v);
   poly_invntt(&v);
  
   rec(sharedkey, &v, &c);
-#ifndef STATISTICAL_TEST 
-  sha3256(sharedkey, sharedkey, 32); 
-#endif
+  sha3256(sharedkey, sharedkey, 32);
 }
