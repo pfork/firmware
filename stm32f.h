@@ -1896,4 +1896,8 @@ typedef struct {
 //#define DACCVIOL   (1 << 1)
 //#define IACCVIOL   (1 << 0)
 
+#define OTP_START_ADDR	(0x1FFF7800)
+#define OTP_BYTES_IN_BLOCK	32
+#define OTP_BLOCKS	16
+
 #endif

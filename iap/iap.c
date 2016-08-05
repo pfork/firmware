@@ -18,10 +18,6 @@
 // important note usbd_dev must be in a region from the firmware which is not overwritten by iap!!!
 // otherwise strange usb errors, when switching modes, and no usb device working at the end.
 
-#define OTP_START_ADDR	(0x1FFF7800)
-#define OTP_BYTES_IN_BLOCK	32
-#define OTP_BLOCKS	16
-
 #define ALIGN(x) __attribute__((aligned(x)))
 ALIGN(128) uint32_t nvic_table[128];
 
