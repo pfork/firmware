@@ -888,6 +888,7 @@ static void kexmenu_cb(char menuidx) {
   case 1: { mode=NEW_HOPE; break; }
   case 2: { mode=MPECDH; break; }
   }
+  peers=0;
   gui_refresh=1;
   appctx.idx=1;
   appctx.top=0;
