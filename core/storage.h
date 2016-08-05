@@ -50,7 +50,7 @@ typedef enum {
 #define USER_SALT_LEN 32
 #define PEER_NAME_MAX 32
 #define PEERMAP_MAC_PREFIX_LEN (PEERMAP_HEADER_LEN - crypto_secretbox_MACBYTES)
-#define USERDATA_HEADER_LEN 35
+#define USERDATA_HEADER_LEN (35+32)
 #define PEERMAP_HEADER_LEN 35
 
 #define FLASH_SR_ALL_FLAGS (FLASH_SR_PGSERR | FLASH_SR_PGPERR | \
@@ -69,7 +69,7 @@ typedef enum {
 #define FLASH_SECTOR04_SIZE (64 << 10)
 #define FLASH_SECTOR05 0x08020000 // sector 5 (128KB)
 #define FLASH_SECTOR05_SIZE (128 << 10)
-#define FLASH_SECTOR06 0x08040000 // sector 5 (128KB)
+#define FLASH_SECTOR06 0x08040000 // sector 6 (128KB)
 #define FLASH_SECTOR06_SIZE (128 << 10)
 
 #define FLASH_BASE FLASH_SECTOR06
@@ -99,6 +99,7 @@ typedef struct {
   unsigned char type;
   unsigned short len;
   unsigned char salt[32];
+  unsigned char self_destruct[32];
   unsigned char name[4]; // dummy length defined by len
 } __attribute((packed)) UserRecord;
 
@@ -117,7 +118,7 @@ typedef struct {
   unsigned short len;
   unsigned int peerid[STORAGE_ID_LEN>>2];
   unsigned char mac[crypto_secretbox_MACBYTES];
-  unsigned char peer_name; // dummy holder, \0 separated
+  unsigned char peer_name; // dummy holder, \0 terminated
 } __attribute((packed)) MapRecord;
 
 void clear_flash(unsigned int sector_id);
