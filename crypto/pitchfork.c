@@ -39,23 +39,6 @@
 
 /*        ----===== typedefs =====----        */
 /**
-  * @brief  CRYPTO_CMD: enum for all PITCHFORK USB cmd byte
-  */
-typedef enum {
-  PITCHFORK_CMD_ENCRYPT = 0,
-  PITCHFORK_CMD_DECRYPT,
-  PITCHFORK_CMD_SIGN,
-  PITCHFORK_CMD_VERIFY,
-  PITCHFORK_CMD_ECDH_START,
-  PITCHFORK_CMD_ECDH_RESPOND,
-  PITCHFORK_CMD_ECDH_END,
-  PITCHFORK_CMD_LIST_KEYS,
-  PITCHFORK_CMD_RNG,
-  PITCHFORK_CMD_STOP,
-  PITCHFORK_CMD_STORAGE,
-} CRYPTO_CMD;
-
-/**
   * @brief  CMD_Buffer: USB read buffer for commands
   */
 typedef struct {
@@ -117,7 +100,7 @@ static unsigned char active_buf = 0;
 /**
   * @brief  modus: state of PITCHFORK, off is PITCHFORK_CMD_STOP
   */
-static CRYPTO_CMD modus=PITCHFORK_CMD_STOP;
+CRYPTO_CMD modus=PITCHFORK_CMD_STOP;
 
 /**
   * @brief  hash_state: for conserving hash_states across multiple input buf
@@ -127,10 +110,10 @@ static crypto_generichash_state hash_state;
 /**
   * @brief  blocked: 1 if stalled.
   */
-static unsigned char blocked = 0;
+unsigned char blocked = 0;
 
 static CMD_Buffer cmd_buf;
-static char cmd_blocked=0;
+char cmd_blocked=0;
 
 /**
   * @brief  params: for passing params from ctl to buf handlers
@@ -405,10 +388,14 @@ static void ecdh_start_handler(void) {
   ECDH_Start_Params* args = (ECDH_Start_Params*) params;
   unsigned char pub[crypto_scalarmult_curve25519_BYTES];
   unsigned char keyid[STORAGE_ID_LEN];
+  if(!cmd_blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_CTRL_IN, 1);
+  if(!blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
   start_ecdh(args->name, args->len, pub, keyid);
   // output keyid, pub
   memcpy(outbuf,keyid,STORAGE_ID_LEN);
   memcpy(outbuf+STORAGE_ID_LEN,pub,crypto_scalarmult_curve25519_BYTES);
+  if(!cmd_blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_CTRL_IN, 0);
+  if(!blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
   usb_write(outbuf, STORAGE_ID_LEN+crypto_scalarmult_curve25519_BYTES, 0, USB_CRYPTO_EP_DATA_OUT);
   reset();
 }
@@ -421,10 +408,14 @@ static void ecdh_start_handler(void) {
 static void ecdh_respond_handler(void) {
   ECDH_Response_Params* args = (ECDH_Response_Params*) params;
   unsigned char keyid[STORAGE_ID_LEN];
+  if(!cmd_blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_CTRL_IN, 1);
+  if(!blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
   respond_ecdh(args->name, args->len, args->pub, keyid);
   // output keyid, pub
   memcpy(outbuf,keyid,STORAGE_ID_LEN);
   memcpy(outbuf+STORAGE_ID_LEN,args->pub,crypto_scalarmult_curve25519_BYTES);
+  if(!cmd_blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_CTRL_IN, 0);
+  if(!blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
   usb_write(outbuf, STORAGE_ID_LEN+crypto_scalarmult_curve25519_BYTES, 0, USB_CRYPTO_EP_DATA_OUT);
   reset();
 }
@@ -438,12 +429,18 @@ static void ecdh_end_handler(void) {
   unsigned char peer[32];
   unsigned char keyid[STORAGE_ID_LEN];
   ECDH_End_Params* args = (ECDH_End_Params*) params;
+
+  if(!cmd_blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_CTRL_IN, 1);
+  if(!blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
+
   SeedRecord* seedptr = get_seedrec(0,args->keyid, 0, 0);
   unsigned char peer_len = get_peer(peer, (unsigned char*) seedptr->peerid);
   if(seedptr > 0 && peer_len > 0)
     finish_ecdh(peer, peer_len, args->keyid, args->pub, keyid);
   // output keyid
   memcpy(outbuf,keyid,STORAGE_ID_LEN);
+  if(!cmd_blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_CTRL_IN, 0);
+  if(!blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
   usb_write(outbuf, STORAGE_ID_LEN, 0, USB_CRYPTO_EP_DATA_OUT);
   reset();
 }
@@ -461,6 +458,9 @@ static void listkeys(const unsigned char *peerid) {
   unsigned char plain[crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES];
   unsigned short deleted = 0, corrupt = 0, unknown = 0;
   UserRecord *userdata = get_userrec();
+
+  if(!cmd_blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_CTRL_IN, 1);
+  if(!blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
 
   while(ptr < FLASH_BASE + FLASH_SECTOR_SIZE && *((unsigned char*)ptr) != EMPTY ) {
     if(*((unsigned char*)ptr) == DELETED_SEED) {
@@ -525,6 +525,10 @@ static void listkeys(const unsigned char *peerid) {
       break;
     }
   }
+
+  if(!cmd_blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_CTRL_IN, 0);
+  if(!blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
+
   if(outptr>outbuf) {
     // write out stats
     *((unsigned short*) outptr) = deleted;
