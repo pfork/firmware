@@ -8,6 +8,7 @@
 #include "dma.h"
 #include "storage.h"
 #include "widgets.h"
+#include "master.h"
 
 void getstr(char *prompt, uint8_t *name, int *len) {
   uint8_t keys, i;
@@ -94,6 +95,7 @@ void getstr(char *prompt, uint8_t *name, int *len) {
 uint8_t gui_refresh=1;
 uint8_t rf=0, mode=CRYPTO, chrg=0, sdcd=0;
 UserRecord* userec = NULL;
+static uint32_t blinker;
 
 void statusline(void) {
   uint8_t refresh=gui_refresh;
@@ -134,6 +136,15 @@ void statusline(void) {
     refresh=1;
     sdcd=0;
   }
+
+  if(pitchfork_hot!=0) {
+    if(blinker++ & 0x80) {
+      oled_print_inv(0,0, (char*) " PITCHFORK!!5!  ", Font_8x8);
+    } else {
+      oled_print(0,0, (char*) " PITCHFORK!!5!  ", Font_8x8);
+    }
+  }
+
   if(refresh) {
     if(rf) {
       oled_print(0,56, (char*) "R", Font_8x8);
@@ -155,7 +166,9 @@ void statusline(void) {
     } else {
       oled_print(24,56, (char*) "D", Font_8x8);
     }
-    oled_print_inv(0,0, (char*) " PITCHFORK!!5!  ", Font_8x8);
+    if(pitchfork_hot==0) {
+      oled_print_inv(0,0, (char*) " PITCHFORK!!5!  ", Font_8x8);
+    }
     if(userec) {
       char name[33];
       memcpy(name, userec->name, userec->len - USERDATA_HEADER_LEN);

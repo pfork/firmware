@@ -35,6 +35,8 @@
 #include "storage.h"
 #include "main.h"
 #include "fwsig.h"
+#include "iap.h"
+#include "master.h"
 
 void randombytes_pitchfork_init(struct entropy_store* pool);
 struct entropy_store* pool;
@@ -121,18 +123,19 @@ static const unsigned char bitmap_lzg[] = {
 };
 #define BITMAP_LZG_LEN 384
 
-#define MENU_SWITCH_MODE 0
-#define MENU_KEX 1
-#define MENU_TRAIN_CHORDS 2
-#define MENU_FLASH_INFO 3
-#define MENU_FLASH_DUMP 4
-#define MENU_LIST_SEEDS 5
-#define MENU_DEL_RAM 6
-#define MENU_DEL_KEYS 7
-#define MENU_UPDATE 8
-#define MENU_ABOUT 9
-#define MENU_LEN 10
-static const char *menuitems[]={"Switch Mode", "Key Exchange", "Train Chords", "Flash info", "Flash dump", "List Seeds", "Erase RAM", "Erase Keystore", "FW Update", "About"};
+#define MENU_UNLOCK 0
+#define MENU_SWITCH_MODE 1
+#define MENU_KEX 2
+#define MENU_TRAIN_CHORDS 3
+#define MENU_FLASH_INFO 4
+#define MENU_FLASH_DUMP 5
+#define MENU_LIST_SEEDS 6
+#define MENU_DEL_RAM 7
+#define MENU_DEL_KEYS 8
+#define MENU_UPDATE 9
+#define MENU_ABOUT 10
+#define MENU_LEN 11
+static const char *menuitems[]={"(un)lock","Switch Mode", "Key Exchange", "Train Chords", "Flash info", "Flash dump", "List Seeds", "Erase RAM", "Erase Keystore", "FW Update", "About"};
 typedef enum {None=0, Flashstats, Flashdump, Listseeds, Chord_train, KEXMenu} AppModes;
 AppModes appmode=None;
 
@@ -159,6 +162,9 @@ static UserRecord* init_pf_user(void) {
   if(nlen>0 && nlen<=32) {
     return init_user(name, nlen);
   }
+  // todo
+  // also set unique device random in OTP[2] if not locked yet
+  // also create two signing keys (ecc,sphincs)
   return (UserRecord*) 0;
 }
 
@@ -191,12 +197,6 @@ static void about(void) {
   oled_print(0,48, (char*) "     team" , Font_8x8);
 }
 
-extern int firmware_updater;
-extern int _binary_fwupdater_bin_size;
-extern int _binary_fwupdater_bin_lzg_size;
-extern unsigned char* _binary_fwupdater_bin_lzg_start;
-extern unsigned char* _load_addr;
-
 void fwupdate_trampoline(void) {
   LZG_Decode((uint8_t*) &_binary_fwupdater_bin_lzg_start,
              (int) &_binary_fwupdater_bin_lzg_size,
@@ -205,6 +205,15 @@ void fwupdate_trampoline(void) {
   //fw_updater(usbd_dev);
   asm volatile("mov r0, %[value]" ::[value] "r" (usbd_dev));
   asm volatile("blx %[addr]" ::[addr] "r" (&firmware_updater));
+}
+
+void toggle_lock(void) {
+  if(pitchfork_hot!=0) {
+    erase_master_key();
+  } else {
+    get_master_key();
+  }
+  gui_refresh=1;
 }
 
 static void menu_cb(char menuidx) {
@@ -233,6 +242,7 @@ static void menu_cb(char menuidx) {
   case MENU_DEL_RAM: { softreset(); break; }
   case MENU_DEL_KEYS: { erase_keystore(); softreset(); break; }
   case MENU_UPDATE: { fwupdate_trampoline(); gui_refresh=0; break; }
+  case MENU_UNLOCK: { toggle_lock(); break; }
   case MENU_ABOUT: { about(); gui_refresh=0; break; }
   }
 }
@@ -293,7 +303,9 @@ int main(void) {
     if(!(sysctr & 16383)) { // reseed about every 16s
       randombytes_pitchfork_stir();
     }
-    if(gui_refresh==0) statusline();
+    expire_master_key();
+    //if(gui_refresh==0) statusline();
+    statusline();
     app();
   }
 
