@@ -24,7 +24,7 @@ extern MenuCtx appctx;
 
 static KEXmodes mode = KEXTYPE;
 static size_t peers=0;
-static uint8_t *msgs;
+//static uint8_t *msgs;
 static uint8_t *pgpwords=NULL;
 static uint8_t **menuitems=NULL;
 static uint8_t menuitems_len = 0;
@@ -36,6 +36,14 @@ static uint8_t peer[33];
 static int peer_len=0;
 
 static const char *kexmenuitems[]={"ECDH", "New Hope (PQ)", "Group ECDH" };
+
+typedef struct {
+  unsigned char addr[5];
+  unsigned char name[32-5+1];
+  unsigned int ctr;
+} __attribute((packed)) PeerCandidate;
+
+static PeerCandidate *msgs;
 
 // used pgpwords.py >pgpwords.0offset
 // ./src/tools/lzg -9 pgpwords.0offset pgpwords.lzg
@@ -440,7 +448,7 @@ static const char* pgpword(uint16_t *wordlist, uint8_t n, size_t idx) {
 static int find_peer(uint8_t* msg) {
   size_t i;
   for(i=0;i<peers;i++) {
-    if(memcmp((void*) msgs+i*33+5, (void*) msg+5, 32-5)==0) return i;
+    if(memcmp((uint8_t*) msgs[i].name, (void*) msg+5, 32-5)==0) return i;
   }
   return -1;
 }
@@ -500,8 +508,8 @@ static void kex_cb(char menuidx) {
     oled_print(0,32, (char*) "calc pub" , Font_8x8);
     crypto_scalarmult_curve25519_base(pub, e);
     oled_print(0,40, (char*) "send pub" , Font_8x8);
-    while(nrf_send(msgs+33*menuidx,pub,32)==0);
-    nrf_open_rx(msgs+33*menuidx);
+    while(nrf_send((uint8_t*) (&msgs[(int) menuidx]),pub,32)==0);
+    nrf_open_rx((uint8_t*) (&msgs[(int) menuidx]));
     uDelay(120);
     oled_print(0,48, (char*) "get pub" , Font_8x8);
     while((nrf_recv(pub, PLOAD_WIDTH) & 0x7f) != 32 );
@@ -525,17 +533,17 @@ static void kex_cb(char menuidx) {
     // send send
     oled_print(0,32, (char*) "send pub" , Font_8x8);
     for(i=0;i<POLY_BYTES;i+=32) {
-      while(nrf_send(msgs+33*menuidx,send+i,32)==0);
+      while(nrf_send((uint8_t*) (&msgs[(int) menuidx]),send+i,32)==0);
     }
     // receive send
     oled_print(0,40, (char*) "recv pub" , Font_8x8);
-    nrf_open_rx(msgs+33*menuidx);
+    nrf_open_rx((uint8_t*) (&msgs[(int) menuidx]));
     for(i=0;i<POLY_BYTES;i+=32) {
       while(((res=nrf_recv(send+i, 32)) & 0x7f) != 32 ||
             ((res & 0x80) == 1)); // broadcast
     }
     mDelay(1); // wtf? todo/fixme. without this delay doesn't work
-    nrf_open_rx(msgs);
+    nrf_open_rx((uint8_t*) msgs);
 
     newhope_shareda(key, &sk, send);
   } else {
@@ -543,14 +551,14 @@ static void kex_cb(char menuidx) {
   }
 
   // send name
-  while(nrf_send(msgs+33*menuidx,msgs+5,32-5)==0);
+  while(nrf_send((uint8_t*) (&msgs[(int) menuidx]),msgs[0].name,32-5)==0);
 
   uint8_t verifier[16];
   crypto_generichash(verifier, sizeof(verifier),                               // output
                      (unsigned char*) "PITCHFORK KEX Verifier          ", 32,  // input
                      (unsigned char*) key, 32);                                // key
-  for(i=0;i<(32-5) && msgs[33*menuidx+5+i]!=0;i++) {
-    peer[i]=msgs[(33*menuidx)+5+i];
+  for(i=0;i<(32-5) && msgs[(int) menuidx].name[i]!=0;i++) {
+    peer[i]=msgs[(int) menuidx].name[i];
   }
   peer_len=i;
   to_pgpwords(verifier, sizeof(verifier));
@@ -593,7 +601,7 @@ void mpkex_cb(char menulen) {
   bubble_sort(parties, peer_cnt);
 
   for(self=0;self<peer_cnt;self++) {
-    if(memcmp(msgs,parties[self],32)==0) break;
+    if(memcmp((uint8_t*) msgs,parties[self],32)==0) break;
   }
   if(self>=peer_cnt) {
     // error couldn't find self
@@ -633,13 +641,13 @@ void mpkex_cb(char menulen) {
   memcpy(omsg, grouphash, 32);
   for(j=0;j<5;j++) {
     // xor our own id into the grouphash
-    omsg[j]^=msgs[j];
+    omsg[j]^=msgs[0].addr[j];
   }
 
   int done=peer_cnt*4;
+  nrf_open_rx((uint8_t*) msgs);
+  uDelay(200);
   while(1) {
-    nrf_open_rx(msgs);
-    uDelay(200);
     while(nrf_recv(imsg, PLOAD_WIDTH)==32) {
       if(memcmp(imsg+5,grouphash+5,32-5)==0) {
         // last 27 bytes correct, find out who sent it
@@ -659,6 +667,8 @@ void mpkex_cb(char menulen) {
     if(i!=self && nrf_send(parties[i], omsg,32)==1) {
       sent[i/32] |= (1<<(i%32));
     }
+    nrf_open_rx((uint8_t*) msgs);
+    uDelay(200);
     if(++i>=peer_cnt) i=0;
 
     for(j=0;j<(peer_cnt/32+1) && sent[j]==0xffffffff && checked[j]==0xffffffff;j++);
@@ -685,7 +695,7 @@ void mpkex_cb(char menulen) {
   uint8_t inaddr[5], outaddr[5];
   for(i=0;i<5;i++) {
     // reverse the self and next peer addresses for this part of the protocol
-    inaddr[i]=msgs[4-i];
+    inaddr[i]=msgs[0].addr[4-i];
     outaddr[i]=parties[(self+1)%peer_cnt][4-i];
   }
 
@@ -770,7 +780,7 @@ void mpkex_cb(char menulen) {
 static int select_peers() {
   int i, ret;
   for(i=0;i<peers;i++)
-    options[i].str=msgs+i*33+5;
+    options[i].str=msgs[i].name;
   ret = selector(&appctx,options,peers,mpkex_cb);
   if(ret == 0) {
     mode=KEXTYPE;
@@ -781,8 +791,13 @@ static int select_peers() {
 }
 
 static int show_peers() {
-  int i, ret;
-  for(i=0;i<peers;i++) menuitems[i]=msgs+i*33+5;
+  int i, j, ret;
+  for(i=0,j=0;i<peers;i++) {
+    if(msgs[i].ctr>32) {
+      menuitems[j]=msgs[i].name;
+      j++;
+    }
+  }
   ret = menu(&appctx, (const uint8_t**) menuitems,peers,kex_cb);
   if(ret == 0) {
     mode=KEXTYPE;
@@ -800,7 +815,7 @@ static void discover() {
   // send sometimes
   if(ii++ % 16 == 0) {
     nrf_send(BCAST, (uint8_t*) msgs,32);
-    nrf_open_rx(msgs);
+    nrf_open_rx((uint8_t*) msgs);
     uDelay(120);
   }
 
@@ -808,13 +823,19 @@ static void discover() {
   if(((res = nrf_recv(msg, PLOAD_WIDTH)) & 0x7f) >0) {
     if(res & 0x80) { // broadcast stuff
       // process msg
-      if(find_peer(msg) == -1 && peers < 64) {
+      int peeridx=0;
+      if((peeridx=find_peer(msg)) == -1 && peers < 64) {
         // insert into list
-        memcpy((void*) (msgs+peers*33),msg,32);
-        msgs[peers*33+32]=0;
-        options[peers].selected=0;
         peers++;
+        memcpy((uint8_t*) (&msgs[peers]),msg,32);
+        msgs[peers].name[32-5]=0;
+        msgs[peers].ctr=0;
+        options[peers].selected=0;
         gui_refresh=1;
+      } else {
+        if(msgs[peeridx].ctr<(32^1)-1) {
+          msgs[peeridx].ctr++;
+        }
       }
     } else { // private stuff
       if(mode==MPECDH) return;
@@ -839,7 +860,7 @@ static void discover() {
         oled_print(0,40, (char*) "calc pub" , Font_8x8);
         crypto_scalarmult_curve25519_base(msg, e);
         oled_print(0,48, (char*) "send pub" , Font_8x8);
-        while(!nrf_send(msgs,msg,32));
+        while(!nrf_send((uint8_t*) msgs,msg,32));
       } else if(mode==NEW_HOPE) {
         uint8_t *senda = bufs[0].buf;
         uint8_t *sendb = bufs[0].buf+POLY_BYTES;
@@ -857,13 +878,13 @@ static void discover() {
         // send sendb
         oled_print(0,40, (char*) "send resp" , Font_8x8);
         for(i=0;i<POLY_BYTES;i+=32) {
-          while(nrf_send(msgs,sendb+i,32)==0);
+          while(nrf_send((uint8_t*) msgs,sendb+i,32)==0);
         }
       } else {
         return;
       }
 
-      nrf_open_rx(msgs);
+      nrf_open_rx((uint8_t*) msgs);
       // receive peer name
       while(((res=nrf_recv(peer, 32-5)) & 0x7f) != (32-5) || ((res & 0x80) == 1));
 
@@ -892,11 +913,11 @@ static void kexmenu_cb(char menuidx) {
   gui_refresh=1;
   appctx.idx=1;
   appctx.top=0;
-  nrf_open_rx(msgs);
+  nrf_open_rx((uint8_t*) msgs);
 }
 
 int kex_menu_init(void) {
-  msgs=(uint8_t*) ((((uint32_t) outbuf)+3) & 0xfffffffc);
+  msgs=(PeerCandidate*) ((((uint32_t) outbuf)+3) & 0xfffffffc);
   menuitems = (uint8_t **) bufs[1].buf;
   options = (Options*) bufs[1].buf;
   // add self
@@ -904,8 +925,8 @@ int kex_menu_init(void) {
   if(userec) {
     size_t namelen = userec->len - USERDATA_HEADER_LEN;
     namelen = (namelen>(32-5))?(32-5):namelen;
-    memcpy(msgs+5, userec->name, namelen);
-    msgs[5+namelen]=0;
+    memcpy(msgs[0].name, userec->name, namelen);
+    msgs[0].name[namelen]=0;
   } else {
     oled_print(0,16, (char*) "uninitialized :/" , Font_8x8);
     return 0;
