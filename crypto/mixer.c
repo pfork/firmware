@@ -117,11 +117,14 @@ struct entropy_store* init_pool(void) {
   */
 void seed_pool(void) {
   unsigned int i;
+#ifndef DEFECTIVE_ADC
   unsigned char val8;
+#endif
   unsigned int val32;
 
   // TODO implement external RNG instead of disabled internal ADC entropy sources
 
+#ifndef DEFECTIVE_ADC
   for (i = 0; i < ADC_COLLECT_ITER; ++i) {
     val8=(uint8_t) (0xff & read_temp());
     mix_pool_bytes(&input_pool, (const void *) &val8, 1);
@@ -134,6 +137,7 @@ void seed_pool(void) {
     val8=(uint8_t) (0xff & read_vbat());
     mix_pool_bytes(&input_pool, (const void *) &val8, 1);
   }
+#endif
   for (i = 0; i < XESRC_COLLECT_ITER; ++i) {
     get_entropy((uint8_t*) &val32,4);
     mix_pool_bytes(&input_pool, (const void *) &val32, 4);
