@@ -16,7 +16,9 @@
 @ WARNING: These functions work only on little endian CPU with@ ARMv7m architecture (ARM Cortex-M3, ...).
 
 
-	.thumb
+  .cpu cortex-m3
+  .fpu softvfp
+  .thumb
 	.syntax unified
 .text
 

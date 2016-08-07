@@ -7,8 +7,11 @@
     .endm
 
 	.macro barrett a, q, t
-	  mov \t,#5
-	  smulwb \t,\a,\t
+	  //mov \t,#5
+	  //smulwb \t,\a,\t
+     LSL \t,\a,#2
+     ADD \t,\a
+     LSR \t,#16
 	  mls \a,\t,\q,\a
 	.endm
 	.macro butterfly a0,a1,q,t
@@ -36,7 +39,10 @@
 	//
     .align 4
 	.syntax unified
-	.cpu cortex-m4
+  .cpu cortex-m3
+  .fpu softvfp
+  .thumb
+	//.cpu cortex-m4
     // r0=&a, r1=&omegas
 	// r2 loop counter
 	// r3 to r10 8 elements of a, in that way we are able to merge 3 layers in one loop
@@ -414,7 +420,10 @@ barrett_reduce:
 	// unaligned loads and store add one cycle each block
     .align 4
 	.syntax unified
-	.cpu cortex-m4
+	//.cpu cortex-m4
+  .cpu cortex-m3
+  .fpu softvfp
+  .thumb
 
 mul_coeff:
     push {r0-r12,lr}
@@ -504,7 +513,10 @@ looppsis1:
 	// unaligned loads and store add one cycle each block
     .align 4
 	.syntax unified
-	.cpu cortex-m4
+	//.cpu cortex-m4
+  .cpu cortex-m3
+  .fpu softvfp
+  .thumb
 
 mul_coefficients:
     push {r0-r12,lr}
@@ -584,7 +596,10 @@ looptop:
     .type bitrev_vector, %function
     .align 2
 	.syntax unified
-	.cpu cortex-m4
+	//.cpu cortex-m4
+  .cpu cortex-m3
+  .fpu softvfp
+  .thumb
 
 bitrev_vector:
     push {r0-r12,lr}
@@ -616,7 +631,10 @@ exit:
 	// unaligned loads and store add one cycle each block
     .align 4
 	.syntax unified
-	.cpu cortex-m4
+	//.cpu cortex-m4
+  .cpu cortex-m3
+  .fpu softvfp
+  .thumb
 
 poly_pointwise:
     push {r0-r12,lr}

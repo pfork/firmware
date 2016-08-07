@@ -2,7 +2,9 @@
 .type chacha_perm_asm, %function
 
 .syntax unified
-.cpu cortex-m3
+  .cpu cortex-m3
+  .fpu softvfp
+  .thumb
 
 // operates on r0 as output and r1 as input pointer
 // assumes space of 64 bytes following both pointers
