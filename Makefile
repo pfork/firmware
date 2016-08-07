@@ -11,7 +11,7 @@ INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Ilib/ -Icrypto/ -Iutils/ -Iiap/
 			  -Ilib/sphincs256 -Ilib/blake -Ilib/newhope -Ilib/chacha20 \
 			  -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
 LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3_stm32f2.a
-CFLAGS = -mno-unaligned-access -g -Wall -Werror -Os \
+CFLAGS += -mno-unaligned-access -g -Wall -Werror -Os \
 	-mfix-cortex-m3-ldrd -msoft-float -mthumb -Wno-strict-aliasing \
 	-fomit-frame-pointer -mthumb -mcpu=cortex-m3 $(INCLUDES) -DSTM32F2 -DHAVE_MSC \
 	-fstack-protector --param=ssp-buffer-size=4 -DRAMLOAD
@@ -34,9 +34,9 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	utils/ntohex.o lib/scalarmult/cortex_m0_mpy121666.o \
 	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
 	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o \
-	lib/newhope/newhope_asm.o lib/newhope/precomp.o lib/newhope/poly.o \
-	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/fips202.o \
-	lib/newhope/keccakf1600.o lib/newhope/chacha.o lib/newhope/crypto_stream_chacha20.o \
+	lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
+	lib/newhope/newhope.o lib/newhope/precomp.o lib/newhope/poly.o lib/newhope/ntt.o \
+	lib/newhope/error_correction.o lib/newhope/fips202.o lib/newhope/reduce.o \
 	iap/fwupdater.lzg.o
 
 all : main.bin signer/signer tools/store-master-key.bin
