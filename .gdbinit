@@ -19,24 +19,4 @@ define con
   attach 1
 end
 
-define inject
-  delete breakpoints
-  symbol-file tmp/ramload/test.elf
-  restore tmp/ramload/test.bin binary 0x20018000
-  thbreak test
-  jump test
-  delete breakpoints
-end
-
-define out
-  frame 1
-  thbr
-  frame 0
-  cont
-end
-
-define dump-store
-  dump memory store.dmp 0x08010000 0x08014000
-end
-
 con
