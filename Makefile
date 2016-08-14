@@ -29,7 +29,7 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
 	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork.o \
 	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o \
-	utils/abort.o lib/open.o lib/blake512.o crypto/fwsig.o \
+	utils/abort.o lib/crypto_sign/open.o lib/blake512/blake512.o crypto/fwsig.o \
 	utils/widgets.o utils/itoa.o utils/flashdbg.o utils/chords.o core/nrf.o \
 	utils/ntohex.o lib/scalarmult/cortex_m0_mpy121666.o \
 	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
