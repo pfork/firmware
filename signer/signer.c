@@ -18,6 +18,10 @@ int main(int argc, char *argv[]) {
   // read secret key
   // todo check argv for malicious paths
   FILE *f = fopen(argv[1], "r");
+  if(f==NULL) {
+    fprintf(stderr, "error reading file: %s\n", argv[1]);
+    exit(1);
+  }
   size_t size;
   if((size = fread(sk,sizeof(sk),1,f)) !=1) {
     fprintf(stderr, "error reading file: %s\n", argv[1]);

@@ -1,6 +1,5 @@
-#PREFIX = /home/stef/tasks/pitchfork/toolchain/arm/bin/arm-none-eabi
-#PREFIX = /home/stef/tasks/pitchfork/gcc-arm-none-eabi-4_7-2013q3/bin/arm-none-eabi
-PREFIX = /home/stef/tasks/pitchfork/toolchain/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi
+#PREFIX = /home/stef/tasks/pitchfork/toolchain/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi
+PREFIX = /home/stef/tasks/pitchfork/clean/toolchain/gcc-arm-none-eabi-5_4-2016q2/bin/arm-none-eabi
 CC=$(PREFIX)-gcc
 LD=$(PREFIX)-ld
 OC=$(PREFIX)-objcopy
@@ -8,9 +7,9 @@ OD=$(PREFIX)-objdump
 AS=$(PREFIX)-as
 
 INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Ilib/ -Icrypto/ -Iutils/ -Iiap/ \
-			  -Ilib/sphincs256 -Ilib/blake -Ilib/newhope -Ilib/chacha20 \
+			  -Ilib/sphincs256 -Ilib/blake512 -Ilib/newhope -Ilib/chacha20 \
 			  -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
-LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3_stm32f2.a
+LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3/lib/libopencm3_stm32f2.a
 CFLAGS += -mno-unaligned-access -g -Wall -Werror -Os \
 	-mfix-cortex-m3-ldrd -msoft-float -mthumb -Wno-strict-aliasing \
 	-fomit-frame-pointer -mthumb -mcpu=cortex-m3 $(INCLUDES) -DSTM32F2 -DHAVE_MSC \
@@ -61,22 +60,22 @@ signature.o: $(objs) memmap signer/signer
 	rm unsigned.main.elf # main.unsigned.bin
 
 signer/signer: signer/sign.o signer/blake512.o signer/signer.c
-	gcc -Ilib signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
+	gcc -Ilib/blake512 -Ilib/crypto_sign signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
 
-signer/blake512.o: lib/blake512.c
-	gcc -c -o signer/blake512.o lib/blake512.c
+signer/blake512.o: lib/blake512/blake512.c
+	gcc -c -o signer/blake512.o -Ilib/blake512 lib/blake512/blake512.c
 
 signer/sign.o: signer/sign.c
-	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib -o signer/sign.o signer/sign.c
+	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/blake512/ -Ilib/crypto_sign -o signer/sign.o signer/sign.c
 
 iap/fwupdater.lzg.o:
 	cd iap; make
 
 tools/store-master-key.bin: tools/store-key.c main.syms
 	$(CC) -mthumb -mcpu=cortex-m3 -fno-common -Ttools/store-key-memmap \
-			-DSTM32F2 -I/lib/libopencm3/include -Wl,--just-symbols=main.syms \
+			-DSTM32F2 -Wl,--just-symbols=main.syms \
 	      -Icore -Ilib/libopencm3/include -nostartfiles -Wl,--gc-sections -Wl,-z,relro \
-	      -o tools/store-key.elf tools/store-key.c lib/libopencm3_stm32f2.a
+	      -o tools/store-key.elf tools/store-key.c lib/libopencm3/lib/libopencm3_stm32f2.a
 	$(OC) --gap-fill 0xff tools/store-key.elf tools/store-master-key.bin -O binary
 	$(OD) -Dl tools/store-key.elf > tools/store-key.list
 

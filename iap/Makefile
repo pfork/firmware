@@ -1,4 +1,5 @@
-PREFIX = /home/stef/tasks/pitchfork/toolchain/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi
+#PREFIX = /home/stef/tasks/pitchfork/toolchain/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi
+PREFIX = /home/stef/tasks/pitchfork/clean/toolchain/gcc-arm-none-eabi-5_4-2016q2/bin/arm-none-eabi
 CC=$(PREFIX)-gcc
 LD=$(PREFIX)-ld
 OC=$(PREFIX)-objcopy
@@ -7,7 +8,7 @@ AS=$(PREFIX)-as
 
 BP=..
 
-INCLUDES = -I. -I$(BP) -I$(BP)/core/ -I$(BP)/utils/ -I$(BP)/sdio -I$(BP)/lib -I$(BP)/crypto \
+INCLUDES = -I. -I$(BP) -I$(BP)/core/ -I$(BP)/utils/ -I$(BP)/sdio -I$(BP)/lib -I$(BP)/crypto -I$(BP)/lib/blake512/ \
 	-I$(BP)/usb -I$(BP)/usb/msc -I$(BP)/lib/libsodium/src/libsodium/include/sodium/ \
 	-I$(BP)/lib/libopencm3/include
 CFLAGS = -mno-unaligned-access -g -Wall -Werror -Os \
@@ -17,12 +18,12 @@ CFLAGS = -mno-unaligned-access -g -Wall -Werror -Os \
 	-DSTM32F2
 
 LIBS = -Wl,--just-symbols=main.syms \
-	$(BP)/lib/libopencm3_stm32f2.a \
+	$(BP)/lib/libopencm3/lib/libopencm3_stm32f2.a \
 	$(BP)/lib/libsodium/src/libsodium/.libs/libsodium.a
 
 LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-sections -Wl,-z,relro
 
-objs = iap.o $(BP)/lib/open.o $(BP)/lib/blake512.o $(BP)/core/oled.o $(BP)/core/smallfonts.o $(BP)/core/delay.o
+objs = iap.o $(BP)/lib/crypto_sign/open.o $(BP)/lib/blake512/blake512.o $(BP)/core/oled.o $(BP)/core/smallfonts.o $(BP)/core/delay.o
 
 all : fwupdater.bin fwupdater.elf fwupdater.lzg.o
 
@@ -32,7 +33,7 @@ fwupdater.bin : memmap $(objs) #main.syms
 	$(OC) fwupdater.elf fwupdater.bin -O binary
 
 fwupdater.lzg.o: fwupdater.elf
-	lzg/lzg -9 fwupdater.bin fwupdater.bin.lzg
+	$(BP)/lib/liblzg/src/tools/lzg -9 fwupdater.bin fwupdater.bin.lzg
 	$(OC) --input binary --output elf32-littlearm \
 			--rename-section .data=.rodata \
 			--add-symbol _binary_fwupdater_bin_size=`stat -c %s fwupdater.bin` \
