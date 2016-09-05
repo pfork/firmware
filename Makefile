@@ -38,7 +38,7 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	lib/newhope/error_correction.o lib/newhope/fips202.o lib/newhope/reduce.o \
 	iap/fwupdater.lzg.o
 
-all : main.bin signer/signer tools/store-master-key.bin
+all : main.bin signer/signer tools/store-master-key.bin tools/lock-flash.bin
 
 full: clean all doc main.check tags
 
@@ -79,6 +79,14 @@ tools/store-master-key.bin: tools/store-key.c main.syms
 	$(OC) --gap-fill 0xff tools/store-key.elf tools/store-master-key.bin -O binary
 	$(OD) -Dl tools/store-key.elf > tools/store-key.list
 
+tools/lock-flash.elf: tools/lock-flash.c main.syms
+	$(CC) -mthumb -mcpu=cortex-m3 -fno-common -Ttools/memmap \
+			-DSTM32F2 -Wl,--just-symbols=main.syms \
+	      -Icore -Ilib/libopencm3/include -nostartfiles -Wl,--gc-sections -Wl,-z,relro \
+	      -o tools/lock-flash.elf tools/lock-flash.c lib/libopencm3/lib/libopencm3_stm32f2.a
+	#$(OC) --gap-fill 0xff tools/lock-flash.elf tools/lock-flash.bin -O binary
+	$(OD) -Dl tools/lock-flash.elf > tools/lock-flash.list
+
 main.syms: main.elf
 	nm -g main.elf | sed 's/\([^ ]*\) [^ ]* \([^ ]*\)$$/\2 = 0x\1;/' >main.syms
 
@@ -103,6 +111,9 @@ main.check:
 
 %.o: %.S
 	$(CC) $(CFLAGS) -o $@ -c $<
+
+%.bin: %.elf
+	$(OC) --gap-fill 0xff $< $@ -O binary
 
 clean:
 	rm -f *.bin
