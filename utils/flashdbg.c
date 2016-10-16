@@ -54,7 +54,7 @@ int flashdump(void) {
                                cipher,                // plaintext input
                                crypto_scalarmult_curve25519_BYTES+crypto_secretbox_ZEROBYTES, // plain length
                                nonce,                 // nonce
-                               get_master_key())      // key
+                               get_master_key("flashdump"))      // key
          == -1) {
         *(outptr-2-(nlen+1)) = 'c';
       }
@@ -150,7 +150,7 @@ int flashstats(void) {
                              cipher,                // plaintext input
                              crypto_scalarmult_curve25519_BYTES+crypto_secretbox_ZEROBYTES, // plain length
                              nonce,                 // nonce
-                             get_master_key())      // key
+                             get_master_key("flashstats"))      // key
        == -1) {
       // rewind name of corrupt seed
       corrupt++;
@@ -244,7 +244,7 @@ int listseeds(void) {
                              cipher,                // plaintext input
                              crypto_scalarmult_curve25519_BYTES+crypto_secretbox_ZEROBYTES, // plain length
                              nonce,                 // nonce
-                             get_master_key())      // key
+                             get_master_key("listseeds"))      // key
        == -1) {
       // rewind name of corrupt seed
       goto endloop;

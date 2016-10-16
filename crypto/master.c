@@ -71,7 +71,7 @@ static int chord(uint8_t *dst) {
   return i/2;
 }
 
-unsigned char* get_master_key(void) {
+unsigned char* get_master_key(char *msg) {
   ts=sysctr; // update last used timestamp
   if(pitchfork_hot!=0) // unlocked, use key in store
     return masterkey;
@@ -88,6 +88,7 @@ unsigned char* get_master_key(void) {
 
   oled_clear();
   oled_print_inv(0,0,"unlock key", Font_8x8);
+  oled_print(0,56,msg, Font_8x8);
   oled_print(0,0,"unlock key", Font_8x8);
   // todo get and display keyid/
   memset(passcode,0,sizeof(passcode));

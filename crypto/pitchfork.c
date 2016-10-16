@@ -505,7 +505,7 @@ static void listkeys(const unsigned char *peerid) {
                              cipher,                // plaintext input
                              crypto_scalarmult_curve25519_BYTES+crypto_secretbox_ZEROBYTES, // plain length
                              nonce,                 // nonce
-                             get_master_key())      // key
+                             get_master_key("usb list keys"))      // key
        == -1) {
       memset(plain, 0, crypto_secretbox_KEYBYTES+crypto_secretbox_ZEROBYTES);
       // rewind name of corrupt seed

@@ -157,6 +157,16 @@ SeedRecord* store_seed(unsigned char *seed, unsigned char* peer, unsigned char l
   rec.type = SEED;
   // set peerid
   topeerid(peer, len, (unsigned char*) rec.peerid);
+  // check if there is an existing peermap already
+  // and if it decrypts with the current masterkey
+  uint8_t junk[33];
+  int retries=3;
+  while(get_peer(junk, (uint8_t*) rec.peerid)==-1 && retries-->0) {
+    erase_master_key();
+    get_master_key("bad key");
+  }
+  if(retries==0) return NULL; // or fail
+
   // set keyid
   switch(memcmp(peer, userdata->name, MIN(len,userdata->len - USERDATA_HEADER_LEN))) {
   case -1:
@@ -191,7 +201,7 @@ SeedRecord* store_seed(unsigned char *seed, unsigned char* peer, unsigned char l
                    intmp,                 // plaintext input
                    crypto_scalarmult_curve25519_BYTES+crypto_secretbox_ZEROBYTES, // plain length
                    nonce,                 // nonce
-                   get_master_key());     // key
+                   get_master_key("store key"));     // key
 
   // clear plaintext seed in RAM
   memset(intmp,0,sizeof(intmp));
@@ -244,8 +254,10 @@ unsigned int next_rec(unsigned int ptr) {
   case DELETED_SEED:
     return ptr + sizeof(SeedRecord);
   case PEERMAP:
+    // todo add length check
     return ptr + ((MapRecord*) ptr)->len;
   case USERDATA:
+    // todo add length check
     return ptr + ((UserRecord*) ptr)->len;
   default:
     // unhandled/unknown record type found
@@ -280,7 +292,7 @@ unsigned int find_last(unsigned int ptr, unsigned char type) {
   * @brief  find: finds the next record matching type
   * @param  ptr: pointer to current record
   * @param  type: record type to find.
-  * @retval pointer to last record or -1 or -2
+  * @retval pointer to last record or 0, -1 or -2
   */
 unsigned int find(unsigned int ptr, unsigned char type) {
   if(ptr == 0) {
@@ -409,7 +421,7 @@ SeedRecord* get_seed(unsigned char* seed, unsigned char* peerid, unsigned char* 
                            cipher,                // plaintext input
                            crypto_scalarmult_curve25519_BYTES+crypto_secretbox_ZEROBYTES, // plain length
                            nonce,                 // nonce
-                           get_master_key())      // key
+                           get_master_key("get key"))      // key
      == -1)
     return 0;
   memcpy(seed, plain+crypto_secretbox_ZEROBYTES,crypto_scalarmult_curve25519_BYTES);
@@ -485,7 +497,7 @@ MapRecord* store_map(unsigned char* name, unsigned char len, unsigned char* peer
                    intmp,                 // plaintext input
                    len+crypto_secretbox_ZEROBYTES, // plain length
                    nonce,                 // nonce
-                   get_master_key());     // key
+                   get_master_key("store user"));     // key
   memcpy(map.mac,
          outtmp+crypto_secretbox_BOXZEROBYTES,
          len+crypto_secretbox_MACBYTES);
@@ -523,7 +535,7 @@ int get_peer(unsigned char* map, unsigned char* peerid) {
                            cipher,                // plaintext input
                            (maprec->len - PEERMAP_HEADER_LEN)+crypto_secretbox_ZEROBYTES, // plain length
                            nonce,                 // nonce
-                           get_master_key())      // key
+                           get_master_key("peerid 2 peer"))      // key
      == -1)
     return -1;
   if(map!=NULL) memcpy(map, plain+crypto_secretbox_ZEROBYTES,(maprec->len - PEERMAP_HEADER_LEN));
