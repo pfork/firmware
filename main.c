@@ -30,7 +30,6 @@
 #include "irq.h"
 #include "widgets.h"
 #include "flashdbg.h"
-#include "chords.h"
 #include "kex.h"
 #include "storage.h"
 #include "main.h"
@@ -126,17 +125,16 @@ static const unsigned char bitmap_lzg[] = {
 #define MENU_UNLOCK 0
 #define MENU_SWITCH_MODE 1
 #define MENU_KEX 2
-#define MENU_TRAIN_CHORDS 3
-#define MENU_FLASH_INFO 4
-#define MENU_FLASH_DUMP 5
-#define MENU_LIST_SEEDS 6
-#define MENU_DEL_RAM 7
-#define MENU_DEL_KEYS 8
-#define MENU_UPDATE 9
-#define MENU_ABOUT 10
-#define MENU_LEN 11
-static const char *menuitems[]={"(un)lock","Switch Mode", "Key Exchange", "Train Chords", "Flash info", "Flash dump", "List Seeds", "Erase RAM", "Erase Keystore", "FW Update", "About"};
-typedef enum {None=0, Flashstats, Flashdump, Listseeds, Chord_train, KEXMenu} AppModes;
+#define MENU_FLASH_INFO 3
+#define MENU_FLASH_DUMP 4
+#define MENU_LIST_SEEDS 5
+#define MENU_DEL_RAM 6
+#define MENU_DEL_KEYS 7
+#define MENU_UPDATE 8
+#define MENU_ABOUT 9
+#define MENU_LEN 10
+static const char *menuitems[]={"(un)lock","Switch Mode", "Key Exchange", "Flash info", "Flash dump", "List Seeds", "Erase RAM", "Erase Keystore", "FW Update", "About"};
+typedef enum {None=0, Flashstats, Flashdump, Listseeds, KEXMenu} AppModes;
 AppModes appmode=None;
 
 MenuCtx menuctx={0,0};
@@ -211,7 +209,7 @@ void toggle_lock(void) {
   if(pitchfork_hot!=0) {
     erase_master_key();
   } else {
-    get_master_key();
+    get_master_key("unlock from gui");
   }
   gui_refresh=1;
 }
@@ -238,7 +236,6 @@ static void menu_cb(char menuidx) {
   case MENU_FLASH_INFO: { oled_clear(); appmode=Flashstats; appctx.idx=0; appctx.top=0; break; }
   case MENU_FLASH_DUMP: { oled_clear(); appmode=Flashdump; appctx.idx=0; appctx.top=0; break; }
   case MENU_LIST_SEEDS: { oled_clear(); appmode=Listseeds; appctx.idx=0; appctx.top=0; break; }
-  case MENU_TRAIN_CHORDS: { oled_clear(); chord_reset(); appmode=Chord_train; gui_refresh=0; break; }
   case MENU_DEL_RAM: { softreset(); break; }
   case MENU_DEL_KEYS: { erase_keystore(); softreset(); break; }
   case MENU_UPDATE: { fwupdate_trampoline(); gui_refresh=0; break; }
@@ -253,12 +250,6 @@ static void app(void) {
   case Flashstats: { if(flashstats()==0) appmode=None; break; }
   case Flashdump: { if(flashdump()==0) appmode=None; break; }
   case Listseeds: { if(listseeds()==0) appmode=None; break; }
-  case Chord_train: { if(chord_train()==0) {
-        appmode=None;
-        gui_refresh=1;
-        break;
-      }
-  }
   case KEXMenu: { if(kex_menu()==0) appmode=None; break; }
   }
 }
