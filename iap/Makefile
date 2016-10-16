@@ -1,5 +1,6 @@
 #PREFIX = /home/stef/tasks/pitchfork/toolchain/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi
-PREFIX = /home/stef/tasks/pitchfork/clean/toolchain/gcc-arm-none-eabi-5_4-2016q2/bin/arm-none-eabi
+#PREFIX = /home/stef/tasks/pitchfork/clean/toolchain/gcc-arm-none-eabi-5_4-2016q2/bin/arm-none-eabi
+PREFIX = /home/s/tasks/pitchfork/toolchain/arm/bin/arm-none-eabi
 CC=$(PREFIX)-gcc
 LD=$(PREFIX)-ld
 OC=$(PREFIX)-objcopy
@@ -34,7 +35,7 @@ fwupdater.bin : memmap $(objs) #main.syms
 
 fwupdater.lzg.o: fwupdater.elf
 	$(BP)/lib/liblzg/src/tools/lzg -9 fwupdater.bin fwupdater.bin.lzg
-	$(OC) --input binary --output elf32-littlearm \
+	$(OC) --input-target binary --output-target elf32-littlearm \
 			--rename-section .data=.rodata \
 			--add-symbol _binary_fwupdater_bin_size=`stat -c %s fwupdater.bin` \
 			--add-symbol `nm fwupdater.elf| grep ' firmware_updater$$' | sed 's/\([^ ]*\) [^ ] firmware_updater/firmware_updater=0x\1/'` \

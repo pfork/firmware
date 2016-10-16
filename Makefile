@@ -1,5 +1,6 @@
 #PREFIX = /home/stef/tasks/pitchfork/toolchain/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi
-PREFIX = /home/stef/tasks/pitchfork/clean/toolchain/gcc-arm-none-eabi-5_4-2016q2/bin/arm-none-eabi
+#PREFIX = /home/stef/tasks/pitchfork/clean/toolchain/gcc-arm-none-eabi-5_4-2016q2/bin/arm-none-eabi
+PREFIX = /home/s/tasks/pitchfork/toolchain/arm/bin/arm-none-eabi
 CC=$(PREFIX)-gcc
 LD=$(PREFIX)-ld
 OC=$(PREFIX)-objcopy
@@ -29,7 +30,7 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork.o \
 	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o \
 	utils/abort.o lib/crypto_sign/open.o lib/blake512/blake512.o crypto/fwsig.o \
-	utils/widgets.o utils/itoa.o utils/flashdbg.o utils/chords.o core/nrf.o \
+	utils/widgets.o utils/itoa.o utils/flashdbg.o core/nrf.o \
 	utils/ntohex.o lib/scalarmult/cortex_m0_mpy121666.o \
 	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
 	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o \
@@ -54,13 +55,13 @@ signature.o: $(objs) memmap signer/signer
 	$(CC) $(LDFLAGS) -o unsigned.main.elf $(objs) $(LIBS)
 	$(OC) --gap-fill 0xff unsigned.main.elf main.unsigned.bin -O binary
 	signer/signer signer/master.key main.unsigned.bin >signature.bin
-	$(OC) --input binary --output elf32-littlearm \
+	$(OC) --input-target binary --output-target elf32-littlearm \
 			--rename-section .data=.sigSection \
 	      --binary-architecture arm signature.bin signature.o
 	rm unsigned.main.elf # main.unsigned.bin
 
 signer/signer: signer/sign.o signer/blake512.o signer/signer.c
-	gcc -Ilib/blake512 -Ilib/crypto_sign signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/i386-linux-gnu/libsodium.a
+	gcc -Ilib/blake512 -Ilib/crypto_sign signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/libsodium.a
 
 signer/blake512.o: lib/blake512/blake512.c
 	gcc -c -o signer/blake512.o -Ilib/blake512 lib/blake512/blake512.c
