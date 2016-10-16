@@ -34,6 +34,7 @@ static int ii=0;
 static uint8_t key[32];
 static uint8_t peer[33];
 static int peer_len=0;
+static int prevpeers=0;
 
 static const char *kexmenuitems[]={"ECDH", "New Hope (PQ)", "Group ECDH" };
 
@@ -492,8 +493,15 @@ static void to_pgpwords(const unsigned char* buf, const size_t buflen) {
 }
 
 static void kex_cb(char menuidx) {
-  if(menuidx<1) return;
-  int i;
+  //if(menuidx<1) return;
+  // adjust menuidx to peers with packets hitting thresholds
+  int i, j;
+  for(i=0,j=-1;j<(int)menuidx;i++) {
+    if(msgs[i].ctr>3) {
+      j++;
+    }
+  }
+  menuidx = i;
 
   oled_clear();
   statusline();
@@ -793,12 +801,13 @@ static int select_peers() {
 static int show_peers() {
   int i, j, ret;
   for(i=0,j=0;i<peers;i++) {
-    if(msgs[i].ctr>32) {
+    if(msgs[i].ctr>3) {
       menuitems[j]=msgs[i].name;
       j++;
     }
   }
-  ret = menu(&appctx, (const uint8_t**) menuitems,peers,kex_cb);
+  if(j>0 && j!=prevpeers) { gui_refresh=1; prevpeers=j; }
+  ret = menu(&appctx, (const uint8_t**) menuitems,j,kex_cb);
   if(ret == 0) {
     mode=KEXTYPE;
     show_verifier=0;
@@ -833,7 +842,7 @@ static void discover() {
         options[peers].selected=0;
         gui_refresh=1;
       } else {
-        if(msgs[peeridx].ctr<(32^1)-1) {
+        if(msgs[peeridx].ctr<(32^2)-1) {
           msgs[peeridx].ctr++;
         }
       }
@@ -910,8 +919,9 @@ static void kexmenu_cb(char menuidx) {
   case 2: { mode=MPECDH; break; }
   }
   peers=0;
+  prevpeers=0;
   gui_refresh=1;
-  appctx.idx=1;
+  appctx.idx=0;
   appctx.top=0;
   nrf_open_rx((uint8_t*) msgs);
 }
