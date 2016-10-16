@@ -50,8 +50,6 @@ typedef enum {
 #define USER_SALT_LEN 32
 #define PEER_NAME_MAX 32
 #define PEERMAP_MAC_PREFIX_LEN (PEERMAP_HEADER_LEN - crypto_secretbox_MACBYTES)
-#define USERDATA_HEADER_LEN (35+32)
-#define PEERMAP_HEADER_LEN 35
 
 #define FLASH_SR_ALL_FLAGS (FLASH_SR_PGSERR | FLASH_SR_PGPERR | \
                             FLASH_SR_PGAERR | FLASH_SR_WRPERR | \
@@ -71,6 +69,16 @@ typedef enum {
 #define FLASH_SECTOR05_SIZE (128 << 10)
 #define FLASH_SECTOR06 0x08040000 // sector 6 (128KB)
 #define FLASH_SECTOR06_SIZE (128 << 10)
+#define FLASH_SECTOR07 0x08060000 // sector 7 (128KB)
+#define FLASH_SECTOR07_SIZE (128 << 10)
+#define FLASH_SECTOR08 0x08080000 // sector 8 (128KB)
+#define FLASH_SECTOR08_SIZE (128 << 10)
+#define FLASH_SECTOR09 0x080a0000 // sector 9 (128KB)
+#define FLASH_SECTOR09_SIZE (128 << 10)
+#define FLASH_SECTOR10 0x080c0000 // sector 10 (128KB)
+#define FLASH_SECTOR10_SIZE (128 << 10)
+#define FLASH_SECTOR11 0x080e0000 // sector 11 (128KB)
+#define FLASH_SECTOR11_SIZE (128 << 10)
 
 #define FLASH_BASE FLASH_SECTOR06
 #define FLASH_SECTOR_SIZE FLASH_SECTOR06_SIZE
@@ -101,7 +109,9 @@ typedef struct {
   unsigned char salt[32];
   unsigned char self_destruct[32];
   unsigned char name[4]; // dummy length defined by len
-} __attribute((packed)) UserRecord;
+} UserRecord;
+
+#define USERDATA_HEADER_LEN (sizeof(UserRecord) - 4)
 
 // seed
 typedef struct {
@@ -110,7 +120,7 @@ typedef struct {
   unsigned int keyid[STORAGE_ID_LEN>>2];
   unsigned char mac[crypto_secretbox_MACBYTES];
   unsigned char value[crypto_scalarmult_curve25519_BYTES];
-} __attribute((packed)) SeedRecord;
+} SeedRecord;
 
 // name mapping - caution variable length record!
 typedef struct {
@@ -119,7 +129,9 @@ typedef struct {
   unsigned int peerid[STORAGE_ID_LEN>>2];
   unsigned char mac[crypto_secretbox_MACBYTES];
   unsigned char peer_name; // dummy holder, \0 terminated
-} __attribute((packed)) MapRecord;
+} MapRecord;
+
+#define PEERMAP_HEADER_LEN (sizeof(MapRecord) -1)
 
 void clear_flash(unsigned int sector_id);
 unsigned int data_store(unsigned char *data, unsigned int len);
