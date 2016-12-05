@@ -17,6 +17,12 @@ define con
   target extended-remote /dev/ttyACM0
   mon swdp_scan
   attach 1
+  mon vector_catch enable hard int bus stat chk nocp mm reset
+end
+
+define noop
+  tbreak $pc+2
+  jump $pc+2
 end
 
 con
