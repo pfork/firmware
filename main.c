@@ -29,18 +29,19 @@
 #include "utils/lzg/lzg.h"
 #include "irq.h"
 #include "widgets.h"
-#include "flashdbg.h"
 #include "kex.h"
-#include "storage.h"
+#include "user.h"
 #include "main.h"
 #include "fwsig.h"
 #include "iap.h"
 #include "master.h"
+#include "stfs.h"
+#include "pf_store.h"
 
 void randombytes_pitchfork_init(struct entropy_store* pool);
 struct entropy_store* pool;
 
-void fancycls(void) {
+static void fancycls(void) {
   // vertical line
   uint8_t i,j,w;
   for(j=0;j<0x80-8;j++) {
@@ -125,22 +126,20 @@ static const unsigned char bitmap_lzg[] = {
 #define MENU_UNLOCK 0
 #define MENU_SWITCH_MODE 1
 #define MENU_KEX 2
-#define MENU_FLASH_INFO 3
-#define MENU_FLASH_DUMP 4
-#define MENU_LIST_SEEDS 5
-#define MENU_DEL_RAM 6
-#define MENU_DEL_KEYS 7
-#define MENU_UPDATE 8
-#define MENU_ABOUT 9
-#define MENU_LEN 10
-static const char *menuitems[]={"(un)lock","Switch Mode", "Key Exchange", "Flash info", "Flash dump", "List Seeds", "Erase RAM", "Erase Keystore", "FW Update", "About"};
-typedef enum {None=0, Flashstats, Flashdump, Listseeds, KEXMenu} AppModes;
+#define MENU_KEYS 3
+#define MENU_DEL_RAM 4
+#define MENU_DEL_KEYS 5
+#define MENU_UPDATE 6
+#define MENU_ABOUT 7
+#define MENU_LEN 8
+static const char *menuitems[]={"(un)lock","Switch Mode", "Key Exchange", "Keys", "Erase RAM", "Erase Keystore", "FW Update", "About"};
+typedef enum {None=0, KeysMenu, KEXMenu} AppModes;
 AppModes appmode=None;
 
 MenuCtx menuctx={0,0};
 MenuCtx appctx={0,0};
 
-static UserRecord* init_pf_user(void) {
+static void init_pf_user(void) {
   uint8_t keys;
   oled_clear();
   oled_print_inv(0,0, (char*) " PITCHFORK!!5!  ", Font_8x8);
@@ -152,18 +151,25 @@ static UserRecord* init_pf_user(void) {
   while((keys = key_handler())==0);
   if(!(keys & BUTTON_RIGHT)) {
     oled_clear();
-    return (UserRecord*) 0;
+    return;
+  }
+  if(0!=pf_store_init()) {
+    oled_clear();
+    oled_print(0,0,"fail store init", Font_8x8);
+    oled_print(0,27,"      :/", Font_8x8);
+    mDelay(1000);
+    return;
   }
   uint8_t name[33];
   int nlen=0;
   getstr("enter your name", name,&nlen);
   if(nlen>0 && nlen<=32) {
-    return init_user(name, nlen);
+    uint8_t userbuf[sizeof(UserRecord)+PEER_NAME_MAX];
+    UserRecord *userrec=(UserRecord*) userbuf;
+    // todo set unique device random in OTP[2] if not locked yet
+    // todo set panic key
+    new_user(userrec, name, nlen);
   }
-  // todo
-  // also set unique device random in OTP[2] if not locked yet
-  // also create two signing keys (ecc,sphincs)
-  return (UserRecord*) 0;
 }
 
 void softreset() {
@@ -181,10 +187,6 @@ void softreset() {
   SCB->AIRCR  = (NVIC_AIRCR_VECTKEY | (SCB->AIRCR & (0x700)) | (1<<NVIC_SYSRESETREQ)); /* Keep priority group unchanged */
   asm("dsb"); /* Ensure completion of memory access */
   while(1);
-}
-
-static void erase_keystore(void) {
-  clear_flash(FLASH_SECTOR_ID);
 }
 
 static void about(void) {
@@ -233,33 +235,42 @@ static void menu_cb(char menuidx) {
     }
     break;
   }
-  case MENU_FLASH_INFO: { oled_clear(); appmode=Flashstats; appctx.idx=0; appctx.top=0; break; }
-  case MENU_FLASH_DUMP: { oled_clear(); appmode=Flashdump; appctx.idx=0; appctx.top=0; break; }
-  case MENU_LIST_SEEDS: { oled_clear(); appmode=Listseeds; appctx.idx=0; appctx.top=0; break; }
+  case MENU_KEYS: { oled_clear(); appmode=KeysMenu; appctx.idx=0; appctx.top=0; break; }
   case MENU_DEL_RAM: { softreset(); break; }
-  case MENU_DEL_KEYS: { erase_keystore(); softreset(); break; }
+  case MENU_DEL_KEYS: {
+    oled_print_inv(40,56, "     format", Font_8x8);
+    stfs_format();
+    softreset();
+    break;
+  }
   case MENU_UPDATE: { fwupdate_trampoline(); gui_refresh=0; break; }
   case MENU_UNLOCK: { toggle_lock(); break; }
   case MENU_ABOUT: { about(); gui_refresh=0; break; }
   }
 }
 
+static int keysmenu() {
+  // todo implement
+  oled_clear();
+  oled_print(0,16, (char*) "unimplemented" , Font_8x8);
+  return 0;
+}
+
 static void app(void) {
   switch(appmode) {
   case None: {menu(&menuctx, (const uint8_t **) menuitems,MENU_LEN,menu_cb); break;}
-  case Flashstats: { if(flashstats()==0) appmode=None; break; }
-  case Flashdump: { if(flashdump()==0) appmode=None; break; }
-  case Listseeds: { if(listseeds()==0) appmode=None; break; }
+  case KeysMenu: { if(keysmenu()==0) appmode=None; break; }
   case KEXMenu: { if(kex_menu()==0) appmode=None; break; }
   }
 }
 
 int main(void) {
   init();
-  verify_fwsig();
-  mDelay(500);
+  // todo fix and reenable: verify_fwsig();
+  // mDelay(500);
   pool = init_pool();
   randombytes_pitchfork_init(pool);
+  stfs_init();
 
   bufs[0].start =  bufs[0].buf + crypto_secretbox_ZEROBYTES;
   bufs[1].start =  bufs[1].buf + crypto_secretbox_ZEROBYTES;
@@ -282,7 +293,11 @@ int main(void) {
   // check if user is initialized, if not attempt so
   // user is needed for crypto ops, without an initialized user
   // pitchfork cannot execute crypto ops, only rng
-  if(get_userrec()==NULL) init_pf_user();
+  {
+    uint8_t userbuf[sizeof(UserRecord)+PEER_NAME_MAX];
+    UserRecord *userrec=(UserRecord*) userbuf;
+    if(get_user(userrec)==-1) init_pf_user();
+  }
 
   while(1){
 
