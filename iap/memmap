@@ -11,7 +11,7 @@ _Min_Stack_Size = 0x200; /* required amount of stack */
 /* Specify the memory areas */
 MEMORY
 {
-  RAM (xrw)         : ORIGIN = 0x20004000, LENGTH = 32K
+  RAM (xrw)         : ORIGIN = 0x20005000, LENGTH = 64K
   /*RAM (xrw)         : ORIGIN = 0x20014000, LENGTH = 48K*/
   /*RAM (xrw)       : ORIGIN = 0x20019000, LENGTH = 12K */
 }
