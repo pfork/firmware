@@ -10,17 +10,49 @@
   * @brief  CRYPTO_CMD: enum for all PITCHFORK USB cmd byte
   */
 typedef enum {
-  PITCHFORK_CMD_ENCRYPT = 0,
-  PITCHFORK_CMD_DECRYPT,
-  PITCHFORK_CMD_SIGN,
-  PITCHFORK_CMD_VERIFY,
-  PITCHFORK_CMD_ECDH_START,
-  PITCHFORK_CMD_ECDH_RESPOND,
-  PITCHFORK_CMD_ECDH_END,
+  PITCHFORK_CMD_STOP = 0,
+
+  // list all keys
   PITCHFORK_CMD_LIST_KEYS,
+
+  // dump rng
   PITCHFORK_CMD_RNG,
-  PITCHFORK_CMD_STOP,
-  PITCHFORK_CMD_STORAGE,
+
+  // kex functions
+  PITCHFORK_CMD_KEX_START,
+
+  // dumping pubkeys
+  PITCHFORK_CMD_DUMP_PUB,
+
+  // ops needing double input buffers, starting at 0x10
+  // so we can test for them like (modus & PITCHFORK_CMD_BUFFERED)
+  PITCHFORK_CMD_BUFFERED = 16,
+
+  PITCHFORK_CMD_SIGN,      // xedsa
+  PITCHFORK_CMD_PQSIGN,    // sphincs
+
+  // for encrypting with a shared secret
+  PITCHFORK_CMD_ENCRYPT,
+  // for encrypting in an axolotl session
+  PITCHFORK_CMD_AX_SEND,
+
+  // for decrypting with a shared secret
+  PITCHFORK_CMD_DECRYPT,
+  // decrypt with our lt pubkey and an ephemeral key? like:
+  // epk,esk=genkey() send( epk|nonce|encrypt(esk+pub,plain) )
+  PITCHFORK_CMD_DECRYPT_ANON,
+  // for decrypting in an axolotl session
+  PITCHFORK_CMD_AX_RECEIVE,
+
+  PITCHFORK_CMD_VERIFY,
+  // msg+sig+pubkey - as pubkeys are not stored for sphincs
+  // we don't do these, because this doesn't need
+  // secret key material and can be done on a host
+  //PITCHFORK_CMD_PQVERIFY,
+
+  // kex fns which have prekeys as input
+  PITCHFORK_CMD_KEX_RESPOND,
+  PITCHFORK_CMD_KEX_END,
 } CRYPTO_CMD;
 
 /**
@@ -32,21 +64,30 @@ typedef enum {
   CLOSED      // buffer is the final one.
 } Buffer_State;
 
+typedef enum {
+  // /lt /ax /sph /keys /pub /prekeys
+  PF_KEY_LONGTERM,
+  PF_KEY_AXOLOTL,
+  PF_KEY_SPHINCS,
+  PF_KEY_SHARED,
+  PF_KEY_PUBCURVE,
+  PF_KEY_PREKEY,
+} PF_KeyType;
+
 /**
   * @brief  Buffer: USB read buffer for data double buffering
   */
 typedef struct {
   Buffer_State state;                                        /* buffer state (i/o/c) */
   int size;                                                  /* size of buffer */
-  unsigned char buf[BUF_SIZE+crypto_secretbox_ZEROBYTES+64]; /* extra crypto_secretbox_ZEROBYTES (32) for encryption
-                                                              * but decryption needs 40 (nonce+mac) - since this is read
-                                                              * it is padded to maxpacketsize so we can handle meh.
-                                                              */
   unsigned char* start;                                      /* ptr to start of unused space in buffer */
+  unsigned char buf[BUF_SIZE+crypto_secretbox_ZEROBYTES+64]; /* extra crypto_secretbox_ZEROBYTES (32) for encryption
+                                                              * and decryption needs 16 (mac)
+                                                              */
 } Buffer;
 
 extern Buffer bufs[2];
-extern unsigned char outbuf[crypto_secretbox_NONCEBYTES+crypto_secretbox_ZEROBYTES+BUF_SIZE];
+extern unsigned char outbuf[crypto_secretbox_ZEROBYTES+BUF_SIZE];
 
 extern unsigned char blocked;
 extern char cmd_blocked;

@@ -8,7 +8,7 @@ OD=$(PREFIX)-objdump
 AS=$(PREFIX)-as
 
 INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Ilib/ -Icrypto/ -Iutils/ -Iiap/ \
-			  -Ilib/sphincs256 -Ilib/blake512 -Ilib/newhope -Ilib/chacha20 \
+			  -Ilib/sphincs256 -Ilib/newhope -Ilib/chacha20 -Ilib/xeddsa \
 			  -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
 LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3/lib/libopencm3_stm32f2.a
 CFLAGS += -mno-unaligned-access -g -Wall -Werror -Os \
@@ -18,26 +18,45 @@ CFLAGS += -mno-unaligned-access -g -Wall -Werror -Os \
 
 LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-sections -Wl,-z,relro
 
+xeddsa_objs = lib/xeddsa/elligator.o lib/xeddsa/vxeddsa.o lib/xeddsa/xeddsa.o \
+	lib/xeddsa/keygen.o lib/xeddsa/zeroize.o lib/xeddsa/curve_sigs.o \
+	lib/xeddsa/fe_isequal.o lib/xeddsa/fe_mont_rhs.o lib/xeddsa/fe_montx_to_edy.o \
+	lib/xeddsa/ge_montx_to_p3.o lib/xeddsa/ge_p3_to_montx.o lib/xeddsa/ge_scalarmult.o \
+	lib/xeddsa/ge_scalarmult_cofactor.o lib/xeddsa/sc_clamp.o lib/xeddsa/sc_cmov.o \
+	lib/xeddsa/sc_neg.o lib/xeddsa/fe_sqrt.o lib/xeddsa/sign_modified.o \
+	lib/xeddsa/open_modified.o lib/xeddsa/vsign_modified.o lib/xeddsa/compare.o \
+	lib/xeddsa/vopen_modified.o lib/xeddsa/ge_neg.o lib/xeddsa/ge_isneutral.o
+
+curve_objs = lib/scalarmult/cortex_m0_mpy121666.o \
+	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
+	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o
+
+newhope_objs = lib/newhope/newhope.o lib/newhope/precomp.o lib/newhope/poly.o \
+	lib/newhope/ntt.o lib/newhope/error_correction.o lib/newhope/fips202.o lib/newhope/reduce.o
+
+usb_objs = usb/msc/usb_bsp.o usb/msc/usb_dcd.o usb/msc/usbd_core.o usb/msc/usbd_ioreq.o \
+   usb/msc/usbd_msc_core.o usb/msc/usbd_msc_scsi.o usb/msc/usbd_storage_msd.o \
+	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
+	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o
+
+sphincs_objs = lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
+	lib/sphincs/qsort.o lib/sphincs/wots.o lib/sphincs/prg.o lib/sphincs/hash.o \
+	lib/sphincs/horst.o lib/sphincs/sign.o
+
+util_objs = utils/memmove.o
+
 objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/ssp.o \
 	core/clock.o core/systimer.o core/mpu.o core/init.o core/usb.o core/irq.o \
 	core/dma.o sdio/sdio.o sdio/sd.o core/led.o core/keys.o core/delay.o core/xentropy.o \
-	core/startup.o usb/dual.o crypto/mixer.o crypto/ecdho.o crypto/master.o core/storage.o \
+	core/startup.o usb/dual.o crypto/mixer.o crypto/master.o utils/strlen.o \
 	crypto/randombytes_pitchfork.o utils/memcpy.o utils/memset.o utils/memcmp.o \
-	crypto/pbkdf2_generichash.o \
-	usb/msc/usb_bsp.o usb/msc/usb_dcd.o usb/msc/usbd_core.o usb/msc/usbd_ioreq.o \
-   usb/msc/usbd_msc_core.o usb/msc/usbd_msc_scsi.o usb/msc/usbd_storage_msd.o \
-	usb/msc/usb_core.o usb/msc/usb_dcd_int.o usb/msc/usbd_desc.o usb/msc/usbd_msc_bot.o \
-	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o crypto/pitchfork.o \
-	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o \
-	utils/abort.o lib/crypto_sign/open.o lib/blake512/blake512.o crypto/fwsig.o \
-	utils/widgets.o utils/itoa.o utils/flashdbg.o core/nrf.o \
-	utils/ntohex.o lib/scalarmult/cortex_m0_mpy121666.o \
-	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
-	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o \
-	lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
-	lib/newhope/newhope.o lib/newhope/precomp.o lib/newhope/poly.o lib/newhope/ntt.o \
-	lib/newhope/error_correction.o lib/newhope/fips202.o lib/newhope/reduce.o \
-	iap/fwupdater.lzg.o
+	crypto/pbkdf2_generichash.o crypto/axolotl.o utils/pgpwords_data.o utils/pgpwords.o \
+	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o core/stfs.o core/user.o \
+	utils/abort.o lib/crypto_sign/open.o crypto/fwsig.o \
+	utils/widgets.o utils/itoa.o core/nrf.o crypto/pf_store.o utils/ntohex.o  \
+	$(usb_objs) $(xeddsa_objs) $(curve_objs) $(newhope_objs) $(sphincs_objs)\
+	$(util_objs) \
+	iap/fwupdater.lzg.o crypto/pitchfork.o # keep these last
 
 all : main.bin signer/signer tools/store-master-key.bin tools/lock-flash.bin
 
@@ -60,14 +79,11 @@ signature.o: $(objs) memmap signer/signer
 	      --binary-architecture arm signature.bin signature.o
 	rm unsigned.main.elf # main.unsigned.bin
 
-signer/signer: signer/sign.o signer/blake512.o signer/signer.c
-	gcc -Ilib/blake512 -Ilib/crypto_sign signer/sign.o signer/blake512.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/libsodium.a
-
-signer/blake512.o: lib/blake512/blake512.c
-	gcc -c -o signer/blake512.o -Ilib/blake512 lib/blake512/blake512.c
+signer/signer: signer/sign.o signer/signer.c
+	gcc -Ilib/crypto_sign signer/sign.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/libsodium.a
 
 signer/sign.o: signer/sign.c
-	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/blake512/ -Ilib/crypto_sign -o signer/sign.o signer/sign.c
+	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/crypto_sign -o signer/sign.o signer/sign.c
 
 iap/fwupdater.lzg.o:
 	cd iap; make
@@ -110,6 +126,13 @@ main.check:
 # %.o: %.c
 # 		$(CC) $(CFLAGS) -o $@ -c $<
 
+utils/pgpwords_data.o: tools/pgpwords.py
+	python tools/pgpwords.py >utils/pgpwords_data.0offset
+	./lib/liblzg/src/tools/lzg -9 utils/pgpwords_data.0offset utils/pgpwords_data.lzg
+	$(OC) --input-target binary --output-target elf32-littlearm \
+			--rename-section .data=.rodata \
+	      --binary-architecture arm utils/pgpwords_data.lzg utils/pgpwords_data.o
+
 %.o: %.S
 	$(CC) $(CFLAGS) -o $@ -c $<
 
@@ -117,16 +140,11 @@ main.check:
 	$(OC) --gap-fill 0xff $< $@ -O binary
 
 clean:
-	rm -f *.bin
-	rm -f $(objs)
-	rm -f *.elf
-	rm -f *.list
-	rm signer/signer signer/*.o
-	rm tools/*.bin tools/*.elf tools/*.list
+	rm -f *.bin $(objs) *.elf *.list signer/signer signer/*.o tools/*.bin tools/*.elf tools/*.list || true
 	cd iap; make clean
 
 clean-all: clean
-	rm -rf doc/latex doc/html
-	rm -f GPATH GRTAGS GSYMS GTAGS
+	rm -rf doc/latex doc/html || true
+	rm -f GPATH GRTAGS GSYMS GTAGS || true
 
 .PHONY: clean clean-all upload full doc tags static_check
