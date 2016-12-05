@@ -96,6 +96,12 @@ SECTIONS
      KEEP(*(.sigSection)) /* keep my variable even if not referenced */
   } >FLASH
 
+  .fsSection 0x8040000:
+  {
+    blocks = .;        /* create a global symbol at data start */
+    KEEP(*(.fsSection)) /* keep my variable even if not referenced */
+  } >FLASH
+
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :
