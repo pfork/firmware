@@ -22,7 +22,7 @@
 #include "widgets.h"
 #include "pitchfork.h"
 #include "systimer.h"
-#include "storage.h"
+#include "user.h"
 #include "pbkdf2_generichash.h"
 
 #define KEY_TIMEOUT 30*1000 // milliseconds / 30s
@@ -97,8 +97,10 @@ unsigned char* get_master_key(char *msg) {
 
   // derive key from chords + unique device random
   // todo generichash is not a kdf per se
-  UserRecord *userdata = get_userrec();
-  if(userdata==NULL) {
+
+  uint8_t userbuf[sizeof(UserRecord)+PEER_NAME_MAX];
+  UserRecord *userdata=(UserRecord*) userbuf;
+  if(get_user(userdata)==-1) {
     oled_clear();
     oled_print(0,0,"uninitalized",Font_8x8);
     oled_print(0,9,"pls reboot and", Font_8x8);
