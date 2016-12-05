@@ -1,7 +1,7 @@
 
 #include <string.h>
 
-#include "blake512.h"
+#include "crypto_generichash.h"
 #include "crypto_sign_ed25519.h"
 #include "utils.h"
 #include "private/curve25519_ref10.h"
@@ -12,21 +12,21 @@ crypto_sign_ed25519_detached(unsigned char *sig, unsigned long long *siglen_p,
                              const unsigned char *m, unsigned long long mlen,
                              const unsigned char *sk)
 {
-    blake512_state hs;
+    crypto_generichash_state hs;
     unsigned char az[64];
     unsigned char nonce[64];
     unsigned char hram[64];
     ge_p3 R;
 
-    crypto_hash_blake512(az, sk, 32);
+    crypto_generichash(az, 64, sk, 32, NULL, 0);
     az[0] &= 248;
     az[31] &= 63;
     az[31] |= 64;
 
-    blake512_init(&hs);
-    blake512_update(&hs, az + 32, 32*8);
-    blake512_update(&hs, m, mlen*8);
-    blake512_final(&hs, nonce);
+    crypto_generichash_init(&hs, NULL, 0, 64);
+    crypto_generichash_update(&hs, az + 32, 32);
+    crypto_generichash_update(&hs, m, mlen);
+    crypto_generichash_final(&hs, nonce, 64);
 
     memmove(sig + 32, sk + 32, 32);
 
@@ -34,10 +34,10 @@ crypto_sign_ed25519_detached(unsigned char *sig, unsigned long long *siglen_p,
     ge_scalarmult_base(&R, nonce);
     ge_p3_tobytes(sig, &R);
 
-    blake512_init(&hs);
-    blake512_update(&hs, sig, 64*8);
-    blake512_update(&hs, m, mlen*8);
-    blake512_final(&hs, hram);
+    crypto_generichash_init(&hs, NULL, 0, 64);
+    crypto_generichash_update(&hs, sig, 64);
+    crypto_generichash_update(&hs, m, mlen);
+    crypto_generichash_final(&hs, hram, 64);
 
     sc_reduce(hram);
     sc_muladd(sig + 32, hram, az, nonce);

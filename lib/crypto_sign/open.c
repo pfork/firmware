@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "blake512.h"
+#include "crypto_generichash.h"
 #include "crypto_sign_ed25519.h"
 #include "crypto_verify_32.h"
 #include "utils.h"
@@ -82,7 +82,7 @@ crypto_sign_ed25519_verify_detached(const unsigned char *sig,
                                     unsigned long long mlen,
                                     const unsigned char *pk)
 {
-    blake512_state hs;
+    crypto_generichash_state hs;
     unsigned char h[64];
     unsigned char rcheck[32];
     unsigned int  i;
@@ -109,11 +109,11 @@ crypto_sign_ed25519_verify_detached(const unsigned char *sig,
     if (d == 0) {
         return -1;
     }
-    blake512_init(&hs);
-    blake512_update(&hs, sig, 32*8);
-    blake512_update(&hs, pk, 32*8);
-    blake512_update(&hs, m, mlen*8);
-    blake512_final(&hs, h);
+    crypto_generichash_init(&hs, NULL, 0, 64);
+    crypto_generichash_update(&hs, sig, 32);
+    crypto_generichash_update(&hs, pk, 32);
+    crypto_generichash_update(&hs, m, mlen);
+    crypto_generichash_final(&hs, h, 64);
     sc_reduce(h);
 
     ge_double_scalarmult_vartime(&R, h, &A, sig + 32);

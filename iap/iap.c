@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "blake512.h"
+#include "crypto_generichash.h"
 #include "crypto_sign.h"
 
 #include <libopencm3/usb/usbd.h>
@@ -25,10 +25,10 @@ usbd_device *usbd_dev;
 
 static volatile char state=0;
 static int sector=0;
-static unsigned char sectorhashes[8][BLAKE512_BYTES];
+static unsigned char sectorhashes[8][64];
 static unsigned char* bufstart;
 static unsigned char *ptr;
-static blake512_state hashstate;
+static crypto_generichash_state hashstate;
 
 static const uint8_t cont[]="go";
 
@@ -112,14 +112,14 @@ static void clear_flash(unsigned int sector_id) {
 
 void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
   int plen, total, i;
-  blake512_state tmpstate;
+  crypto_generichash_state tmpstate;
 
   if(sector>=8) return;
 
   switch(state) {
   case 0: { // start 1st reading
     ptr=bufstart; // reset output ptr and hashstate
-    blake512_init(&hashstate);
+    crypto_generichash_init(&hashstate, NULL, 0, 64);
     state++;
     oled_print(0,9,"verifying sig...", Font_8x8);
   }
@@ -137,8 +137,8 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
       if(sector==7) {
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
         oled_print(0,18,"hashing block 7",Font_8x8);
-        blake512_update(&hashstate, bufstart, (total-crypto_sign_BYTES)*8);
-        blake512_final(&hashstate, sectorhashes[sector]);
+        crypto_generichash_update(&hashstate, bufstart, (total-crypto_sign_BYTES));
+        crypto_generichash_final(&hashstate, sectorhashes[sector], 64);
 
         oled_print(0,27,"verifying sig",Font_8x8);
         if ((crypto_sign_verify_detached((void*) bufstart+total-crypto_sign_BYTES,
@@ -160,7 +160,7 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
         oled_print(0,36,"erased 256KB    ",Font_8x8);
         state++;
         ptr=bufstart; // reset output ptr
-        blake512_init(&hashstate); // reset hash state
+        crypto_generichash_init(&hashstate, NULL, 0, 64); // reset hash state
         sector=0;
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
       } else {
@@ -169,9 +169,9 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
         char tmp[16];
         itos(tmp,sector);
         oled_print(14*8, 18, tmp, Font_8x8);
-        blake512_update(&hashstate, bufstart, total*8);
+        crypto_generichash_update(&hashstate, bufstart, total);
         memcpy(&tmpstate,&hashstate,sizeof(hashstate));
-        blake512_final(&tmpstate, sectorhashes[sector]);
+        crypto_generichash_final(&tmpstate, sectorhashes[sector], 64);
         sector++;
         ptr=bufstart; // reset output ptr
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
@@ -191,12 +191,12 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
     ptr+=plen;
     total=ptr - bufstart;
     if(total>=32*1024) {
-      unsigned char hash[BLAKE512_BYTES];
+      unsigned char hash[64];
       if(sector==7) {
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
         oled_print(0,45,"hashing block 7",Font_8x8);
-        blake512_update(&hashstate, bufstart, (total-crypto_sign_BYTES)*8);
-        blake512_final(&hashstate, hash);
+        crypto_generichash_update(&hashstate, bufstart, (total-crypto_sign_BYTES));
+        crypto_generichash_final(&hashstate, hash, 64);
         if(memcmp(hash,sectorhashes[sector],sizeof(hash))!=0 ) {
           invalid_sig();
         }
@@ -206,7 +206,7 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
         oled_print(0,45,"writing done    ",Font_8x8);
         state++;
         ptr=bufstart; // reset output ptr
-        blake512_init(&hashstate); // reset hash state
+        crypto_generichash_init(&hashstate, NULL, 0, 64); // reset hash state
         sector=0;
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
       } else {
@@ -215,9 +215,9 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
         itos(tmp,sector);
         oled_print(0,45,"hashing block",Font_8x8);
         oled_print(14*8, 45, tmp, Font_8x8);
-        blake512_update(&hashstate, bufstart, total*8);
+        crypto_generichash_update(&hashstate, bufstart, total);
         memcpy(&tmpstate,&hashstate,sizeof(hashstate));
-        blake512_final(&tmpstate, hash);
+        crypto_generichash_final(&tmpstate, hash, 64);
         if(memcmp(hash,sectorhashes[sector],sizeof(hash))!=0 ) {
           invalid_sig();
         }

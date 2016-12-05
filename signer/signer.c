@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "blake512.h"
+#include "crypto_generichash.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,11 +38,11 @@ int main(int argc, char *argv[]) {
     exit(1);
   };
   fclose(f);
-  fprintf(stderr, "[i] read %d bytes\n", size);
+  fprintf(stderr, "[i] read %d bytes (%dKB)\n", size, size/1024-256);
 
   fprintf(stderr, "[+] hashing %d bytes... ", sizeof(buf)-crypto_sign_BYTES);
-  uint8_t digest[BLAKE512_BYTES];
-  crypto_hash_blake512(digest, buf, sizeof(buf)-crypto_sign_BYTES);
+  uint8_t digest[64];
+  crypto_generichash(digest, 64, buf, sizeof(buf)-crypto_sign_BYTES, NULL, 0);
 
   fprintf(stderr, "done\n");
 

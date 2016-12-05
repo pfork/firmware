@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "blake512.h"
+#include "crypto_generichash.h"
 #include <unistd.h>
 #include "oled.h"
 #include <crypto_sign.h>
@@ -23,7 +23,7 @@ static char read_otp(uint32_t block, uint32_t byte) {
 }
 
 int verify_fwsig(void) {
-  uint8_t digest[BLAKE512_BYTES];
+  uint8_t digest[64];
 
   oled_clear();
   oled_print(0,0,"verifying..", Font_8x8);
@@ -37,7 +37,7 @@ int verify_fwsig(void) {
   }
 
   oled_print(0,18,"hashing...", Font_8x8);
-  crypto_hash_blake512(digest, (uint8_t *)0x08000000, 0x40000-64);
+  crypto_generichash(digest, 64, (uint8_t *)0x08000000, 0x40000-64, NULL, 0);
 
   oled_print(0,18,"hashing: done", Font_8x8);
 
