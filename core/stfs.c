@@ -375,6 +375,10 @@ int opendir(uint8_t *path, ReaddirCTX *ctx) {
     // fail path not found
     return -1;
   }
+  if(blocks[b][c].inode.type!=Directory) {
+    errno = E_NOTDIR;
+    return -1;
+  }
   LOG(3, "[i] oid directory %x\n", oid);
   ctx->oid=oid;
   ctx->block=0;
@@ -933,7 +937,7 @@ int stfs_truncate(uint8_t *path, uint32_t length) {
   }
   if(blocks[b][c].inode.size<length) {
     // fail
-    LOG(1, "[x] path '%s' is not a File\n", path);
+    LOG(1, "[x] path '%s' is too short\n", path);
     errno = E_NOEXT;
     return -1;
   }

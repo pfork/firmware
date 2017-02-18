@@ -38,6 +38,7 @@
 #define E_DELROOT   20
 #define E_FDREOPEN  21
 #define E_DANGLE    22
+#define E_NOTDIR    23
 
 #define SEEK_SET 0
 #define SEEK_CUR 1
