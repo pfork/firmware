@@ -9,7 +9,7 @@ AS=$(PREFIX)-as
 
 BP=..
 
-INCLUDES = -I. -I$(BP) -I$(BP)/core/ -I$(BP)/utils/ -I$(BP)/sdio -I$(BP)/lib -I$(BP)/crypto -I$(BP)/lib/blake512/ \
+INCLUDES = -I. -I$(BP) -I$(BP)/core/ -I$(BP)/utils/ -I$(BP)/sdio -I$(BP)/lib -I$(BP)/crypto \
 	-I$(BP)/usb -I$(BP)/usb/msc -I$(BP)/lib/libsodium/src/libsodium/include/sodium/ \
 	-I$(BP)/lib/libopencm3/include
 CFLAGS = -mno-unaligned-access -g -Wall -Werror -Os \
