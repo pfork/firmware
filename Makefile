@@ -52,7 +52,7 @@ objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/
 	crypto/randombytes_pitchfork.o utils/memcpy.o utils/memset.o utils/memcmp.o \
 	crypto/pbkdf2_generichash.o crypto/axolotl.o utils/pgpwords_data.o utils/pgpwords.o \
 	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o core/stfs.o core/user.o \
-	utils/abort.o lib/crypto_sign/open.o crypto/fwsig.o \
+	utils/abort.o crypto/fwsig.o \
 	utils/widgets.o utils/itoa.o core/nrf.o crypto/pf_store.o utils/ntohex.o  \
 	$(usb_objs) $(xeddsa_objs) $(curve_objs) $(newhope_objs) $(sphincs_objs)\
 	$(util_objs) \
@@ -80,10 +80,10 @@ signature.o: $(objs) memmap signer/signer
 	rm unsigned.main.elf # main.unsigned.bin
 
 signer/signer: signer/sign.o signer/signer.c
-	gcc -Ilib/crypto_sign signer/sign.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/libsodium.a
+	gcc signer/sign.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/libsodium.a
 
 signer/sign.o: signer/sign.c
-	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/crypto_sign -o signer/sign.o signer/sign.c
+	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -o signer/sign.o signer/sign.c
 
 iap/fwupdater.lzg.o:
 	cd iap; make
