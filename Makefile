@@ -8,7 +8,7 @@ OD=$(PREFIX)-objdump
 AS=$(PREFIX)-as
 
 INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Ilib/ -Icrypto/ -Iutils/ -Iiap/ \
-			  -Ilib/sphincs256 -Ilib/newhope -Ilib/chacha20 -Ilib/xeddsa \
+			  -Ilib/sphincs -Ilib/newhope -Ilib/chacha20 -Ilib/xeddsa \
 			  -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
 LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3/lib/libopencm3_stm32f2.a
 CFLAGS += -mno-unaligned-access -g -Wall -Werror -Os \
@@ -31,7 +31,7 @@ curve_objs = lib/scalarmult/cortex_m0_mpy121666.o \
 	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
 	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o
 
-newhope_objs = lib/newhope/newhope_asm_cm3.o lib/newhope/precomp.o lib/newhope/poly.o \
+newhope_objs = lib/newhope/newhope_asm.o lib/newhope/precomp.o lib/newhope/poly.o \
 	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/fips202.o \
 	lib/newhope/keccakf1600.o
 
