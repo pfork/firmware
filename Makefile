@@ -31,8 +31,9 @@ curve_objs = lib/scalarmult/cortex_m0_mpy121666.o \
 	lib/scalarmult/cortex_m0_reduce25519.o lib/scalarmult/mul.o \
 	lib/scalarmult/scalarmult.o lib/scalarmult/sqr.o
 
-newhope_objs = lib/newhope/newhope.o lib/newhope/precomp.o lib/newhope/poly.o \
-	lib/newhope/ntt.o lib/newhope/error_correction.o lib/newhope/fips202.o lib/newhope/reduce.o
+newhope_objs = lib/newhope/newhope_asm_cm3.o lib/newhope/precomp.o lib/newhope/poly.o \
+	lib/newhope/error_correction.o lib/newhope/newhope.o lib/newhope/fips202.o \
+	lib/newhope/keccakf1600.o
 
 usb_objs = usb/msc/usb_bsp.o usb/msc/usb_dcd.o usb/msc/usbd_core.o usb/msc/usbd_ioreq.o \
    usb/msc/usbd_msc_core.o usb/msc/usbd_msc_scsi.o usb/msc/usbd_storage_msd.o \
