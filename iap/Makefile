@@ -24,7 +24,7 @@ LIBS = -Wl,--just-symbols=main.syms \
 
 LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-sections -Wl,-z,relro
 
-objs = iap.o $(BP)/lib/crypto_sign/open.o $(BP)/core/oled.o $(BP)/utils/itoa.o \
+objs = iap.o $(BP)/core/oled.o $(BP)/utils/itoa.o \
 	$(BP)/core/smallfonts.o $(BP)/core/delay.o $(BP)/utils/abort.o
 
 all : fwupdater.bin fwupdater.elf fwupdater.lzg.o
