@@ -15,8 +15,6 @@ static const uint8_t* pgpword(uint16_t *wordlist, const uint8_t n, const size_t 
 }
 
 // wordlist is menuitems for menu()
-// pgpwords is a temporary area for the decompressed pgpword tables
-//   e.g. pgpwords = bufs[0].buf;
 // words is a buffer for retaining the zero-terminated words (not deduplicated), max wordsize is 11+1
 // buf contains the bytes to convert and buflen its size
 int to_pgpwords(uint8_t **wordlist, uint8_t *words, const unsigned char* buf, const size_t buflen) {
