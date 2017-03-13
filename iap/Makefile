@@ -1,6 +1,6 @@
 #PREFIX = /home/stef/tasks/pitchfork/toolchain/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi
 #PREFIX = /home/stef/tasks/pitchfork/clean/toolchain/gcc-arm-none-eabi-5_4-2016q2/bin/arm-none-eabi
-PREFIX = /home/s/tasks/pitchfork/toolchain/arm/bin/arm-none-eabi
+PREFIX = arm-none-eabi
 CC=$(PREFIX)-gcc
 LD=$(PREFIX)-ld
 OC=$(PREFIX)-objcopy
