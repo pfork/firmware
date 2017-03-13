@@ -47,6 +47,10 @@ install_libsodium() {
     check_error $? "Error cloning libsodium"
 
     cd "$LIBSODIUM_PATH"
+
+    patch -p1 <../libsodium-pitchfork.patch
+    check_error $? "Error patching libsodium"
+
     ./autogen.sh
     check_error $? "Error initializing libsodium"
 
