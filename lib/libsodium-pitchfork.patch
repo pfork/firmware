@@ -1,8 +1,8 @@
-diff --git a/src/libsodium/crypto_generichash/blake2/ref/blake2b-ref.c b/src/libsodium/crypto_generichash/blake2/ref/blake2b-ref.c
-index bffac86..c3c35ac 100644
---- a/src/libsodium/crypto_generichash/blake2/ref/blake2b-ref.c
-+++ b/src/libsodium/crypto_generichash/blake2/ref/blake2b-ref.c
-@@ -29,6 +29,9 @@ typedef unsigned uint128_t __attribute__ ((mode(TI)));
+diff --git a/src/libsodium/crypto_generichash/blake2b/ref/blake2b-ref.c b/src/libsodium/crypto_generichash/blake2b/ref/blake2b-ref.c
+index 8a00cb88..278c4168 100644
+--- a/src/libsodium/crypto_generichash/blake2b/ref/blake2b-ref.c
++++ b/src/libsodium/crypto_generichash/blake2b/ref/blake2b-ref.c
+@@ -31,6 +31,9 @@ typedef unsigned uint128_t __attribute__((mode(TI)));
  # endif
  #endif
  
@@ -11,9 +11,9 @@ index bffac86..c3c35ac 100644
 +
  static blake2b_compress_fn blake2b_compress = blake2b_compress_ref;
  
- static const uint64_t blake2b_IV[8] =
+ static const uint64_t blake2b_IV[8] = {
 diff --git a/src/libsodium/crypto_sign/ed25519/ref10/open.c b/src/libsodium/crypto_sign/ed25519/ref10/open.c
-index 2731e813..0a7433ad 100644
+index 95e55d2d..2c10ff97 100644
 --- a/src/libsodium/crypto_sign/ed25519/ref10/open.c
 +++ b/src/libsodium/crypto_sign/ed25519/ref10/open.c
 @@ -3,7 +3,7 @@
@@ -24,40 +24,71 @@ index 2731e813..0a7433ad 100644
 +#include "crypto_generichash.h"
  #include "crypto_sign_ed25519.h"
  #include "crypto_verify_32.h"
- #include "utils.h"
-@@ -83,7 +83,7 @@ crypto_sign_ed25519_verify_detached(const unsigned char *sig,
-                                     unsigned long long mlen,
-                                     const unsigned char *pk)
+ #include "ed25519_ref10.h"
+@@ -114,7 +114,7 @@ _crypto_sign_ed25519_verify_detached(const unsigned char *sig,
+                                      const unsigned char *pk,
+                                      int prehashed)
  {
 -    crypto_hash_sha512_state hs;
 +    crypto_generichash_state hs;
-     unsigned char h[64];
-     unsigned char rcheck[32];
-     unsigned int  i;
-@@ -110,11 +110,11 @@ crypto_sign_ed25519_verify_detached(const unsigned char *sig,
-     if (d == 0) {
+     unsigned char            h[64];
+     unsigned char            rcheck[32];
+     unsigned int             i;
+@@ -141,10 +141,10 @@ _crypto_sign_ed25519_verify_detached(const unsigned char *sig,
          return -1;
      }
--    crypto_hash_sha512_init(&hs);
+     _crypto_sign_ed25519_ref10_hinit(&hs, prehashed);
 -    crypto_hash_sha512_update(&hs, sig, 32);
 -    crypto_hash_sha512_update(&hs, pk, 32);
 -    crypto_hash_sha512_update(&hs, m, mlen);
 -    crypto_hash_sha512_final(&hs, h);
-+    crypto_generichash_init(&hs, NULL, 0, 64);
 +    crypto_generichash_update(&hs, sig, 32);
 +    crypto_generichash_update(&hs, pk, 32);
 +    crypto_generichash_update(&hs, m, mlen);
-+    crypto_generichash_final(&hs, h, 64);
++    crypto_generichash_final(&hs, h);
      sc_reduce(h);
  
      ge_double_scalarmult_vartime(&R, h, &A, sig + 32);
-diff --git a/src/libsodium/crypto_stream/chacha20/ref/stream_chacha20_ref.c b/src/libsodium/crypto_stream/chacha20/ref/stream_chacha20_ref.c
-index 15cbae7..42635b1 100644
---- a/src/libsodium/crypto_stream/chacha20/ref/stream_chacha20_ref.c
-+++ b/src/libsodium/crypto_stream/chacha20/ref/stream_chacha20_ref.c
-@@ -15,6 +15,9 @@
+diff --git a/src/libsodium/crypto_sign/ed25519/ref10/sign.c b/src/libsodium/crypto_sign/ed25519/ref10/sign.c
+index f9d47fdc..e46175d5 100644
+--- a/src/libsodium/crypto_sign/ed25519/ref10/sign.c
++++ b/src/libsodium/crypto_sign/ed25519/ref10/sign.c
+@@ -1,14 +1,14 @@
+ 
+ #include <string.h>
+ 
+-#include "crypto_hash_sha512.h"
++#include "crypto_generichash.h"
+ #include "crypto_sign_ed25519.h"
+ #include "ed25519_ref10.h"
+ #include "private/curve25519_ref10.h"
+ #include "utils.h"
+ 
+ void
+-_crypto_sign_ed25519_ref10_hinit(crypto_hash_sha512_state *hs, int prehashed)
++_crypto_sign_ed25519_ref10_hinit(crypto_generichash_state *hs, int prehashed)
+ {
+     static const unsigned char DOM2PREFIX[32 + 2] = {
+         'S', 'i', 'g', 'E', 'd', '2', '5', '5', '1', '9', ' ',
+@@ -17,9 +17,9 @@ _crypto_sign_ed25519_ref10_hinit(crypto_hash_sha512_state *hs, int prehashed)
+         'c', 'o', 'l', 'l', 'i', 's', 'i', 'o', 'n', 's', 1, 0
+     };
+ 
+-    crypto_hash_sha512_init(hs);
++    crypto_generichash_init(hs);
+     if (prehashed) {
+-        crypto_hash_sha512_update(hs, DOM2PREFIX, sizeof DOM2PREFIX);
++        crypto_generichash_update(hs, DOM2PREFIX, sizeof DOM2PREFIX);
+     }
+ }
+ 
+diff --git a/src/libsodium/crypto_stream/chacha20/ref/chacha20_ref.c b/src/libsodium/crypto_stream/chacha20/ref/chacha20_ref.c
+index 7a19cebb..7729e77c 100644
+--- a/src/libsodium/crypto_stream/chacha20/ref/chacha20_ref.c
++++ b/src/libsodium/crypto_stream/chacha20/ref/chacha20_ref.c
+@@ -16,6 +16,9 @@
  #include "../stream_chacha20.h"
- #include "../../sodium/common.h"
+ #include "chacha20_ref.h"
  
 +extern void bsod(const char*,int);
 +#define abort() bsod(__FILE__,__LINE__)
@@ -66,10 +97,10 @@ index 15cbae7..42635b1 100644
      uint32_t input[16];
  };
 diff --git a/src/libsodium/sodium/utils.c b/src/libsodium/sodium/utils.c
-index 5228e40..9d203bf 100644
+index 3ac929d2..5f39a394 100644
 --- a/src/libsodium/sodium/utils.c
 +++ b/src/libsodium/sodium/utils.c
-@@ -62,6 +62,9 @@ _sodium_dummy_symbol_to_prevent_memzero_lto(void * const pnt, const size_t len)
+@@ -76,6 +76,9 @@ _sodium_memzero_as_a_weak_symbol_to_prevent_lto(void *const  pnt,
  }
  #endif
  
@@ -77,5 +108,5 @@ index 5228e40..9d203bf 100644
 +#define abort() bsod(__FILE__,__LINE__)
 +
  void
- sodium_memzero(void * const pnt, const size_t len)
+ sodium_memzero(void *const pnt, const size_t len)
  {
