@@ -2,7 +2,7 @@
 #include "crypto_generichash.h"
 #include <unistd.h>
 #include "oled.h"
-#include <crypto_sign.h>
+#include "../sodium/crypto_sign.h"
 #include <string.h>
 
 #define OTP_START_ADDR	(0x1FFF7800)
@@ -22,6 +22,7 @@ static char read_otp(uint32_t block, uint32_t byte) {
   return *(char*)(OTP_START_ADDR + block * OTP_BYTES_IN_BLOCK + byte);
 }
 
+// todo rewrite using xeddsa
 int verify_fwsig(void) {
   uint8_t digest[64];
 
