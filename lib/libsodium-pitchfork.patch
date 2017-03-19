@@ -12,8 +12,22 @@ index 8a00cb88..278c4168 100644
  static blake2b_compress_fn blake2b_compress = blake2b_compress_ref;
  
  static const uint64_t blake2b_IV[8] = {
+diff --git a/src/libsodium/crypto_sign/ed25519/ref10/ed25519_ref10.h b/src/libsodium/crypto_sign/ed25519/ref10/ed25519_ref10.h
+index 8d93892b..e38d4f81 100644
+--- a/src/libsodium/crypto_sign/ed25519/ref10/ed25519_ref10.h
++++ b/src/libsodium/crypto_sign/ed25519/ref10/ed25519_ref10.h
+@@ -1,7 +1,8 @@
+ #ifndef ed25519_ref10_H
+ #define ed25519_ref10_H
++#include "crypto_generichash.h"
+ 
+-void _crypto_sign_ed25519_ref10_hinit(crypto_hash_sha512_state *hs,
++void _crypto_sign_ed25519_ref10_hinit(crypto_generichash_state *hs,
+                                       int prehashed);
+ 
+ int _crypto_sign_ed25519_detached(unsigned char *sig,
 diff --git a/src/libsodium/crypto_sign/ed25519/ref10/open.c b/src/libsodium/crypto_sign/ed25519/ref10/open.c
-index 95e55d2d..2c10ff97 100644
+index 95e55d2d..1fa2a825 100644
 --- a/src/libsodium/crypto_sign/ed25519/ref10/open.c
 +++ b/src/libsodium/crypto_sign/ed25519/ref10/open.c
 @@ -3,7 +3,7 @@
@@ -45,12 +59,12 @@ index 95e55d2d..2c10ff97 100644
 +    crypto_generichash_update(&hs, sig, 32);
 +    crypto_generichash_update(&hs, pk, 32);
 +    crypto_generichash_update(&hs, m, mlen);
-+    crypto_generichash_final(&hs, h);
++    crypto_generichash_final(&hs, h, 64);
      sc_reduce(h);
  
      ge_double_scalarmult_vartime(&R, h, &A, sig + 32);
 diff --git a/src/libsodium/crypto_sign/ed25519/ref10/sign.c b/src/libsodium/crypto_sign/ed25519/ref10/sign.c
-index f9d47fdc..e46175d5 100644
+index f9d47fdc..72fb8fd3 100644
 --- a/src/libsodium/crypto_sign/ed25519/ref10/sign.c
 +++ b/src/libsodium/crypto_sign/ed25519/ref10/sign.c
 @@ -1,14 +1,14 @@
@@ -75,13 +89,53 @@ index f9d47fdc..e46175d5 100644
      };
  
 -    crypto_hash_sha512_init(hs);
-+    crypto_generichash_init(hs);
++    crypto_generichash_init(hs, 0, 0, 64);
      if (prehashed) {
 -        crypto_hash_sha512_update(hs, DOM2PREFIX, sizeof DOM2PREFIX);
 +        crypto_generichash_update(hs, DOM2PREFIX, sizeof DOM2PREFIX);
      }
  }
  
+@@ -28,21 +28,21 @@ _crypto_sign_ed25519_detached(unsigned char *sig, unsigned long long *siglen_p,
+                               const unsigned char *m, unsigned long long mlen,
+                               const unsigned char *sk, int prehashed)
+ {
+-    crypto_hash_sha512_state hs;
++    crypto_generichash_state hs;
+     unsigned char            az[64];
+     unsigned char            nonce[64];
+     unsigned char            hram[64];
+     ge_p3                    R;
+ 
+-    crypto_hash_sha512(az, sk, 32);
++    crypto_generichash(az, 64, sk, 32, 0, 0);
+     az[0] &= 248;
+     az[31] &= 63;
+     az[31] |= 64;
+ 
+     _crypto_sign_ed25519_ref10_hinit(&hs, prehashed);
+-    crypto_hash_sha512_update(&hs, az + 32, 32);
+-    crypto_hash_sha512_update(&hs, m, mlen);
+-    crypto_hash_sha512_final(&hs, nonce);
++    crypto_generichash_update(&hs, az + 32, 32);
++    crypto_generichash_update(&hs, m, mlen);
++    crypto_generichash_final(&hs, nonce, 64);
+ 
+     memmove(sig + 32, sk + 32, 32);
+ 
+@@ -51,9 +51,9 @@ _crypto_sign_ed25519_detached(unsigned char *sig, unsigned long long *siglen_p,
+     ge_p3_tobytes(sig, &R);
+ 
+     _crypto_sign_ed25519_ref10_hinit(&hs, prehashed);
+-    crypto_hash_sha512_update(&hs, sig, 64);
+-    crypto_hash_sha512_update(&hs, m, mlen);
+-    crypto_hash_sha512_final(&hs, hram);
++    crypto_generichash_update(&hs, sig, 64);
++    crypto_generichash_update(&hs, m, mlen);
++    crypto_generichash_final(&hs, hram, 64);
+ 
+     sc_reduce(hram);
+     sc_muladd(sig + 32, hram, az, nonce);
 diff --git a/src/libsodium/crypto_stream/chacha20/ref/chacha20_ref.c b/src/libsodium/crypto_stream/chacha20/ref/chacha20_ref.c
 index 7a19cebb..7729e77c 100644
 --- a/src/libsodium/crypto_stream/chacha20/ref/chacha20_ref.c
