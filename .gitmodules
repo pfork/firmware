@@ -1,12 +1,12 @@
 [submodule "lib/xeddsa"]
 	path = lib/xeddsa
-	url = ssh://git@pitchfork.ist/~/xeddsa
+	url = http://l6jhsd5aflooopjj.onion/git/xedds.git
 [submodule "lib/scalarmult"]
 	path = lib/scalarmult
-	url = ssh://git@pitchfork.ist/~/scalarmult
+	url = http://l6jhsd5aflooopjj.onion/git/scalarmul.git
 [submodule "lib/sphincs"]
 	path = lib/sphincs
-	url = ssh://git@pitchfork.ist/~/pitchforkedsphincs
+	url = http://l6jhsd5aflooopjj.onion/git/pitchforkedsphincs.git
 [submodule "lib/newhope"]
 	path = lib/newhope
-	url = ssh://git@pitchfork.ist/~/newhope-cm3
+	url = http://l6jhsd5aflooopjj.onion/git/newhope-cm3.git
