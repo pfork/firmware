@@ -37,11 +37,6 @@ static void bag_del(BagEntry *bag);
 static void bag_dump(BagEntry bag[]);
 #endif // AXOLOTL_DEBUG
 
-void axolotl_genid(Axolotl_KeyPair * keys) {
-  randombytes_buf(keys->sk,crypto_scalarmult_curve25519_BYTES);
-  crypto_scalarmult_curve25519_base(keys->pk, keys->sk);
-}
-
 void axolotl_prekey(Axolotl_PreKey *prekey, Axolotl_prekey_private *ctx, const Axolotl_KeyPair *keypair, uint8_t nh) {
   // copy identity key into ctx dhis
   memcpy(ctx->dhis, keypair->sk, crypto_scalarmult_curve25519_BYTES);
@@ -67,7 +62,7 @@ void axolotl_prekey(Axolotl_PreKey *prekey, Axolotl_prekey_private *ctx, const A
   }
 }
 
-static int tripledh(uint8_t *mk, u8 send[POLY_BYTES], const Axolotl_prekey_private *ctx, const Axolotl_PreKey *prekey, int isAlice) {
+static int tripledh(uint8_t *mk, uint8_t send[POLY_BYTES], const Axolotl_prekey_private *ctx, const Axolotl_PreKey *prekey, int isAlice) {
   /*
   Triple DH performs cross DH between two peers having two keys each:
 
@@ -258,89 +253,6 @@ int axolotl_handshake(Axolotl_ctx* ctx, Axolotl_PreKey *resp, const Axolotl_PreK
   memset(mk, 0, sizeof(mk));
 
   return 0;
-}
-
-void axolotl_box(Axolotl_ctx *ctx, uint8_t *out, uint32_t *out_len, const uint8_t *in, const uint32_t in_len) {
-/*
-   as per https://github.com/trevp/axolotl/wiki/newversion (Nov 19, 2013 · 41 revisions)
-
-   Sending messages
-   -----------------
-   Local variables:
-     MK  : message key
-
-   if DHRs == <none>:
-     DHRs = generateECDH()
-   MK = HASH(CKs || "0")
-   msg = Enc(HKs, Ns || PNs || DHRs) || Enc(MK, plaintext)
-   Ns = Ns + 1
-   CKs = HASH(CKs || "1")
-   return msg
-
-   can update ctx.dhrs
-   updates ctx.ns, ctx.cks //ns is simply incremented, no need to store it? counting ctx.cks's would be enough?
-*/
-  uint8_t mk[crypto_secretbox_KEYBYTES];
-  uint8_t *hnonce=out;
-  uint8_t *mnonce=out+crypto_secretbox_NONCEBYTES;
-  int i,j;
-  // check if we have a DHRs
-  for(i=0,j=0;i<crypto_secretbox_KEYBYTES;i++) if(ctx->dhrs.sk[i]==0) j++;
-  if(j==crypto_secretbox_KEYBYTES) { // if not, generate one, and reset counter
-    randombytes_buf(ctx->dhrs.sk,crypto_scalarmult_curve25519_BYTES);
-    crypto_scalarmult_curve25519_base(ctx->dhrs.pk, ctx->dhrs.sk);
-    ctx->pns=ctx->ns;
-    ctx->ns=0;
-  }
-  // derive message key
-  crypto_generichash(mk, crypto_secretbox_KEYBYTES,       // output
-                     ctx->cks, crypto_secretbox_KEYBYTES, // msg
-                     (uint8_t*) "MK", 2);                 // "MK")
-  // hnonce
-  randombytes_buf(hnonce,crypto_secretbox_NONCEBYTES);
-  // mnonce
-  randombytes_buf(mnonce,crypto_secretbox_NONCEBYTES);
-
-  // calculate Enc(HKs, Ns || PNs || DHRs)
-  uint8_t header[PADDEDHCRYPTLEN]; // includes nacl padding
-  memset(header,0,sizeof(header));
-  // concat ns || pns || dhrs
-  memcpy(header+32,&ctx->ns, sizeof(long long));
-  memcpy(header+32+sizeof(long long),&ctx->pns, sizeof(long long));
-  memcpy(header+32+sizeof(long long)*2, ctx->dhrs.pk, crypto_scalarmult_curve25519_BYTES);
-
-  uint8_t header_enc[PADDEDHCRYPTLEN]; // also nacl padded
-  // encrypt them
-  crypto_secretbox(header_enc, header, sizeof(header), hnonce, ctx->hks);
-
-  // unpad to output buf
-  memcpy(mnonce+crypto_secretbox_NONCEBYTES, header_enc+16, sizeof(header_enc)-16);
-
-  // pad the message // todo handle big messages using outbuf/bufs
-  uint8_t padded[32+in_len];
-  memset(padded,0,32);
-  uint8_t paddedout[16+in_len+crypto_secretbox_MACBYTES];
-  memcpy(padded+32, in, in_len);
-#if AXOLOTL_DEBUG
-  print_key("mnonce", mnonce);
-#endif
-  crypto_secretbox(paddedout, padded, sizeof(padded), mnonce, mk);
-#if AXOLOTL_DEBUG
-    printf("encrypt ");
-    { int j; for(j=0;j<sizeof(paddedout);j++) printf("%02x:", paddedout[j]); }
-    printf("\n");
-#endif
-  memcpy(mnonce+crypto_secretbox_NONCEBYTES+sizeof(header_enc)-16,paddedout+16, sizeof(paddedout)-16);
-  memset(mk,0,sizeof(mk));
-  *out_len = crypto_secretbox_NONCEBYTES*2+sizeof(header_enc)-16+sizeof(paddedout)-16;
-  ctx->ns++;
-  crypto_generichash(ctx->cks, crypto_scalarmult_curve25519_BYTES, // output
-                     ctx->cks, crypto_scalarmult_curve25519_BYTES, // msg
-                     (uint8_t*) "CK", 2);                          // no key
-#if AXOLOTL_DEBUG
-    print_key("cks1", ctx->cks);
-    printf("\n");
-#endif
 }
 
 static int try_skipped(Axolotl_ctx *ctx, uint8_t *out, uint32_t *outlen,
@@ -628,35 +540,6 @@ int ax_recv(Axolotl_ctx *ctx, uint8_t *paddedout, uint32_t *out_len,
 
   return 0;
 }
-
-#if AXOLOTL_DEBUG
-void print_key(const char* prefix, const uint8_t* key) {
-  uint32_t* ptr=(uint32_t*) key,i;
-  printf("%s\t", prefix);
-  for(i=0;i<7;i++)
-    printf("%08x:",ptr[i]);
-  printf("%08x\n",ptr[7]);
-}
-
-void print_ctx(Axolotl_ctx *ctx) {
-  print_key("rk", ctx->rk);
-  print_key("hks", ctx->hks);
-  print_key("hkr", ctx->hkr);
-  print_key("nhks", ctx->nhks);
-  print_key("nhkr", ctx->nhkr);
-  print_key("cks", ctx->cks);
-  print_key("ckr", ctx->ckr);
-  print_key("dhrs.sk", ctx->dhrs.sk);
-  print_key("dhrs.pk", ctx->dhrs.pk);
-  print_key("dhrr", ctx->dhrr);
-  bag_dump(ctx->skipped_HK_MK);
-  printf("ns: %lld nr: %lld pns: %lld bobs1st: %d\n",
-         ctx->ns,
-         ctx->nr,
-         ctx->pns,
-         ctx->bobs1stmsg);
-}
-#endif // AXOLOTL_DEBUG
 
 static void bubble_sort(uint8_t ptr[BagSize][2],int s) {
   int i,j;
