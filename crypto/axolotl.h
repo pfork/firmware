@@ -85,13 +85,8 @@ typedef struct {
   BagEntry skipped_HK_MK[BagSize];
 } __attribute((packed)) Axolotl_ctx;
 
-void axolotl_genid(Axolotl_KeyPair * keys);
-//void axolotl_prekey(Axolotl_PreKey *prekey, Axolotl_ctx *ctx, const Axolotl_KeyPair *keypair);
-//int axolotl_handshake(Axolotl_ctx* ctx, const Axolotl_PreKey *prekey);
 void axolotl_prekey(Axolotl_PreKey *prekey, Axolotl_prekey_private *ctx, const Axolotl_KeyPair *keypair, uint8_t nh);
 int axolotl_handshake(Axolotl_ctx* ctx, Axolotl_PreKey *resp, const Axolotl_PreKey *prekey, Axolotl_prekey_private *private);
-void axolotl_box(Axolotl_ctx *ctx, uint8_t *out, uint32_t *out_len, const uint8_t *in, const uint32_t in_len);
-int axolotl_box_open(Axolotl_ctx *ctx, uint8_t *out, uint32_t *out_len, const uint8_t *in, const uint32_t in_len);
 int ax_recv(Axolotl_ctx *ctx, uint8_t *paddedout, uint32_t *out_len,
             const uint8_t *hnonce, const uint8_t *mnonce,
             const uint8_t *hcrypt, uint8_t *paddedmcrypt,
