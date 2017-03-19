@@ -1,9 +1,9 @@
 [submodule "lib/xeddsa"]
 	path = lib/xeddsa
-	url = http://l6jhsd5aflooopjj.onion/git/xedds.git
+	url = http://l6jhsd5aflooopjj.onion/git/xeddsa.git
 [submodule "lib/scalarmult"]
 	path = lib/scalarmult
-	url = http://l6jhsd5aflooopjj.onion/git/scalarmul.git
+	url = http://l6jhsd5aflooopjj.onion/git/scalarmult.git
 [submodule "lib/sphincs"]
 	path = lib/sphincs
 	url = http://l6jhsd5aflooopjj.onion/git/pitchforkedsphincs.git
