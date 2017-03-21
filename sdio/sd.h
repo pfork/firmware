@@ -4,8 +4,6 @@
 /**
   ******************************************************************************
   * @file    sd.c
-  * @author  stf
-  * @version V0.0.1
   * @date    02-December-2013
   * @brief   This file contains all the functions prototypes for the SD Card
   *          stm322xg_eval_sdio_sd driver firmware library.

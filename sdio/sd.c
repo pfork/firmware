@@ -1,8 +1,6 @@
 /**
   ******************************************************************************
   * @file    sd.c
-  * @author  stf
-  * @version V0.0.1
   * @date    02-December-2013
   * @brief   This file provides a set of functions needed to manage SDIO SD
   *          Card memory.

@@ -1,8 +1,6 @@
 /**
   ******************************************************************************
   * @file    sdio.c
-  * @author  stf
-  * @version V0.0.1
   * @date    01-December-2013
   * @brief   This file provides firmware functions to manage the following
   *          functionalities of the Secure digital input/output interface (SDIO)
