@@ -1,9 +1,6 @@
 /**
   ************************************************************************************
   * @file    dual.c
-  * @author  stf
-  * @version V0.0.1
-  * @date    05-December-2013
   * @brief   This file provides dual USB functionality for PITCHFORK storage mode
   ************************************************************************************
   */

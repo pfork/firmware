@@ -1,8 +1,6 @@
 /**
   ******************************************************************************
   * @file    usb_bsp.h
-  * @author  stf
-  * @version V0.0.1
   * @date    05-December-2013
   * @brief   Specific api's relative to the used hardware platform
   ******************************************************************************

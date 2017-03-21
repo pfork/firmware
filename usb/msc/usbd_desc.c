@@ -1,8 +1,6 @@
 /**
   ******************************************************************************
   * @file    usbd_desc.c
-  * @author  stf
-  * @version V0.0.1
   * @date    06-December-2013
   * @brief   This file provides the USBD descriptors and string formating method.
   ******************************************************************************

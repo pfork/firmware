@@ -1,8 +1,6 @@
 /**
   ******************************************************************************
   * @file    usbd_conf.h
-  * @author  stf
-  * @version V0.0.1
   * @date    05-December-2013
   * @brief   This file provides the interface to the sdio device.
   ******************************************************************************

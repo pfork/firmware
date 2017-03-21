@@ -1,8 +1,6 @@
 /**
   ******************************************************************************
   * @file    sd.c
-  * @author  stf
-  * @version V0.0.1
   * @date    04-December-2013
   * @brief   This file provides a set of functions needed to manage the SDIO SD
   ******************************************************************************
