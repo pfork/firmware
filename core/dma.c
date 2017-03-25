@@ -58,7 +58,7 @@ void DMA_DeInit(DMA_Stream_Regs* stream) {
   */
 FlagStatus DMA_GetFlagStatus(DMA_Stream_Regs* stream, unsigned int flag) {
   // deduce upper/lower half of fcr based on stream offset
-  unsigned char chan = ((((unsigned int) stream && 0xff) - 0x10) / 0x18);
+  unsigned char chan = ((((unsigned int) stream & 0xff) - 0x10) / 0x18);
   unsigned int dma = (unsigned int) stream & ~((unsigned int) 0xff);
   unsigned int mask = ((flag << DMA_ISR_OFFSET(chan)) | (unsigned int)DMA_ISR_RESERVED_MASK);
   if(chan < 4) {
