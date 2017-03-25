@@ -327,7 +327,7 @@ int load_key(uint8_t *path, int sep, uint8_t *buf, int buflen) {
   // implement select key, if only one then default
   ReaddirCTX ctx;
   path[sep]=0;
-  opendir(path, &ctx);
+  stfs_opendir(path, &ctx);
   path[sep]='/';
   const Inode_t *inode;
   uint32_t cnt=0;
@@ -426,7 +426,7 @@ int ekid2key(uint8_t* key, uint8_t *ekid ) {
 
   ReaddirCTX pctx, kctx;
   path[5]=0;
-  if(opendir(path, &pctx)!=0) {
+  if(stfs_opendir(path, &pctx)!=0) {
     // fail
     return -1;
   }
@@ -438,7 +438,7 @@ int ekid2key(uint8_t* key, uint8_t *ekid ) {
     }
     memcpy(path+6,inode->name, inode->name_len);
     path[5+33]=0;
-    opendir(path, &kctx);
+    stfs_opendir(path, &kctx);
     path[5+33]='/';
     while((inode=readdir(&kctx))!=0) {
       if(inode->name_len>32 || inode->name_len<1) {
@@ -503,7 +503,7 @@ int pf_store_init(void) {
     }
     memcpy(path, paths[i], pathlen);
     //path[pathlen-1]=0;
-    if(opendir(path, &ctx)!=0) {
+    if(stfs_opendir(path, &ctx)!=0) {
       if(0!=stfs_mkdir(path)) return -1;
     }
   }

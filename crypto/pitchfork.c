@@ -618,7 +618,7 @@ static int _listkeys(uint8_t *path, int pathlen, int keysize, uint8_t *outptr) {
   ReaddirCTX kctx;
   int ret=0;
   path[pathlen-34]=0;
-  opendir(path, &kctx);
+  stfs_opendir(path, &kctx);
   path[pathlen-34]='/';
   while((inode=readdir(&kctx))!=0) {
     if(inode->name_len!=32 || inode->type!=File) {
@@ -725,7 +725,7 @@ static void listkeys(const PF_KeyType type, const unsigned char *peer) {
     ReaddirCTX pctx;
     path[prefixlen-1]=0;
     // iterate through all entries in prefix dir
-    if(opendir(path, &pctx)!=0) {
+    if(stfs_opendir(path, &pctx)!=0) {
       // fail
       goto exit;
     }

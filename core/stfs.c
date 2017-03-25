@@ -360,7 +360,7 @@ static void del_chunk(const uint32_t b, const uint32_t c) {
 }
 
 
-int opendir(uint8_t *path, ReaddirCTX *ctx) {
+int stfs_opendir(uint8_t *path, ReaddirCTX *ctx) {
   memset((uint8_t*) ctx,0,sizeof(*ctx));
   const uint32_t last=strlen((char*) path)-1;
   uint32_t oid, b=0, c=0;
