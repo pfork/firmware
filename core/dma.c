@@ -32,7 +32,7 @@ void DMA_DeInit(DMA_Stream_Regs* stream) {
 
   // calculate stream number from stream offset
   // -0x10 for dma common dma regs, /0x18 is size of one stream reg
-  unsigned int mask = DMA_ISR_MASK(((((unsigned int) stream && 0xff) - 0x10) / 0x18));
+  unsigned int mask = DMA_ISR_MASK(((((unsigned int) stream & 0xff) - 0x10) / 0x18));
   unsigned int dma = (unsigned int) stream & ~((unsigned int) 0xff);
 
   // deduce upper/lower half of fcr based on stream offset
