@@ -331,7 +331,7 @@ int load_key(uint8_t *path, int sep, uint8_t *buf, int buflen) {
   path[sep]='/';
   const Inode_t *inode;
   uint32_t cnt=0;
-  while((inode=readdir(&ctx))!=0) {
+  while((inode=stfs_readdir(&ctx))!=0) {
     if(inode->name_len>32 || inode->name_len<1) {
       continue; // todo flag error?
     }
@@ -432,7 +432,7 @@ int ekid2key(uint8_t* key, uint8_t *ekid ) {
   }
   path[5]='/';
   const Inode_t *inode;
-  while((inode=readdir(&pctx))!=0) {
+  while((inode=stfs_readdir(&pctx))!=0) {
     if(inode->name_len>32 || inode->name_len<1) {
       continue; // todo flag error?
     }
@@ -440,7 +440,7 @@ int ekid2key(uint8_t* key, uint8_t *ekid ) {
     path[5+33]=0;
     stfs_opendir(path, &kctx);
     path[5+33]='/';
-    while((inode=readdir(&kctx))!=0) {
+    while((inode=stfs_readdir(&kctx))!=0) {
       if(inode->name_len>32 || inode->name_len<1) {
         continue; // todo flag error?
       }

@@ -95,7 +95,7 @@ typedef struct {
 } STFS_File;
 
 int stfs_opendir(uint8_t *path, ReaddirCTX *ctx);
-const Inode_t* readdir(ReaddirCTX *ctx);
+const Inode_t* stfs_readdir(ReaddirCTX *ctx);
 int stfs_mkdir(uint8_t *path);
 int stfs_rmdir(uint8_t *path);
 int stfs_open(uint8_t *path, uint32_t oflag);

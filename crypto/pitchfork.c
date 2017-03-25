@@ -620,7 +620,7 @@ static int _listkeys(uint8_t *path, int pathlen, int keysize, uint8_t *outptr) {
   path[pathlen-34]=0;
   stfs_opendir(path, &kctx);
   path[pathlen-34]='/';
-  while((inode=readdir(&kctx))!=0) {
+  while((inode=stfs_readdir(&kctx))!=0) {
     if(inode->name_len!=32 || inode->type!=File) {
       continue; // todo flag error?
     }
@@ -732,7 +732,7 @@ static void listkeys(const PF_KeyType type, const unsigned char *peer) {
     path[prefixlen-1]='/';
 
     const Inode_t *inode;
-    while((inode=readdir(&pctx))!=0) {
+    while((inode=stfs_readdir(&pctx))!=0) {
       if(inode->name_len!=32 || inode->type!=Directory) {
         continue; // todo flag error?
       }

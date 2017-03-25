@@ -386,7 +386,7 @@ int stfs_opendir(uint8_t *path, ReaddirCTX *ctx) {
   return 0;
 }
 
-const Inode_t* readdir(ReaddirCTX *ctx) {
+const Inode_t* stfs_readdir(ReaddirCTX *ctx) {
   const Chunk *chunk=find_chunk(Inode, 0, ctx->oid, 0, &(ctx->block), &(ctx->chunk));
   if(chunk==NULL) return NULL;
   if(ctx->chunk+1>=CHUNKS_PER_BLOCK) {
@@ -454,7 +454,7 @@ static int create_obj(uint8_t *path, Chunk *chunk) {
   ReaddirCTX ctx={.oid=parent,.block=0,.chunk=0};
   const Inode_t *inode;
   const uint32_t fsize=strlen((char*) fname);
-  while((inode=readdir(&ctx))!=0) {
+  while((inode=stfs_readdir(&ctx))!=0) {
     if(fsize==inode->name_len &&
        memcmp(inode->name, fname, inode->name_len)==0) {
       // fail parent has already a child named fname
@@ -531,7 +531,7 @@ int stfs_rmdir(uint8_t *path) {
 
   // check if directory is empty
   ReaddirCTX ctx={.oid=self, .block=0, .chunk=0};
-  if(readdir(&ctx)!=0) {
+  if(stfs_readdir(&ctx)!=0) {
     // fail directory is not empty
     LOG(1, "[x] directory '%s' is not empty\n", path);
     return -1;
