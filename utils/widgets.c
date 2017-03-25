@@ -105,7 +105,7 @@ void statusline(void) {
   if(have_user==0) {
     if(get_user(userrec)==0 &&
        userrec->len>0 &&
-       userrec->len<32) {
+       userrec->len<=32) {
       have_user=1;
       ((uint8_t*) &(userrec->name))[userrec->len]=0;
     }
