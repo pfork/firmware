@@ -2,8 +2,6 @@
   ************************************************************************************
   * @file    pitchfork_irq.c
   * @author  stf
-  * @version V0.0.1
-  * @date    05-December-2013
   * @brief   This file provides PITCHFORK usb irq handlers
   ************************************************************************************
   */
@@ -286,6 +284,11 @@ static void hash_block(const Buffer *buf) {
   crypto_generichash_update(&hash_state, buf->start, buf->size);
 }
 
+/**
+  * @brief  kex_start: starts a key-exchange over USB
+  * @param  None
+  * @retval None
+  */
 void kex_start() {
   Axolotl_KeyPair kp;
   if(load_ltkeypair(&kp)==0) {
@@ -1275,7 +1278,7 @@ static void handle_buf(void) {
           break;
         }
         case PITCHFORK_CMD_DECRYPT_ANON: {
-          oled_print_inv(40,56, " ax decrypt", Font_8x8);
+          oled_print_inv(40,56, " an decrypt", Font_8x8);
           decrypt_block(buf);
           break;
         }
@@ -1290,7 +1293,7 @@ static void handle_buf(void) {
           break;
         }
         case PITCHFORK_CMD_KEX_END: {
-          oled_print_inv(40,56, "   kex resp", Font_8x8);
+          oled_print_inv(40,56, "    kex end", Font_8x8);
           kex_end(buf);
           break;
         }
