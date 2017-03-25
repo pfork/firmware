@@ -262,7 +262,7 @@ int save_seed(unsigned char *seed, unsigned char* peer, unsigned char len) {
   uint8_t keyid[STORAGE_ID_LEN];
   uint8_t userbuf[sizeof(UserRecord)+PEER_NAME_MAX];
   UserRecord *userdata=(UserRecord*) userbuf;
-  if(get_user(userdata)==-1) return -1;
+  if(get_user(userdata)==-1 || userdata->len < 0 || userdata->len > 32) return -1;
   // set keyid
   switch(memcmp(peer, userdata->name, MIN(len,userdata->len))) {
   case -1:
