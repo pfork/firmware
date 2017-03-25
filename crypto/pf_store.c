@@ -127,11 +127,8 @@ int cread(uint8_t *fname, uint8_t *buf, uint32_t len) {
   uint8_t nonce[crypto_secretbox_NONCEBYTES];
   if(stfs_read(fd,nonce,crypto_secretbox_NONCEBYTES)!=crypto_secretbox_NONCEBYTES) {
     //LOG(1,"[x] failed reading nonce from file '%s' err: %d\n", fname, stfs_geterrno());
+    stfs_close(fd);
     return -1;
-    if(stfs_close(fd)==-1) {
-      //LOG(1,"[x] failed to close file, err: %d\n", stfs_geterrno());
-      return -1;
-    }
   }
 
   int size=stfs_read(fd,cipher+crypto_secretbox_BOXZEROBYTES,len + crypto_secretbox_MACBYTES);
