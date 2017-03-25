@@ -247,7 +247,7 @@
 
 static unsigned int CardType =  SDIO_STD_CAPACITY_SD_CARD_V1_1;
 static unsigned int CSD_Tab[4], CID_Tab[4], RCA = 0;
-static unsigned char SDSTATUS_Tab[16];
+static unsigned char SDSTATUS_Tab[80];
 volatile unsigned int StopCondition = 0;
 volatile SD_Error TransferError = SD_OK;
 volatile unsigned int TransferEnd = 0, DMAEndOfTransfer = 0;
@@ -1441,11 +1441,9 @@ SD_Error SD_SendSDStatus(unsigned int *psdstatus) {
     return SD_START_BIT_ERR;
   }
 
-  count = SD_DATATIMEOUT;
-  while ((SDIO_GetFlagStatus(SDIO_FLAG_RXDAVL) != RESET) && (count > 0)) {
+  while (SDIO_GetFlagStatus(SDIO_FLAG_RXDAVL) != RESET) {
     *psdstatus = SDIO_ReadData();
     psdstatus++;
-    count--;
   }
   /*!< Clear all the static status flags*/
   SDIO_ClearFlag(SDIO_STATIC_FLAGS);
