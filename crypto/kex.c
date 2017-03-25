@@ -125,7 +125,7 @@ static int recv_buf(uint8_t *src, uint8_t *buf, uint32_t size) {
   for(retries=0;retries<5;) {
     len=size<=32?size:32;
     res=nrf_recv(buf, len);
-    if((res & 0x80) == 1) continue; //broadcast
+    if((res & 0x80) == 0x80) continue; //broadcast
     if((res & 0x7f) == len) break;
     mDelay(15);
     retries++;
