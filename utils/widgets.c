@@ -103,7 +103,9 @@ void statusline(void) {
   uint8_t refresh=gui_refresh;
   uint8_t tmp;
   if(have_user==0) {
-    if(get_user(userrec)==0) {
+    if(get_user(userrec)==0 &&
+       userrec->len>0 &&
+       userrec->len<32) {
       have_user=1;
       ((uint8_t*) &(userrec->name))[userrec->len]=0;
     }
