@@ -692,7 +692,7 @@ static void listkeys(const PF_KeyType type, const unsigned char *peer) {
   }
   }
   int len=0, pathlen=prefixlen+32+1;
-  if(haspeer) pathlen+=33;
+  if(haspeer>0) pathlen+=33;
   uint8_t path[pathlen];
   if(keysize==0 || haspeer==-1 || prefixlen==-1) {
     goto exit;
