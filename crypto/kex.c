@@ -110,7 +110,7 @@ static int recv_fast(uint8_t *buf, uint32_t size) {
     len = (size-i)>=32?32:(size-i);
     for(retries=0;retries<5;) {
       res=nrf_recv(buf+i, len);
-      if((res & 0x80) == 1) continue; //broadcast
+      if((res & 0x80) == 0x80) continue; //broadcast
       if((res & 0x7f) == len)  break;
       retries++;
     }
