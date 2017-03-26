@@ -38,9 +38,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   };
   fclose(f);
-  fprintf(stderr, "[i] read %d bytes (%dKB)\n", size, size/1024-256);
+  fprintf(stderr, "[i] read %ld bytes (%ldKB)\n", size, size/1024-256);
 
-  fprintf(stderr, "[+] hashing %d bytes... ", sizeof(buf)-crypto_sign_BYTES);
+  fprintf(stderr, "[+] hashing %ld bytes... ", sizeof(buf)-crypto_sign_BYTES);
   uint8_t digest[64];
   crypto_generichash(digest, 64, buf, sizeof(buf)-crypto_sign_BYTES, NULL, 0);
 
