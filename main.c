@@ -37,6 +37,7 @@
 #include "master.h"
 #include "stfs.h"
 #include "pf_store.h"
+#include "browser.h"
 
 void randombytes_pitchfork_init(struct entropy_store* pool);
 struct entropy_store* pool;
@@ -235,7 +236,15 @@ static void menu_cb(char menuidx) {
     }
     break;
   }
-  case MENU_KEYS: { oled_clear(); appmode=KeysMenu; appctx.idx=0; appctx.top=0; break; }
+  case MENU_KEYS: {
+    if(browser_init()==0) {
+      oled_clear();
+      appmode=KeysMenu;
+      appctx.idx=0;
+      appctx.top=0;
+    }
+    break;
+  }
   case MENU_DEL_RAM: { softreset(); break; }
   case MENU_DEL_KEYS: {
     oled_print_inv(40,56, "     format", Font_8x8);
@@ -249,17 +258,10 @@ static void menu_cb(char menuidx) {
   }
 }
 
-static int keysmenu() {
-  // todo implement
-  oled_clear();
-  oled_print(0,16, (char*) "unimplemented" , Font_8x8);
-  return 0;
-}
-
 static void app(void) {
   switch(appmode) {
   case None: {menu(&menuctx, (const uint8_t **) menuitems,MENU_LEN,menu_cb); break;}
-  case KeysMenu: { if(keysmenu()==0) appmode=None; break; }
+  case KeysMenu: { if(browser()==0) appmode=None; break; }
   case KEXMenu: { if(kex_menu()==0) appmode=None; break; }
   }
 }
