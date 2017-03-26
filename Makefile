@@ -65,25 +65,30 @@ full: clean all doc main.check tags
 upload: main.bin
 	dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D main.bin
 
-main.bin : memmap $(objs) signature.o
-	$(CC) $(LDFLAGS) -o main.elf $(objs) signature.o $(LIBS)
-	$(OC) --gap-fill 0xff main.elf main.bin -O binary
-	$(OD) -Dl main.elf > main.list
-
-signature.o: $(objs) memmap signer/signer
+unsigned.main.elf: $(objs) memmap
 	$(CC) $(LDFLAGS) -o unsigned.main.elf $(objs) $(LIBS)
+
+unsigned.main.bin: unsigned.main.elf
 	$(OC) --gap-fill 0xff unsigned.main.elf main.unsigned.bin -O binary
-	signer/signer signer/master.key main.unsigned.bin >signature.bin
-	$(OC) --input-target binary --output-target elf32-littlearm \
-			--rename-section .data=.sigSection \
-	      --binary-architecture arm signature.bin signature.o
-	rm unsigned.main.elf # main.unsigned.bin
+
+signer/sign.o: signer/sign.c
+	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -o signer/sign.o signer/sign.c
 
 signer/signer: signer/sign.o signer/signer.c
 	gcc signer/sign.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/libsodium.a
 
-signer/sign.o: signer/sign.c
-	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -o signer/sign.o signer/sign.c
+signature.o: signer/signer unsigned.main.bin # TODO handle signer/master.key
+	signer/signer signer/master.key main.unsigned.bin >signature.bin
+	$(OC) --input-target binary --output-target elf32-littlearm \
+			--rename-section .data=.sigSection \
+	      --binary-architecture arm signature.bin signature.o
+
+main.elf: unsigned.main.bin signature.o memmap $(objs)
+	$(CC) $(LDFLAGS) -o main.elf $(objs) signature.o $(LIBS)
+
+main.bin : main.elf
+	$(OC) --gap-fill 0xff main.elf main.bin -O binary
+	$(OD) -Dl main.elf > main.list
 
 iap/fwupdater.lzg.o:
 	cd iap; make
@@ -147,4 +152,7 @@ clean-all: clean
 	rm -rf doc/latex doc/html || true
 	rm -f GPATH GRTAGS GSYMS GTAGS || true
 
-.PHONY: clean clean-all upload full doc tags static_check
+unsigned.main.clean:
+	rm $(objs)
+
+.PHONY: clean clean-all upload full doc tags static_check unsigned.main.clean
