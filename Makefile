@@ -44,17 +44,16 @@ sphincs_objs = lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
 	lib/sphincs/qsort.o lib/sphincs/wots.o lib/sphincs/prg.o lib/sphincs/hash.o \
 	lib/sphincs/horst.o lib/sphincs/sign.o
 
-util_objs = utils/memmove.o
+util_objs = utils/memmove.o utils/strlen.o utils/memcpy.o utils/memset.o utils/memcmp.o \
+	utils/pgpwords_data.o utils/pgpwords.o utils/lzg/decode.o utils/lzg/checksum.o \
+	utils/abort.o utils/qrcode.o utils/widgets.o utils/itoa.o utils/ntohex.o utils/utils.o
 
-objs = utils/utils.o core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/ssp.o \
+objs = core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/ssp.o \
 	core/clock.o core/systimer.o core/mpu.o core/init.o core/usb.o core/irq.o \
 	core/dma.o sdio/sdio.o sdio/sd.o core/led.o core/keys.o core/delay.o core/xentropy.o \
-	core/startup.o usb/dual.o crypto/mixer.o crypto/master.o utils/strlen.o \
-	crypto/randombytes_pitchfork.o utils/memcpy.o utils/memset.o utils/memcmp.o \
-	crypto/pbkdf2_generichash.o crypto/axolotl.o utils/pgpwords_data.o utils/pgpwords.o \
-	core/smallfonts.o utils/lzg/decode.o utils/lzg/checksum.o core/stfs.o core/user.o \
-	utils/abort.o crypto/fwsig.o crypto/browser.o utils/qrcode.o \
-	utils/widgets.o utils/itoa.o core/nrf.o crypto/pf_store.o utils/ntohex.o  \
+	core/startup.o usb/dual.o crypto/mixer.o crypto/master.o crypto/randombytes_pitchfork.o \
+	crypto/pbkdf2_generichash.o crypto/axolotl.o core/smallfonts.o core/stfs.o core/user.o \
+	crypto/fwsig.o crypto/browser.o core/nrf.o crypto/pf_store.o \
 	$(usb_objs) $(xeddsa_objs) $(curve_objs) $(newhope_objs) $(sphincs_objs)\
 	$(util_objs) \
 	iap/fwupdater.lzg.o crypto/pitchfork.o # keep these last
