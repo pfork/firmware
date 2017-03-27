@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <crypto_sign.h>
 #include <string.h>
+#include <sodium/utils.h>
 
 unsigned char sk[crypto_sign_SECRETKEYBYTES];
 
@@ -43,13 +44,15 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "[+] hashing %ld bytes... ", sizeof(buf)-crypto_sign_BYTES);
   uint8_t digest[64];
   crypto_generichash(digest, 64, buf, sizeof(buf)-crypto_sign_BYTES, NULL, 0);
-
-  fprintf(stderr, "done\n");
+  char hex[1024];
+  sodium_bin2hex(hex,1024,digest,64);
+  fprintf(stderr, "done\n[h] %s\n", hex);
 
   fprintf(stderr, "[+] signing... ");
   uint8_t sig[crypto_sign_BYTES];
   crypto_sign_detached(sig, NULL, digest, sizeof(digest), sk);
-  fprintf(stderr, "done\n");
+  sodium_bin2hex(hex,1024,sig,64);
+  fprintf(stderr, "done\n[s] %s\n", hex);
 
   for(i=0;i<sizeof(sig);i++) {
     printf("%c", sig[i]);
