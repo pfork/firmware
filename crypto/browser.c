@@ -716,7 +716,14 @@ void browse_cb(char idx) {
     return;
   } else {
     // yup path is a directory
-    if(0!=getdents(path)); //todo fail somehow?
+    if(0!=getdents(path)) {
+        oled_clear();
+        oled_print(0,9, "Something went", Font_8x8);
+        oled_print(0,18, "horribly wrong", Font_8x8);
+        oled_print(0,36, "pls reboot", Font_8x8);
+        oled_print(0,56, "getdents toctou", Font_8x8);
+        while(1); // how did we get here anyway?
+    }
     gui_refresh=1;
   }
 }
