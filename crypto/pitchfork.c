@@ -183,7 +183,7 @@ static int query_user(char* op) {
   }
   if(res==0) {
     cmd_clear();
-    usb_write((unsigned char*) "err: rejected", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: rejected", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
     pf_reset();
   }
   gui_refresh=1;
@@ -261,7 +261,7 @@ static void decrypt_block(Buffer* buf) {
                                  size+crypto_secretbox_ZEROBYTES,              // clen = len(plain)+2x(boxzerobytes)
                                  nonce,                                        // n
                                  params)) {
-    usb_write((unsigned char*) "err: corrupt", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: corrupt", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
     pf_reset();
     return;
   }
@@ -292,7 +292,7 @@ static void hash_block(const Buffer *buf) {
 void kex_start() {
   Axolotl_KeyPair kp;
   if(load_ltkeypair(&kp)==0) {
-    usb_write((unsigned char*) "err: no pubkey", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: no pubkey", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
     pf_reset();
     return;
   }
@@ -304,7 +304,7 @@ void kex_start() {
   memset((uint8_t*) &kp, 0, sizeof(kp)); // clear keymaterial
   // store my_sk in /prekeys/
   if(0!=store_key((uint8_t*) &my_sk, sizeof(my_sk), "/prekeys/", my_pk.ephemeralkey, NULL, 0)) {
-    usb_write((unsigned char*) "err: store pk", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: store pk", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
     pf_reset();
     return;
   }
@@ -328,7 +328,7 @@ int kex_resp(Buffer *buf) {
   // load lt private key and derive pubkey from it
   Axolotl_KeyPair kp;
   if(load_ltkeypair(&kp)==0) {
-    usb_write((unsigned char*) "err: no pubkey", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: no pubkey", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
     cmd_clear();
     return -1;
   }
@@ -338,13 +338,13 @@ int kex_resp(Buffer *buf) {
 
   Axolotl_ctx ctx;
   if(axolotl_handshake(&ctx, my_pk, o_pk, &my_sk)!=0) {
-    usb_write((unsigned char*) "err: fail", 8, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: fail", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     cmd_clear();
     return -1;
   }
   // save ctx (and other keys)
   if(0!=save_ax(&ctx, o_pk->identitykey, params+1, params[0])) {
-    usb_write((unsigned char*) "err: save fail", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: save fail", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
     cmd_clear();
     return -1;
   }
@@ -371,13 +371,13 @@ int kex_end(Buffer *buf) {
   Axolotl_PreKey *o_pk = (Axolotl_PreKey*) ((buf->start)+16);
   Axolotl_ctx ctx;
   if(axolotl_handshake(&ctx, NULL, o_pk, &my_sk)!=0) {
-    usb_write((unsigned char*) "err: fail", 8, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: fail", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     cmd_clear();
     return -1;
   }
   // store ctx (and other keys)
   if(0!=save_ax(&ctx, o_pk->identitykey, params+1, params[0])) {
-    usb_write((unsigned char*) "err: save fail", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: save fail", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
     cmd_clear();
     return -1;
   }
@@ -395,7 +395,7 @@ int kex_end(Buffer *buf) {
 int ax_send_init(uint8_t *peer, uint32_t peerlen) {
   // todo merge the innards of this back into axolotl.c
   if( peerlen == 0 || peerlen >= PEER_NAME_MAX) {
-    usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: bad name", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
     return 0;
   }
 
@@ -472,7 +472,7 @@ static void ax_recv_init(Buffer *buf) {
   // todo try with all existing ctx for peer
   if(0!=load_key(cpath, 36, (uint8_t*) &ctx, sizeof(ctx))) {
     memset((uint8_t*) &ctx,0,sizeof(ctx));
-    usb_write((unsigned char*) "err: no ctx", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: no ctx", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
     pf_reset();
     return;
   }
@@ -480,7 +480,7 @@ static void ax_recv_init(Buffer *buf) {
   if(0!=ax_recv(&ctx, outbuf, &out_len, cmd_buf.buf+1, nonce,
                 cmd_buf.buf+1+crypto_secretbox_NONCEBYTES,
                 buf->start-16, buf->size+16, params)) {
-    usb_write((unsigned char*) "err: corrupt", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: corrupt", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
     pf_reset();
     return;
   }
@@ -516,7 +516,7 @@ static void sign_msg(void) {
   // load ltkey, perform xeddsa with it on the finalhash
   Axolotl_KeyPair kp;
   if(0==load_ltkeypair(&kp)) {
-    usb_write((unsigned char*) "err: no key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: no key", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
     pf_reset();
     return;
   }
@@ -572,7 +572,7 @@ static void pqsign_msg(void) {
   uint8_t sk[PQCRYPTO_SECRETKEYBYTES];
   uint8_t path[]="/sph/                                ";
   if(load_key(path, 4, sk, PQCRYPTO_SECRETKEYBYTES)==-1) {
-    usb_write((unsigned char*) "err: no key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: no key", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
     pf_reset();
     return;
   }
@@ -802,7 +802,7 @@ void handle_ctl(usbd_device *usbd_dev, const uint8_t ep) {
     } else {
       // ignore packet
       memset(tmp,0,sizeof(tmp));
-      usb_write((unsigned char*) "err: mode", 9, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((uint8_t*) "err: mode", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     }
 
     cmd_blocked = 1;
@@ -811,7 +811,7 @@ void handle_ctl(usbd_device *usbd_dev, const uint8_t ep) {
   }
   if(cmd_buf.size+64>sizeof(cmd_buf.buf)) { // should not happen, as we set output in state before
     // overflowing - also illegal to send cmds longer than 195 bytes
-    usb_write((unsigned char*) "err: oflow", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((uint8_t*) "err: oflow", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
     // abort
     cmd_clear();
     return;
@@ -838,7 +838,7 @@ void handle_data(usbd_device *usbd_dev, const uint8_t ep) {
     usb_read(tmpbuf); // sink it
     // overwrite this so attacker cannot get reliably data written to stack
     memset(tmpbuf,0,sizeof(tmpbuf));
-    usb_write((unsigned char*) "err: no op", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: no op", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
     return;
   }
   if(bufs[active_buf].state != INPUT) {
@@ -846,7 +846,7 @@ void handle_data(usbd_device *usbd_dev, const uint8_t ep) {
       // throttle input
       blocked = 1;
       usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
-      usb_write((unsigned char*) "err: oflow", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: oflow", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
       return;
     }
     // or read into the fresh buffer
@@ -900,7 +900,7 @@ static void handle_cmd(void) {
 
   if(modus!=PITCHFORK_CMD_STOP) {
     // we are already in a mode, ignore the cmd;
-    usb_write((unsigned char*) "err: mode", 9, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: mode", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     oled_print_inv(40,56, "    bad cmd", Font_8x8);
     cmd_clear();
     return;
@@ -914,14 +914,14 @@ static void handle_cmd(void) {
       return;
     }
     if(cmd_buf.size>PEER_NAME_MAX+1) {
-      usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: bad name", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
 
     //if(peer_to_seed(params, (unsigned char*) cmd_buf.buf+1, cmd_buf.size-1)==0) {
     if(peer2seed(params, (unsigned char*) cmd_buf.buf+1, cmd_buf.size-1)==0) {
-      usb_write((unsigned char*) "err: no key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: no key", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -940,13 +940,13 @@ static void handle_cmd(void) {
       return;
     }
     if(cmd_buf.size!=EKID_SIZE+1+crypto_secretbox_NONCEBYTES) {
-      usb_write((unsigned char*) "err: inv param", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
     // keyid 2 seed
     if(ekid2key(params, (unsigned char*) cmd_buf.buf+1)!=0) {
-      usb_write((unsigned char*) "err: no key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: no key", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -960,6 +960,9 @@ static void handle_cmd(void) {
 
   // kex functions
   case PITCHFORK_CMD_KEX_START: {
+    if(query_user("start kex")==0) {
+      return;
+    }
     // send prekey
     // load lt private key and derive pubkey from it
     modus = PITCHFORK_CMD_KEX_START;
@@ -972,7 +975,7 @@ static void handle_cmd(void) {
       return;
     }
     if(cmd_buf.size>PEER_NAME_MAX+1 || cmd_buf.size<2) {
-      usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: bad name", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -990,7 +993,7 @@ static void handle_cmd(void) {
       return;
     }
     if(cmd_buf.size>PEER_NAME_MAX+1 || cmd_buf.size<2) {
-      usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: bad name", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -1006,7 +1009,7 @@ static void handle_cmd(void) {
   case PITCHFORK_CMD_DECRYPT_ANON: { // expects nonce, epk
                                      // key is scalarmult(epk,mypub)
     if(cmd_buf.size!=1+crypto_secretbox_NONCEBYTES+crypto_scalarmult_curve25519_BYTES) {
-      usb_write((unsigned char*) "err: inv param", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -1020,7 +1023,7 @@ static void handle_cmd(void) {
       return;
     }
     if(0!=crypto_scalarmult_curve25519(params, kp.sk, cmd_buf.buf+1+crypto_secretbox_NONCEBYTES)) {
-      usb_write((unsigned char*) "err: inv param", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -1037,7 +1040,7 @@ static void handle_cmd(void) {
       return;
     }
     if(cmd_buf.size>PEER_NAME_MAX+1 || cmd_buf.size<2) {
-      usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: bad name", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -1047,7 +1050,7 @@ static void handle_cmd(void) {
     //if(peer_to_seed(params, (unsigned char*) cmd_buf.buf+1, cmd_buf.size-1)==0) {
     //if(ax_send_init(params, (unsigned char*) cmd_buf.buf+1, cmd_buf.size-1)==0) {
     if(0!=ax_send_init(cmd_buf.buf+1,cmd_buf.size-1)) {
-      usb_write((unsigned char*) "err: no key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: no key", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -1066,7 +1069,7 @@ static void handle_cmd(void) {
     }
     int fixsize=PADDEDHCRYPTLEN-16+crypto_secretbox_NONCEBYTES*2+1;
     if(cmd_buf.size>fixsize+PEER_NAME_MAX || cmd_buf.size<fixsize+1) {
-      usb_write((unsigned char*) "err: bad params", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: bad params", 16, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -1104,14 +1107,14 @@ static void handle_cmd(void) {
 
   case PITCHFORK_CMD_VERIFY: { // expects signature || peer
     if(cmd_buf.size>PEER_NAME_MAX+1+64 || cmd_buf.size<2+64) {
-      usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: bad name", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
     memcpy(params, cmd_buf.buf+1, 64); // copy sig
     // get pubkey aftersig
     if(1!=peer2pub(params+64,cmd_buf.buf+64+1, cmd_buf.size-65)) {
-      usb_write((unsigned char*) "err: no pub", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: no pub", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -1137,7 +1140,7 @@ static void handle_cmd(void) {
       PF_KeyType type=cmd_buf.buf[1];
       listkeys(type, 0); // list keys
     } else {
-      usb_write((unsigned char*) "err: param", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: param", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
     }
     break;
   }
@@ -1150,7 +1153,7 @@ static void handle_cmd(void) {
 
   case PITCHFORK_CMD_DUMP_PUB: { // expects type
     if(cmd_buf.size!=2) {
-      usb_write((unsigned char*) "err: inv param", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -1171,7 +1174,7 @@ static void handle_cmd(void) {
       uint8_t sk[PQCRYPTO_SECRETKEYBYTES];
       uint8_t path[]="/sph/                                ";
       if(load_key(path, 4, sk, PQCRYPTO_SECRETKEYBYTES)==-1) {
-        usb_write((unsigned char*) "err: no key", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
+        usb_write((unsigned char*) "err: no key", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
         pf_reset();
         return;
       }
@@ -1181,7 +1184,7 @@ static void handle_cmd(void) {
       modus = PITCHFORK_CMD_DUMP_PUB;
       pf_send(pk,sizeof(pk),PITCHFORK_CMD_DUMP_PUB);
     } else {
-      usb_write((unsigned char*) "err: inv param", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
@@ -1202,7 +1205,7 @@ static void handle_cmd(void) {
     /* } */
 
   default: {
-    usb_write((unsigned char*) "err: bad cmd", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
+    usb_write((unsigned char*) "err: bad cmd", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
     oled_print_inv(40,56, "    bad cmd", Font_8x8);
   }
   }
