@@ -110,6 +110,31 @@ static int getdents(uint8_t *path) {
   return 0;
 }
 
+static void parentdir() {
+  // go back to parent dir
+  int plen=strlen((char*) outbuf);
+  if(plen<2) {
+    oled_clear();
+    oled_print(0,0, "strange parent", Font_8x8);
+    oled_print(0,9, "pls reboot", Font_8x8);
+    while(1);
+  }
+  uint8_t *ptr;
+  ptr=outbuf+plen;
+  if(*ptr=='/') {
+    oled_clear();
+    oled_print(0,0, "strange file", Font_8x8);
+    oled_print(0,9, "pls reboot", Font_8x8);
+    while(1);
+  }
+  for(;ptr>outbuf;ptr--) {
+    if(*ptr!='/') continue;
+    *ptr=0;
+    break;
+  }
+  getdents(outbuf);
+}
+
 /**
  * @brief sets up the menu for a specific key
  * @param dmode controls which ops to allow
@@ -628,7 +653,18 @@ static void delete() {
     oled_print(0,23,"delete failed", Font_8x8);
     mDelay(200);
   }
-  getdents(outbuf);
+
+  // go back from file to parent dir
+  parentdir();
+
+  // check if directory is empty
+  int plen=strlen((char*)outbuf)+1;
+  MenuCtx *ctx=((void*) outbuf)+plen;
+  char *menulen=((void*) ctx)+sizeof(MenuCtx);
+  if(*menulen==0) { // also clear parent dir (peerid)
+    stfs_rmdir(outbuf);
+    parentdir();
+  }
   gui_refresh=1;
 }
 
