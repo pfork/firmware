@@ -20,7 +20,7 @@
     - it adds a post-quantum element to the x3dh handshake
     - it replaces SHA256 with Blake2b
     - Currently the names of the peers are not added as an
-      authenticated component in x3dh.
+      authenticated component in the first message after the x3dh.
 
     @copyright
     This file is part of pitchfork.
