@@ -37,9 +37,18 @@ typedef struct {
   uint8_t identitykey[crypto_scalarmult_curve25519_BYTES];
   uint8_t ephemeralkey[crypto_scalarmult_curve25519_BYTES];
   uint8_t DHRs[crypto_scalarmult_curve25519_BYTES];
-  uint8_t newhope[POLY_BYTES];
+  uint8_t newhope[NEWHOPE_SENDABYTES];
   uint8_t sig[64]; // for xeddsa signature
 } __attribute((packed)) Axolotl_PreKey;
+
+typedef struct {
+  uint8_t identitykey[crypto_scalarmult_curve25519_BYTES];
+  uint8_t ephemeralkey[crypto_scalarmult_curve25519_BYTES];
+  uint8_t DHRs[crypto_scalarmult_curve25519_BYTES];
+  uint8_t newhope[NEWHOPE_SENDBBYTES]; // is a bit bigger than in prekey
+  uint8_t sig[64];
+  uint8_t prekeyid[16];
+} __attribute((packed)) Axolotl_Resp;
 
 typedef struct {
   uint8_t dhis[crypto_scalarmult_curve25519_BYTES];
@@ -85,8 +94,12 @@ typedef struct {
   BagEntry skipped_HK_MK[BagSize];
 } __attribute((packed)) Axolotl_ctx;
 
-void axolotl_prekey(Axolotl_PreKey *prekey, Axolotl_prekey_private *ctx, const Axolotl_KeyPair *keypair, uint8_t nh);
-int axolotl_handshake(Axolotl_ctx* ctx, Axolotl_PreKey *resp, const Axolotl_PreKey *prekey, Axolotl_prekey_private *private);
+void axolotl_prekey(Axolotl_PreKey *prekey, Axolotl_prekey_private *ctx, const Axolotl_KeyPair *keypair);
+void axolotl_kexresp(Axolotl_Resp *resp, Axolotl_prekey_private *ctx, const Axolotl_KeyPair *keypair);
+
+int axolotl_handshake(Axolotl_ctx* ctx, Axolotl_Resp *resp, const Axolotl_PreKey *prekey, Axolotl_prekey_private *private);
+int axolotl_handshake_resp(Axolotl_ctx* ctx, const Axolotl_Resp *prekey, Axolotl_prekey_private *private);
+
 int ax_recv(Axolotl_ctx *ctx, uint8_t *paddedout, uint32_t *out_len,
             const uint8_t *hnonce, const uint8_t *mnonce,
             const uint8_t *hcrypt, uint8_t *paddedmcrypt,

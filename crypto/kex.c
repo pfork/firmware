@@ -157,12 +157,12 @@ static void pqx3dh(char menuidx) {
   }
 
   // generate prekey
-  uint8_t sendbuf[sizeof(Axolotl_PreKey)+33], resp[sizeof(Axolotl_PreKey)+33];
-  Axolotl_PreKey *o_pk = (Axolotl_PreKey*) resp;
+  uint8_t sendbuf[sizeof(Axolotl_PreKey)+33], resp[sizeof(Axolotl_Resp)+33];
+  Axolotl_Resp *o_pk = (Axolotl_Resp*) resp;
   Axolotl_PreKey *my_pk = (Axolotl_PreKey *) sendbuf;
   Axolotl_prekey_private my_sk;
   memset(sendbuf,0,sizeof(sendbuf));
-  axolotl_prekey(my_pk, &my_sk, &kp, 1);
+  axolotl_prekey(my_pk, &my_sk, &kp);
 
   // copy username to the end of prekey, so we can send it off
   if((sendbuf[sizeof(Axolotl_PreKey)]=get_owner(sendbuf+sizeof(Axolotl_PreKey)+1))<1) {
@@ -194,7 +194,7 @@ static void pqx3dh(char menuidx) {
       // fail
       continue;
     }
-    int plen=resp[sizeof(Axolotl_PreKey)];
+    int plen=resp[sizeof(Axolotl_Resp)];
     if(plen<1 || plen>32) {
       // fail invalid peername length
       continue;
@@ -203,14 +203,14 @@ static void pqx3dh(char menuidx) {
     int pplen=strlen(((char*) (&msgs[(int) menuidx]))+5);
     pplen=pplen>32-5?32-5:pplen;
     if(memcmp(((char*) (&msgs[(int) menuidx]))+5,
-              resp+sizeof(Axolotl_PreKey)+1,
+              resp+sizeof(Axolotl_Resp)+1,
               pplen)!=0) {
       // prekey
       continue;
     }
 
     peer_len=plen;
-    if(axolotl_handshake(&ctx, NULL, o_pk, &my_sk)==0) {
+    if(axolotl_handshake_resp(&ctx, o_pk, &my_sk)==0) {
       break;
     }
   }
@@ -219,7 +219,7 @@ static void pqx3dh(char menuidx) {
   memcpy(peerpub, o_pk->identitykey, crypto_scalarmult_curve25519_BYTES);
 
   // set peername from response
-  memcpy(peer, resp+sizeof(Axolotl_PreKey)+1, peer_len);
+  memcpy(peer, resp+sizeof(Axolotl_Resp)+1, peer_len);
 
   uint8_t verifier[VERIFIER_SIZE];
   // we hash(idkey1|idkey2) and have the users compare those.
@@ -295,13 +295,13 @@ static void discover() {
     return;
   }
 
-  uint8_t sendbuf[sizeof(Axolotl_PreKey)+33];
-  Axolotl_PreKey *my_pk = (Axolotl_PreKey *) sendbuf;
+  uint8_t sendbuf[sizeof(Axolotl_Resp)+33];
+  Axolotl_Resp *my_pk = (Axolotl_Resp *) sendbuf;
   Axolotl_PreKey *o_pk = (Axolotl_PreKey *) recvbuf;
   Axolotl_prekey_private my_sk;
 
   // copy username to the end of sendbuf, so we can send it off with our prekey
-  if((sendbuf[sizeof(Axolotl_PreKey)]=get_owner(sendbuf+sizeof(Axolotl_PreKey)+1))<1) {
+  if((sendbuf[sizeof(Axolotl_Resp)]=get_owner(sendbuf+sizeof(Axolotl_Resp)+1))<1) {
     oled_print(0,16, (char*) "no owner" , Font_8x8);
     return;
     }
@@ -315,7 +315,7 @@ static void discover() {
   }
 
   // init own prekey
-  axolotl_prekey(my_pk, &my_sk, &kp, 0);
+  axolotl_kexresp(my_pk, &my_sk, &kp);
 
   if(axolotl_handshake(&ctx, my_pk, o_pk, &my_sk)!=0) {
     // fail, try again

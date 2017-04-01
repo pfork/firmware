@@ -198,13 +198,14 @@ static void pf_send(uint8_t *buf, int size, CRYPTO_CMD m) {
   int len, i;
   for(i=0;i<size && (modus == m);i+=len) {
     len = (size-i)>=64?64:(size-i);
+    /* usb_write(buf+i,len,32,USB_CRYPTO_EP_DATA_OUT); */
     while((usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_DATA_OUT, buf+i, len) == 0) &&
           (modus == m))
       usbd_poll(usbd_dev); // todo why are we polling here?
-    if(size%64==0) {
-      while((usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_DATA_OUT, buf, 0) == 0)
-            && (modus == m));
-    }
+  }
+  if(size%64==0) {
+    uDelay(100);
+    usb_write(NULL,0,32,USB_CRYPTO_EP_DATA_OUT);
   }
 }
 
@@ -300,7 +301,7 @@ void kex_start() {
   // generate prekey
   Axolotl_PreKey my_pk;
   Axolotl_prekey_private my_sk;
-  axolotl_prekey(&my_pk, &my_sk, &kp, 1);
+  axolotl_prekey(&my_pk, &my_sk, &kp);
   memset((uint8_t*) &kp, 0, sizeof(kp)); // clear keymaterial
   // store my_sk in /prekeys/
   if(0!=store_key((uint8_t*) &my_sk, sizeof(my_sk), "/prekeys/", my_pk.ephemeralkey, NULL, 0)) {
@@ -320,8 +321,7 @@ int kex_resp(Buffer *buf) {
     return -1;
   }
   // respond with handshake with prekey
-  uint8_t resp[16+sizeof(Axolotl_PreKey)];
-  Axolotl_PreKey *my_pk = (Axolotl_PreKey*) (resp+16);
+  Axolotl_Resp my_pk;
   Axolotl_PreKey *o_pk = (Axolotl_PreKey*) buf->start;
   Axolotl_prekey_private my_sk;
 
@@ -334,10 +334,10 @@ int kex_resp(Buffer *buf) {
   }
 
   // init own prekey
-  axolotl_prekey(my_pk, &my_sk, &kp, 0);
+  axolotl_kexresp(&my_pk, &my_sk, &kp);
 
   Axolotl_ctx ctx;
-  if(axolotl_handshake(&ctx, my_pk, o_pk, &my_sk)!=0) {
+  if(axolotl_handshake(&ctx, &my_pk, o_pk, &my_sk)!=0) {
     usb_write((unsigned char*) "err: fail", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     cmd_clear();
     return -1;
@@ -349,28 +349,28 @@ int kex_resp(Buffer *buf) {
     return -1;
   }
   // send off my_pk
-  memcpy(resp,o_pk->ephemeralkey,16); // to remind the initiator what he used
-  pf_send(resp, sizeof(resp), PITCHFORK_CMD_KEX_RESPOND);
+  memcpy(&my_pk.prekeyid,o_pk->ephemeralkey,16); // to remind the initiator what he used
+  pf_send((uint8_t*)&my_pk, sizeof(my_pk), PITCHFORK_CMD_KEX_RESPOND);
 
   return 0;
 }
 
 int kex_end(Buffer *buf) {
-  if(buf->size!=sizeof(Axolotl_PreKey)+16) {
+  if(buf->size!=sizeof(Axolotl_Resp)) {
     return -1;
   }
-  Axolotl_prekey_private my_sk;
+  Axolotl_Resp *o_pk = (Axolotl_Resp*) buf->start;
   // load my_sk from /prekeys
   uint8_t prekey[]="/prekeys/                                ";
-  stohex(prekey+9, buf->start, 16);
+  stohex(prekey+9, o_pk->prekeyid, 16);
+  Axolotl_prekey_private my_sk;
   if(cread(prekey, (uint8_t*) &my_sk, sizeof(my_sk))!= sizeof(my_sk)) {
     memset((uint8_t*) &my_sk,0,sizeof(my_sk));
     return -1;
   }
 
-  Axolotl_PreKey *o_pk = (Axolotl_PreKey*) ((buf->start)+16);
   Axolotl_ctx ctx;
-  if(axolotl_handshake(&ctx, NULL, o_pk, &my_sk)!=0) {
+  if(axolotl_handshake_resp(&ctx, o_pk, &my_sk)!=0) {
     usb_write((unsigned char*) "err: fail", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     cmd_clear();
     return -1;
@@ -521,8 +521,6 @@ static void sign_msg(void) {
     return;
   }
   // sign with xeddsa, send back sig
-  //crypto_sign(sk, h, 32, (uint8_t*) bufs);
-  /* returns 0 on success */
   uint8_t sig[64], random[64];
   randombytes_buf(random,sizeof(random));
   if(0!=xed25519_sign(sig, kp.sk, h, sizeof(h), random)) {
@@ -547,12 +545,11 @@ static void verify_msg(void) {
   crypto_generichash_final(&hash_state, h, 32);
   // verify with xeddsa, send bool
   oled_clear();
+  oled_print(0,23,"     message", Font_8x8);
   if(0!=xed25519_verify(params /* 64 bytes */, params+64 /* 32 bytes */, h, sizeof(h))) {
-    oled_print(0,23,"     message", Font_8x8);
     oled_print(0,32,"     invalid", Font_8x8);
     usb_write((unsigned char*) "0", 1, 32,USB_CRYPTO_EP_DATA_OUT);
   } else {
-    oled_print(0,23,"     message", Font_8x8);
     oled_print(0,32,"       ok", Font_8x8);
     usb_write((unsigned char*) "1", 1, 32,USB_CRYPTO_EP_DATA_OUT);
   }
@@ -1106,6 +1103,9 @@ static void handle_cmd(void) {
   }
 
   case PITCHFORK_CMD_VERIFY: { // expects signature || peer
+    if(query_user("verify")==0) {
+      return;
+    }
     if(cmd_buf.size>PEER_NAME_MAX+1+64 || cmd_buf.size<2+64) {
       usb_write((unsigned char*) "err: bad name", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
@@ -1118,13 +1118,10 @@ static void handle_cmd(void) {
       cmd_clear();
       return;
     }
-
+    gui_refresh=0;
     crypto_generichash_init(&hash_state, NULL, 0, 32);
     modus = PITCHFORK_CMD_VERIFY;
     oled_print_inv(40,56, "     verify", Font_8x8);
-    if(query_user("verify")==0) {
-      return;
-    }
     break;
   }
 
@@ -1190,19 +1187,6 @@ static void handle_cmd(void) {
     }
     break;
   }
-
-  /* case PITCHFORK_CMD_AX_PREKEY: { */
-  /*   modus = PITCHFORK_CMD_RNG; */
-  /*   oled_print_inv(40,56, "        rng", Font_8x8); */
-  /*   break; */
-  /* } */
-    /* case PITCHFORK_CMD_STORAGE: { */
-    /*   if(cmd_fn!=0) { */
-    /*     irq_mode(); */
-    /*   } */
-    /*   dual_usb_mode = DISK; */
-    /*   break; */
-    /* } */
 
   default: {
     usb_write((unsigned char*) "err: bad cmd", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
