@@ -684,7 +684,7 @@ static void listkeys(const PF_KeyType type, const unsigned char *peer) {
     break;
   }
   case PF_KEY_PREKEY: {
-    prefix=(uint8_t*) "/prekeys/"; prefixlen=9; keysize=sizeof(Axolotl_PreKey); haspeer=0;
+    prefix=(uint8_t*) "/prekeys/"; prefixlen=9; keysize=sizeof(Axolotl_prekey_private); haspeer=0;
     break;
   }
   }
