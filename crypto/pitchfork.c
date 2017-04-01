@@ -765,14 +765,15 @@ static void listkeys(const PF_KeyType type, const unsigned char *peer) {
   // write out result
   tptr=outbuf;
   // write out outbuf
-  while(tptr+64<=outptr) {
+  while(tptr+64<outptr) {
     usb_write(tptr, 64, 0, USB_CRYPTO_EP_DATA_OUT);
     tptr+=64;
   }
   // write out last packet
-  if(tptr<outptr) {
-    // short
+  if(tptr<outptr) {// short pkt
     usb_write(tptr, outptr-tptr, 0, USB_CRYPTO_EP_DATA_OUT);
+  } else if(tptr==outptr) { // zlp
+    usbd_ep_write_packet(usbd_dev, USB_CRYPTO_EP_DATA_OUT, outbuf, 0);
   }
 
  exit:
