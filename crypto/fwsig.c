@@ -1,52 +1,45 @@
 #include <stdint.h>
-#include "crypto_generichash.h"
 #include <unistd.h>
+#include <crypto_generichash.h>
 #include "oled.h"
-#include "../sodium/crypto_sign.h"
-#include <string.h>
+#include "xeddsa.h"
+#include "randombytes_pitchfork.h"
+#include "stm32f.h"
 
-#define OTP_START_ADDR	(0x1FFF7800)
-#define OTP_BYTES_IN_BLOCK	32
-#define OTP_BLOCKS	16
+#define pitchfork_fwsig_BYTES 64
 
 extern const uint8_t *_firmware_sig;
 
-//const unsigned char pk[2][crypto_sign_PUBLICKEYBYTES]=
-//  {{0xe2,0x97,0x55,0x21,0x53,0x9f,0xb2,0xa3, 0xfd,0x49,0xef,0xba,0xc4,0xd9,0x2e,0x14,
-//    0x4d,0x2f,0x18,0x47,0x8d,0x93,0x21,0x44, 0x9c,0xca,0x4d,0x75,0x27,0x18,0x12,0xd6 },
-//   {0xaa,0x17,0x7a,0xc5,0x27,0x08,0x24,0x29, 0x6d,0x6b,0x84,0x50,0x15,0xa2,0x81,0x56,
-//    0x73,0xac,0x14,0xe9,0xda,0x2a,0x85,0x06, 0xcb,0x9f,0x44,0x63,0x7a,0x02,0xa3,0x90 }
-//  };
+// fw based last resort key. in case the immutable keys are dead
+const uint8_t pk[]={0x79, 0xf9, 0xbe, 0x84, 0xa4, 0xe0, 0x1c, 0x32,
+                    0x47, 0xbf, 0xf3, 0xbb, 0xc6, 0xb1, 0x5a, 0x3e,
+                    0x44, 0xae, 0xac, 0xfd, 0x9c, 0x79, 0x75, 0x4f,
+                    0x3d, 0x6b, 0x34, 0x01, 0x0b, 0x5c, 0xeb, 0x75};
 
-static char read_otp(uint32_t block, uint32_t byte) {
-  return *(char*)(OTP_START_ADDR + block * OTP_BYTES_IN_BLOCK + byte);
-}
-
-// todo rewrite using xeddsa
 int verify_fwsig(void) {
-  uint8_t digest[64];
+  uint8_t digest[pitchfork_fwsig_BYTES];
 
   oled_clear();
   oled_print(0,0,"verifying..", Font_8x8);
   oled_print(0,9,"...firmware", Font_8x8);
-
-  int i;
-  for(i=0;i<crypto_sign_PUBLICKEYBYTES && read_otp(0,i)==0xff;i++);
-  if(i>=crypto_sign_PUBLICKEYBYTES) {
-    oled_print(0,18,"no key found", Font_8x8);
-    return 0;
-  }
-
   oled_print(0,18,"hashing...", Font_8x8);
   crypto_generichash(digest, 64, (uint8_t *)0x08000000, 0x40000-64, NULL, 0);
 
   oled_print(0,18,"hashing: done", Font_8x8);
 
   oled_print(0,27,"signature...", Font_8x8);
-  if (crypto_sign_verify_detached((void*) &_firmware_sig, digest, 64, (uint8_t*) (OTP_START_ADDR)) != 0) {
-    if (crypto_sign_verify_detached((void*) &_firmware_sig, digest, 64, (uint8_t*) (OTP_START_ADDR + 1 * OTP_BYTES_IN_BLOCK)) != 0) {
-      oled_print_inv(0,36,"invalid", Font_8x8);
-      while(1);
+  // check master pubkey
+  if (xed25519_verify((void*) &_firmware_sig, (uint8_t*) (OTP_START_ADDR), digest, sizeof digest) != 0) {
+    // check user pubkey
+    if (xed25519_verify((void*) &_firmware_sig, (uint8_t*) (OTP_START_ADDR + 1 * OTP_BYTES_IN_BLOCK), digest, sizeof digest) != 0) {
+      // check soft pubkey
+      if (xed25519_verify((void*) &_firmware_sig, pk, digest, sizeof digest) != 0) {
+        oled_print_inv(0,36,"invalid", Font_8x8);
+        while(1);
+      } else {
+        oled_print(0,36,"valid", Font_8x8);
+        oled_print(0,45,"(soft)", Font_8x8);
+      }
     } else {
       oled_print(0,36,"valid", Font_8x8);
       oled_print(0,45,"(private)", Font_8x8);

@@ -268,8 +268,8 @@ static void app(void) {
 
 int main(void) {
   init();
-  // todo fix and reenable: verify_fwsig();
-  // mDelay(500);
+  verify_fwsig();
+  mDelay(500);
   pool = init_pool();
   randombytes_pitchfork_init(pool);
   stfs_init();

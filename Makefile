@@ -68,26 +68,25 @@ upload: main.bin
 unsigned.main.elf: $(objs) memmap
 	$(CC) $(LDFLAGS) -o unsigned.main.elf $(objs) $(LIBS)
 
-unsigned.main.bin: unsigned.main.elf
+main.unsigned.bin: unsigned.main.elf
 	$(OC) --gap-fill 0xff unsigned.main.elf main.unsigned.bin -O binary
 
-signer/sign.o: signer/sign.c
-	gcc -c -Ilib/libsodium/src/libsodium/include/sodium/ -o signer/sign.o signer/sign.c
+signer/signer:
+	cd signer; make
 
-signer/signer: signer/sign.o signer/signer.c
-	gcc signer/sign.o -o signer/signer signer/signer.c -I/usr/include/sodium /usr/lib/libsodium.a
-
-signature.o: signer/signer unsigned.main.bin # TODO handle signer/master.key
+signature.o: signer/signer main.unsigned.bin # TODO handle signer/master.key
 	signer/signer signer/master.key main.unsigned.bin >signature.bin
 	$(OC) --input-target binary --output-target elf32-littlearm \
 			--rename-section .data=.sigSection \
 	      --binary-architecture arm signature.bin signature.o
 
-main.elf: unsigned.main.bin signature.o memmap $(objs)
+main.elf: main.unsigned.bin signature.o memmap $(objs)
 	$(CC) $(LDFLAGS) -o main.elf $(objs) signature.o $(LIBS)
 
 main.bin : main.elf
 	$(OC) --gap-fill 0xff main.elf main.bin -O binary
+
+main.list: main.elf
 	$(OD) -Dl main.elf > main.list
 
 iap/fwupdater.lzg.o:
