@@ -212,47 +212,22 @@ static int tripledh(uint8_t *mk, uint8_t* poly, const Axolotl_prekey_private *ct
 //    memcpy(resp->ad+crypto_scalarmult_curve25519_BYTES, ctx->dhis.pk, crypto_scalarmult_curve25519_BYTES);
   // prepare response
 
-int axolotl_handshake(Axolotl_ctx* ctx, Axolotl_Resp *resp, const Axolotl_PreKey *prekey, Axolotl_prekey_private *private) {
-  /*
-  as per https://github.com/trevp/axolotl/wiki/newversion (Nov 19, 2013 · 41 revisions)
-
-  Key Agreement
-  --------------
-  - Parties exchange identity keys (A,B) and handshake keys (Ah,Ai) and (Bh,Bi)
-  - Parties assign themselves "Alice" or "Bob" roles by comparing public keys
-  - Parties perform triple-DH with (A,B,Ah,Bh) and derive initial keys:
-  Alice:
-  KDF from triple-DH: RK, HKs, HKr, NHKs, NHKr, CKs, CKr
-  DHRs, DHRr = <none>, Bi
-  Ns, Nr = 0, 0
-  PNs = 0
-  bobs_first_message = False
-  Bob:
-  KDF from triple-DH: RK, HKr, HKs, NHKr, NHKs, CKr, CKs
-  DHRs, DHRr = Bi, <none>
-  Ns, Nr = 0, 0
-  PNs = 0
-  bobs_first_message = True
-  */
-  memset(ctx,0,sizeof(Axolotl_ctx));
-  bag_init(ctx->skipped_HK_MK);
-
-  // check sig on prekey
-  if(xed25519_verify(prekey->sig, // sig
-                     prekey->identitykey, // pubkey
-                     prekey->ephemeralkey, // msg
-                     crypto_scalarmult_curve25519_BYTES*2)!=0) {
-    // fail
-    return 1;
-  }
-
-  uint8_t mk[crypto_scalarmult_curve25519_BYTES];
-  // set ctx->isAlice
-  ctx->isAlice=memcmp(resp->identitykey, prekey->identitykey, crypto_scalarmult_curve25519_BYTES) <=0;
-
-  if(tripledh(mk, resp->newhope, private, prekey, ctx->isAlice)!=0) return 1;
-
-  // mk is the shared secret derived of the triple dh which seeds all keys:
+/** @brief derivectx initializes an ratchet context from the shared secret and the peers public keys
+ *
+ *  Alice:
+ *   KDF from triple-DH: RK, HKs, HKr, NHKs, NHKr, CKs, CKr
+ *   DHRs, DHRr = <none>, Bi
+ *   Ns, Nr = 0, 0
+ *   PNs = 0
+ *   bobs_first_message = False
+ *  Bob:
+ *   KDF from triple-DH: RK, HKr, HKs, NHKr, NHKs, CKr, CKs
+ *   DHRs, DHRr = Bi, <none>
+ *   Ns, Nr = 0, 0
+ *   PNs = 0
+ *   bobs_first_message = True
+ */
+static int derivectx(Axolotl_ctx *ctx, uint8_t *mk, const Axolotl_PreKey *prekey) {
   // derive root key
   crypto_generichash(ctx->rk, crypto_scalarmult_curve25519_BYTES,
                      mk, sizeof(mk),
@@ -321,33 +296,46 @@ int axolotl_handshake(Axolotl_ctx* ctx, Axolotl_Resp *resp, const Axolotl_PreKey
   ctx->ns = 0;
   ctx->nr = 0;
   ctx->pns = 0;
-  memset(mk, 0, sizeof(mk));
+  memset(mk, 0, crypto_scalarmult_curve25519_BYTES);
 
   return 0;
 }
 
-int axolotl_handshake_resp(Axolotl_ctx* ctx, const Axolotl_Resp *resp, Axolotl_prekey_private *private) {
-  /*
-  as per https://github.com/trevp/axolotl/wiki/newversion (Nov 19, 2013 · 41 revisions)
+/** @brief initiates a handshake by consuming a previously published prekey
+ *
+ *  verifies the signature on the prekey, then performs a pq3dh,
+ *  finally derives a double ratchet context.
+ */
+int axolotl_handshake(Axolotl_ctx* ctx, Axolotl_Resp *resp, const Axolotl_PreKey *prekey, Axolotl_prekey_private *private) {
+  memset(ctx,0,sizeof(Axolotl_ctx));
+  bag_init(ctx->skipped_HK_MK);
 
-  Key Agreement
-  --------------
-  - Parties exchange identity keys (A,B) and handshake keys (Ah,Ai) and (Bh,Bi)
-  - Parties assign themselves "Alice" or "Bob" roles by comparing public keys
-  - Parties perform triple-DH with (A,B,Ah,Bh) and derive initial keys:
-  Alice:
-  KDF from triple-DH: RK, HKs, HKr, NHKs, NHKr, CKs, CKr
-  DHRs, DHRr = <none>, Bi
-  Ns, Nr = 0, 0
-  PNs = 0
-  bobs_first_message = False
-  Bob:
-  KDF from triple-DH: RK, HKr, HKs, NHKr, NHKs, CKr, CKs
-  DHRs, DHRr = Bi, <none>
-  Ns, Nr = 0, 0
-  PNs = 0
-  bobs_first_message = True
-  */
+  // check sig on prekey
+  if(xed25519_verify(prekey->sig, // sig
+                     prekey->identitykey, // pubkey
+                     prekey->ephemeralkey, // msg
+                     crypto_scalarmult_curve25519_BYTES*2)!=0) {
+    // fail
+    return 1;
+  }
+
+  uint8_t mk[crypto_scalarmult_curve25519_BYTES];
+  // set ctx->isAlice
+  ctx->isAlice=memcmp(resp->identitykey, prekey->identitykey, crypto_scalarmult_curve25519_BYTES) <=0;
+
+  if(tripledh(mk, resp->newhope, private, prekey, ctx->isAlice)!=0) return 1;
+
+  // mk is the shared secret derived of the triple dh which seeds all keys:
+  return derivectx(ctx,mk,prekey);
+}
+
+/** @brief responds to a handshake by consuming a previously published prekey
+ *
+ *  verifies the signature on the prekey, then performs a pq3dh,
+ *  finally derives a double ratchet context. Different parameter
+ *  types than in axololt_handshake_init make this function necessary.
+ */
+int axolotl_handshake_resp(Axolotl_ctx* ctx, const Axolotl_Resp *resp, Axolotl_prekey_private *private) {
   memset(ctx,0,sizeof(Axolotl_ctx));
   bag_init(ctx->skipped_HK_MK);
 
@@ -370,94 +358,27 @@ int axolotl_handshake_resp(Axolotl_ctx* ctx, const Axolotl_Resp *resp, Axolotl_p
   ctx->isAlice=memcmp(pk, resp->identitykey, crypto_scalarmult_curve25519_BYTES) <=0;
 
   if(tripledh(mk, NULL, private, (const Axolotl_PreKey*) resp, ctx->isAlice)!=0) return 1;
-
-  // mk is the shared secret derived of the triple dh which seeds all keys:
-  // derive root key
-  crypto_generichash(ctx->rk, crypto_scalarmult_curve25519_BYTES,
-                     mk, sizeof(mk),
-                     (uint8_t*) "RK", 2);
-  if(ctx->isAlice) {
-    // DHRr = peer DHRs
-    memcpy(ctx->dhrr, resp->DHRs, crypto_scalarmult_curve25519_BYTES);
-    // clear DHRs
-    memset(ctx->dhrs.sk,0,crypto_scalarmult_curve25519_BYTES);
-    memset(ctx->dhrs.pk,0,crypto_scalarmult_curve25519_BYTES);
-
-    // derive HKs
-    crypto_generichash(ctx->hks, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "HKs", 3);
-    // derive HKr
-    crypto_generichash(ctx->hkr, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "HKr", 3);
-
-    // derive NHKs
-    crypto_generichash(ctx->nhks, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "NHKs", 4);
-    // derive NHKr
-    crypto_generichash(ctx->nhkr, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "NHKr", 4);
-    // derive CKs
-    crypto_generichash(ctx->cks, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "CKs", 3);
-    // derive CKr
-    crypto_generichash(ctx->ckr, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "CKr", 3);
-    ctx->bobs1stmsg = 0;
-  } else {
-    // derive HKs
-    crypto_generichash(ctx->hks, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "HKr", 3);
-    // derive HKr
-    crypto_generichash(ctx->hkr, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "HKs", 3);
-
-    // derive NHKs
-    crypto_generichash(ctx->nhks, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "NHKr", 4);
-    // derive NHKr
-    crypto_generichash(ctx->nhkr, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "NHKs", 4);
-    // derive CKs
-    crypto_generichash(ctx->cks, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "CKr", 3);
-    // derive CKr
-    crypto_generichash(ctx->ckr, crypto_scalarmult_curve25519_BYTES,
-                       mk, sizeof(mk),
-                       (uint8_t*) "CKs", 3);
-    ctx->bobs1stmsg = 1;
-  }
-  ctx->ns = 0;
-  ctx->nr = 0;
-  ctx->pns = 0;
-  memset(mk, 0, sizeof(mk));
-
-  return 0;
+  return derivectx(ctx,mk,(const Axolotl_PreKey*) resp);
 }
 
+/**
+   @brief attempts to decrypt message with keys we had to skip due to out-of-order pkts
+
+   the (hopefully) same in python:
+```
+def try_skipped_keys(self, hcrypt, hnonce, mcrypt, mnonce):
+    for mk, hkr in self.skipped_HK_MK.items():
+        try: nacl.crypto_secretbox_open(hcrypt, hnonce, hkr)
+        except: continue
+        try: msg = nacl.crypto_secretbox_open(mcrypt, mnonce, mk)
+        except: continue
+        del self.skipped_HK_MK[mk]
+        return msg
+```
+*/
 static int try_skipped(Axolotl_ctx *ctx, uint8_t *out, uint32_t *outlen,
                 const uint8_t *hcrypt, const uint8_t *hnonce,
                 const uint8_t *mcrypt, const uint32_t mcrypt_len, const uint8_t *mnonce) {
-  /*
-    def try_skipped_keys(self, hcrypt, hnonce, mcrypt, mnonce):
-        for mk, hkr in self.skipped_HK_MK.items():
-            try: nacl.crypto_secretbox_open(hcrypt, hnonce, hkr)
-            except: continue
-            try: msg = nacl.crypto_secretbox_open(mcrypt, mnonce, mk)
-            except: continue
-            del self.skipped_HK_MK[mk]
-            return msg
-   */
   uint8_t paddedout[mcrypt_len];
   int i;
   for(i=0;i<BagSize;i++) {
@@ -471,19 +392,20 @@ static int try_skipped(Axolotl_ctx *ctx, uint8_t *out, uint32_t *outlen,
   return 0;
 }
 
+/** @brief Generates keys for skipped message
+
+  stage_skipped_header_and_message_keys() : Given a current header
+  key, a current message number, a future message number, and a
+  chain key, calculates and stores all skipped-over message keys (if
+  any) in a staging area where they can later be committed, along
+  with their associated header key.
+
+  Returns the chain key and message key corresponding to the future
+  message number.
+*/
 static void stage_skipped_keys(uint8_t* ckp, uint8_t* mk,  // output
                                const long long nr, const long long np, uint8_t *ck, // input
                                BagEntry stagedkeys[BagSize]) {
-  /*
-    stage_skipped_header_and_message_keys() : Given a current header
-    key, a current message number, a future message number, and a
-    chain key, calculates and stores all skipped-over message keys (if
-    any) in a staging area where they can later be committed, along
-    with their associated header key.
-
-    Returns the chain key and message key corresponding to the future
-    message number.
-  */
   long long i;
   uint8_t _ckp[crypto_secretbox_KEYBYTES];
   memcpy(_ckp, ck, crypto_secretbox_KEYBYTES);
@@ -520,17 +442,9 @@ static void stage_skipped_keys(uint8_t* ckp, uint8_t* mk,  // output
 }
 
 
-// out needs to be unpadded manually by skipping 32 bytes
-// out_len is without padding
-int ax_recv(Axolotl_ctx *ctx, uint8_t *paddedout, uint32_t *out_len,
-            const uint8_t *hnonce, const uint8_t *mnonce,
-            const uint8_t *hcrypt, uint8_t *paddedmcrypt,
-            const int mcryptlen, uint8_t *mk) {
-  /*
-  updates: if skipped key, only skipped_MK
-  if bobs first message: rk, dhrr, hks, nhks, dhrs, cks, bobs1stmsg(can be write once, from 1 to 0)
-  if next msgkey:        rk, dhrr, hks, nhks, dhrs, hkr, nhkr,
-  skipped_HK? nr, ckr
+
+
+/**
   as per https://github.com/trevp/axolotl/wiki/newversion (Nov 19, 2013 · 41 revisions)
 
   Receiving messages
@@ -582,7 +496,18 @@ int ax_recv(Axolotl_ctx *ctx, uint8_t *paddedout, uint32_t *out_len,
   Nr = Np + 1
   CKr = CKp
   return read()
-  */
+
+  updates: if skipped key, only skipped_MK
+  if bobs first message: rk, dhrr, hks, nhks, dhrs, cks, bobs1stmsg(can be write once, from 1 to 0)
+  if next msgkey:        rk, dhrr, hks, nhks, dhrs, hkr, nhkr,
+  skipped_HK? nr, ckr
+*/
+int ax_recv(Axolotl_ctx *ctx,
+            uint8_t *paddedout, /*!< needs to be unpadded manually by skipping 32 bytes */
+            uint32_t *out_len, /*!< excluding padding */
+            const uint8_t *hnonce, const uint8_t *mnonce,
+            const uint8_t *hcrypt, uint8_t *paddedmcrypt,
+            const int mcryptlen, uint8_t *mk) {
 
   uint8_t paddedhcrypt[PADDEDHCRYPTLEN];
   uint8_t headers[PADDEDHCRYPTLEN];
@@ -820,19 +745,3 @@ static void bag_del(BagEntry *bag) {
   bag->id=0;
   memset(bag->mk,0,crypto_scalarmult_curve25519_BYTES);
 }
-
-#if AXOLOTL_DEBUG
-static void bag_dump(BagEntry bag[]) {
-  int i;
-  for(i=0;i<BagSize;i++) {
-    if(bag[i].id==0) {
-      printf("%2d deleted\n", i);
-    } else if(bag[i].id==0xff) {
-      printf("%2d empty\n", i);
-    } else {
-      printf("%2d %3d", i, bag[i].id);
-      print_key("\tmk", bag[i].mk);
-    }
-  }
-}
-#endif
