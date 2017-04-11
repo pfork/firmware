@@ -8,8 +8,7 @@
 
 #include "pf_store.h"
 
-#include "sphincs/crypto_sign.h"
-#include "sphincs/api.h"
+#include "pqcrypto_sign.h"
 
 /**
   * @brief  get_user: returns userrec
@@ -39,7 +38,7 @@ static int default_sphincs_key() {
     _sk[crypto_secretbox_ZEROBYTES+PQCRYPTO_SECRETKEYBYTES],
     *sk=_sk+crypto_secretbox_ZEROBYTES,
     keyid[STORAGE_ID_LEN];
-  //randombytes_buf((void *) sk, PQCRYPTO_SECRETKEYBYTES);
+  randombytes_buf((void *) sk, PQCRYPTO_SECRETKEYBYTES);
   pqcrypto_sign_public_key(pk, sk);
   crypto_generichash(keyid, sizeof(keyid), pk, sizeof(pk), NULL, 0);
 
