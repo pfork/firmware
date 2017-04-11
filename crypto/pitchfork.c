@@ -37,8 +37,7 @@
 #include "randombytes_pitchfork.h"
 #include "crypto_scalarmult_curve25519.h"
 
-#include "sphincs/crypto_sign.h"
-#include "sphincs/api.h"
+#include "pqcrypto_sign.h"
 
 #define outstart32 (outbuf+crypto_secretbox_ZEROBYTES)
 
@@ -580,7 +579,7 @@ static void pqsign_msg(void) {
   // save bufs
   uint8_t* olds1 = bufs[0].start, *olds2=bufs[1].start;
   // sign with sphincs, send back sig
-  pqcrypto_sign(sk, h, 32, (uint8_t*) bufs);
+  pqcrypto_sign((uint8_t*) bufs, h, sk);
   memset(sk,0,PQCRYPTO_SECRETKEYBYTES);
 
   pf_send((uint8_t*) bufs, PQCRYPTO_BYTES, PITCHFORK_CMD_PQSIGN);

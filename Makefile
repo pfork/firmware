@@ -14,7 +14,7 @@ LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3/lib/libopenc
 CFLAGS += -mno-unaligned-access -DNDEBUG -g -Wall -Werror -Os \
 	-mfix-cortex-m3-ldrd -msoft-float -mthumb -Wno-strict-aliasing \
 	-fomit-frame-pointer -mthumb -mcpu=cortex-m3 $(INCLUDES) -DSTM32F2 -DHAVE_MSC \
-	-fstack-protector --param=ssp-buffer-size=4 -DRAMLOAD
+	-fstack-protector --param=ssp-buffer-size=4 -DRAMLOAD -DCHACHA_ASM
 
 LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-sections -Wl,-z,relro
 
@@ -41,7 +41,7 @@ usb_objs = usb/msc/usb_bsp.o usb/msc/usb_dcd.o usb/msc/usbd_core.o usb/msc/usbd_
 	usb/msc/usbd_msc_data.o usb/msc/usbd_req.o usb/msc/usbd_usr.o
 
 sphincs_objs = lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
-	lib/sphincs/qsort.o lib/sphincs/wots.o lib/sphincs/prg.o lib/sphincs/hash.o \
+	lib/sphincs/wots.o lib/sphincs/prg.o lib/sphincs/hash.o \
 	lib/sphincs/horst.o lib/sphincs/sign.o
 
 util_objs = utils/memmove.o utils/strlen.o utils/memcpy.o utils/memset.o utils/memcmp.o \

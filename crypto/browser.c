@@ -14,8 +14,7 @@
 
 #include <crypto_generichash.h>
 #include "xeddsa_keygen.h"
-#include "sphincs/crypto_sign.h"
-#include "sphincs/api.h"
+#include "pqcrypto_sign.h"
 
 // todo peer pub verify/show
 // set new password on peer
