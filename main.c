@@ -193,7 +193,7 @@ void softreset() {
 static void about(void) {
   oled_clear();
   oled_print(0,16, (char*) "Pitchfork v"VERSION , Font_8x8);
-  oled_print(0,32, (char*) "2013-2016" , Font_8x8);
+  oled_print(0,32, (char*) "2013-2017" , Font_8x8);
   oled_print(0,40, (char*) "the pitchfork" , Font_8x8);
   oled_print(0,48, (char*) "     team" , Font_8x8);
 }
