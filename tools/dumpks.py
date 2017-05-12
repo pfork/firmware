@@ -14,7 +14,7 @@ if __name__ == "__main__":
             if len(b)!=256:
                 print >>sys.stderr, "short read, %d" % len(b)
                 print >>sys.stderr
-                rsp.port.close(rsp)
+                rsp.port.close()
                 sys.exit(1)
             if ord(b[0]) == 255:
                 addr += 0x020000
@@ -30,7 +30,7 @@ if __name__ == "__main__":
                 print >>sys.stderr
                 break
             sys.stdout.flush()
-        rsp.port.close(rsp)
+        rsp.port.close()
 
     # this is for cleaning up in case a keyboard interrupt came
     except KeyboardInterrupt:
@@ -48,5 +48,5 @@ if __name__ == "__main__":
             res = rsp.port.read()
         if len(discards)>0 and rsp.verbose: print 'send discards', discards
 
-        rsp.port.close(rsp)
+        rsp.port.close()
         sys.exit(1)
