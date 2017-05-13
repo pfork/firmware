@@ -375,7 +375,7 @@ int stfs_opendir(uint8_t *path, ReaddirCTX *ctx) {
     // fail path not found
     return -1;
   }
-  if(blocks[b][c].inode.type!=Directory) {
+  if(blocks[b][c].inode.type!=Directory && oid!=1) {
     errno = E_NOTDIR;
     return -1;
   }
