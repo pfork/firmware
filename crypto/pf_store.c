@@ -205,7 +205,7 @@ int write_enc(uint8_t *path, const uint8_t *key, const int keylen) {
 // if(0!=store_key(key, sizeof(key), "/peer/", prekey->ephemeralkey, peer, peer_len)) {
 int store_key(const uint8_t* key, const int keylen, const char *type, const uint8_t *keyid, uint8_t* peer, const uint8_t peer_len) {
   // try to save peer
-  if(0!=save_peer(peer, peer_len)) {
+  if(peer && 0!=save_peer(peer, peer_len)) {
     return -1;
   }
 
