@@ -926,9 +926,9 @@ static void handle_cmd(void) {
     randombytes_buf(nonce, crypto_secretbox_NONCEBYTES);
     // send nonce back
     usb_write(nonce, sizeof(nonce), 32, USB_CRYPTO_EP_DATA_OUT);
+    modus = PITCHFORK_CMD_ENCRYPT;
 
     oled_print_inv(40,56, "    encrypt", Font_8x8);
-    modus = PITCHFORK_CMD_ENCRYPT;
     break;
   }
 
@@ -1086,8 +1086,8 @@ static void handle_cmd(void) {
     if(query_user("sign")==0) {
       return;
     }
-    oled_print_inv(40,56, "       sign", Font_8x8);
     modus = PITCHFORK_CMD_SIGN;
+    oled_print_inv(40,56, "       sign", Font_8x8);
     break;
   }
 
