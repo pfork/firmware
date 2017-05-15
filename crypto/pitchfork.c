@@ -1064,7 +1064,7 @@ static void handle_cmd(void) {
     if(query_user("ax decrypt")==0) {
       return;
     }
-    int fixsize=PADDEDHCRYPTLEN-16+crypto_secretbox_NONCEBYTES*2+1;
+    const int fixsize=PADDEDHCRYPTLEN-16+crypto_secretbox_NONCEBYTES*2+1;
     if(cmd_buf.size>fixsize+PEER_NAME_MAX || cmd_buf.size<fixsize+1) {
       usb_write((unsigned char*) "err: bad params", 16, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
