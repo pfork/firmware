@@ -361,7 +361,7 @@ static void get_ekid(unsigned char* keyid,
               unsigned char* ekid) {
   randombytes_buf((void *) nonce, (size_t) EKID_NONCE_LEN);
   crypto_generichash(ekid, EKID_LEN,           // output
-                     nonce, EKID_NONCE_LEN,    // output
+                     nonce, EKID_NONCE_LEN,    // input
                      keyid, STORAGE_ID_LEN);   // salt
 }
 
