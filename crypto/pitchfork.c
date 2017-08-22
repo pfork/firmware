@@ -48,7 +48,7 @@
 typedef struct {
   Buffer_State state;                                        /* buffer state (i/o/c) */
   int size;                                                  /* size of buffer */
-  unsigned char buf[128+64];                                 /* Buffer */
+  unsigned char buf[196+64];                                 /* Buffer */
 } CMD_Buffer;
 
 /*        ----===== imported globals =====----        */
@@ -254,7 +254,7 @@ static void decrypt_block(Buffer* buf) {
   int size = buf->size - crypto_secretbox_MACBYTES;
   // zero out crypto_secretbox_BOXZEROBYTES preamble
   // overwriting the end of the nonce
-  memset(buf->start - crypto_secretbox_BOXZEROBYTES,0,crypto_secretbox_BOXZEROBYTES);
+  sodium_memzero(buf->start - crypto_secretbox_BOXZEROBYTES,crypto_secretbox_BOXZEROBYTES);
   // decrypt (key is stored in beginning of params)
   if(-1 == crypto_secretbox_open(outbuf,                                       // m
                                  (buf->start) - crypto_secretbox_BOXZEROBYTES, // c + preamble
@@ -301,7 +301,7 @@ void kex_start() {
   Axolotl_PreKey my_pk;
   Axolotl_prekey_private my_sk;
   axolotl_prekey(&my_pk, &my_sk, &kp);
-  memset((uint8_t*) &kp, 0, sizeof(kp)); // clear keymaterial
+  sodium_memzero((uint8_t*) &kp, sizeof(kp)); // clear keymaterial
   // store my_sk in /prekeys/
   if(0!=store_key((uint8_t*) &my_sk, sizeof(my_sk), "/prekeys/", my_pk.ephemeralkey, NULL, 0)) {
     usb_write((unsigned char*) "err: store pk", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
@@ -364,7 +364,7 @@ int kex_end(Buffer *buf) {
   stohex(prekey+9, o_pk->prekeyid, 16);
   Axolotl_prekey_private my_sk;
   if(cread(prekey, (uint8_t*) &my_sk, sizeof(my_sk))!= sizeof(my_sk)) {
-    memset((uint8_t*) &my_sk,0,sizeof(my_sk));
+    sodium_memzero((uint8_t*) &my_sk,sizeof(my_sk));
     return -1;
   }
 
@@ -405,9 +405,17 @@ int ax_send_init(uint8_t *peer, uint32_t peerlen) {
   if(topeerid(peerid, peer, peerlen)!=0) return -1;
   stohex(cpath+4, peerid, STORAGE_ID_LEN);
   if(0!=load_key(cpath, 36, (uint8_t*) &ctx, sizeof(ctx))) {
-    memset((uint8_t*) &ctx,0,sizeof(ctx));
+    sodium_memzero((uint8_t*) &ctx,sizeof(ctx));
     return -1;
   }
+
+  uint8_t keyid[STORAGE_ID_LEN];
+  unsigned char ekid[EKID_LEN+EKID_NONCE_LEN];
+  unhex(keyid, cpath+37, 32);
+  // calculate ephemeral keyid
+  get_ekid(keyid, ekid+EKID_LEN, ekid);
+  // and send it back immediately over the ctrl ep
+  usb_write(ekid, sizeof(ekid), 32, USB_CRYPTO_EP_CTRL_OUT);
 
   uint8_t *hnonce=outbuf;
   int i,j;
@@ -428,7 +436,7 @@ int ax_send_init(uint8_t *peer, uint32_t peerlen) {
 
   // calculate Enc(HKs, Ns || PNs || DHRs)
   uint8_t header[PADDEDHCRYPTLEN]; // includes nacl padding
-  memset(header,0,sizeof(header));
+  sodium_memzero(header,sizeof(header));
   // concat ns || pns || dhrs
   memcpy(header+32,&ctx.ns, sizeof(long long));
   memcpy(header+32+sizeof(long long),&ctx.pns, sizeof(long long));
@@ -450,8 +458,8 @@ int ax_send_init(uint8_t *peer, uint32_t peerlen) {
 
   // save ax session ctx
   if(0!=write_enc(cpath, (uint8_t*) &ctx, sizeof(ctx))) {
-    memset(params,0,crypto_secretbox_KEYBYTES);
-    memset((uint8_t*) &ctx,0,sizeof(ctx));
+    sodium_memzero(params,crypto_secretbox_KEYBYTES);
+    sodium_memzero((uint8_t*) &ctx,sizeof(ctx));
     return -1;
   }
 
@@ -460,40 +468,41 @@ int ax_send_init(uint8_t *peer, uint32_t peerlen) {
 
 static void ax_recv_init(Buffer *buf) {
   uint32_t out_len;
-
   Axolotl_ctx ctx;
-  uint8_t cpath[]="/ax/                                /                                ";
-  uint8_t peerid[STORAGE_ID_LEN];
-  if(topeerid(peerid, params+1, params[0])!=0) {
+
+  // keyid 2 key
+  const char dir[]="/ax";
+  const int dirlen=strlen(dir);
+  uint8_t path[dirlen+2*33+1];
+  memcpy(path,dir,dirlen);
+  if(ekid2key((uint8_t*) cmd_buf.buf+1, path, dirlen, (uint8_t*) &ctx, sizeof(Axolotl_ctx))!=0) {
+    usb_write((uint8_t*) "err: no key", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
+    cmd_clear();
     return;
   }
-  stohex(cpath+4, peerid, STORAGE_ID_LEN);
-  // todo try with all existing ctx for peer
-  if(0!=load_key(cpath, 36, (uint8_t*) &ctx, sizeof(ctx))) {
-    memset((uint8_t*) &ctx,0,sizeof(ctx));
-    usb_write((unsigned char*) "err: no ctx", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
+
+  memcpy(nonce, cmd_buf.buf+1+EKID_SIZE+PADDEDHCRYPTLEN-16+crypto_secretbox_NONCEBYTES, crypto_secretbox_NONCEBYTES);
+
+  if(0!=ax_recv(&ctx, outbuf, &out_len, cmd_buf.buf+1+EKID_SIZE, nonce,
+                cmd_buf.buf+1+EKID_SIZE+crypto_secretbox_NONCEBYTES,
+                buf->start-16, buf->size+16, params)) {
+    usb_write((uint8_t*) "err: corrupt", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
     pf_reset();
     return;
   }
 
-  if(0!=ax_recv(&ctx, outbuf, &out_len, cmd_buf.buf+1, nonce,
-                cmd_buf.buf+1+crypto_secretbox_NONCEBYTES,
-                buf->start-16, buf->size+16, params)) {
-    usb_write((unsigned char*) "err: corrupt", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
-    pf_reset();
-    return;
-  }
   // save ax session ctx
-  if(0!=write_enc(cpath, (uint8_t*) &ctx, sizeof(ctx))) {
-    memset(params,0,crypto_secretbox_KEYBYTES);
-    memset((uint8_t*) &ctx,0,sizeof(ctx));
+  if(0!=write_enc(path, (uint8_t*) &ctx, sizeof(ctx))) {
+    sodium_memzero(params,crypto_secretbox_KEYBYTES);
+    sodium_memzero((uint8_t*) &ctx,sizeof(ctx));
     return;
   }
-  memset((uint8_t*) &ctx,0,sizeof(ctx));
+
+  sodium_memzero((uint8_t*) &ctx,sizeof(ctx));
   // send usb packet sized result
   usb_write((unsigned char*) "tx", 2, 32,USB_CRYPTO_EP_CTRL_OUT);
   pf_send(outstart32, out_len, PITCHFORK_CMD_AX_RECEIVE);
-  memset(outstart32,0,out_len);
+  sodium_memzero(outstart32,out_len);
 
   if(out_len==32768) {
     modus=PITCHFORK_CMD_DECRYPT;
@@ -527,10 +536,10 @@ static void sign_msg(void) {
     pf_reset();
     return;
   }
-  memset((uint8_t*) &kp,0,sizeof(kp));
+  sodium_memzero((uint8_t*) &kp,sizeof(kp));
 
   pf_send(sig, sizeof(sig), PITCHFORK_CMD_SIGN);
-  memset(sig,0,sizeof(sig));
+  sodium_memzero(sig,sizeof(sig));
 }
 
 /**
@@ -580,7 +589,7 @@ static void pqsign_msg(void) {
   uint8_t* olds1 = bufs[0].start, *olds2=bufs[1].start;
   // sign with sphincs, send back sig
   pqcrypto_sign((uint8_t*) bufs, h, sk);
-  memset(sk,0,PQCRYPTO_SECRETKEYBYTES);
+  sodium_memzero(sk,PQCRYPTO_SECRETKEYBYTES);
 
   pf_send((uint8_t*) bufs, PQCRYPTO_BYTES, PITCHFORK_CMD_PQSIGN);
 
@@ -635,7 +644,7 @@ static int _listkeys(uint8_t *path, int pathlen, int keysize, uint8_t *outptr) {
       erase_master_key();
       get_master_key("bad key");
     }
-    memset(sk,0,keysize); //clear key
+    sodium_memzero(sk,keysize); //clear key
     if(len<1) {
       // corrupt
       *outptr++=3;
@@ -795,10 +804,10 @@ void handle_ctl(usbd_device *usbd_dev, const uint8_t ep) {
     int len = usbd_ep_read_packet(usbd_dev, USB_CRYPTO_EP_CTRL_IN, tmp, 64);
     if(len==1 && tmp[0] == PITCHFORK_CMD_STOP) {
       cmd_buf.buf[0] = PITCHFORK_CMD_STOP;
-      memset(tmp,0,sizeof(tmp));
+      sodium_memzero(tmp,sizeof(tmp));
     } else {
       // ignore packet
-      memset(tmp,0,sizeof(tmp));
+      sodium_memzero(tmp,sizeof(tmp));
       usb_write((uint8_t*) "err: mode", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
     }
 
@@ -834,7 +843,7 @@ void handle_data(usbd_device *usbd_dev, const uint8_t ep) {
     unsigned char tmpbuf[64];
     usb_read(tmpbuf); // sink it
     // overwrite this so attacker cannot get reliably data written to stack
-    memset(tmpbuf,0,sizeof(tmpbuf));
+    sodium_memzero(tmpbuf,sizeof(tmpbuf));
     usb_write((unsigned char*) "err: no op", 11, 32,USB_CRYPTO_EP_CTRL_OUT);
     return;
   }
@@ -941,8 +950,12 @@ static void handle_cmd(void) {
       cmd_clear();
       return;
     }
-    // keyid 2 seed
-    if(ekid2key(params, (unsigned char*) cmd_buf.buf+1)!=0) {
+    // keyid 2 key
+    const char dir[]="/keys";
+    const int dirlen=strlen(dir);
+    uint8_t path[dirlen+2*33+1];
+    memcpy(path,dir,dirlen);
+    if(ekid2key((unsigned char*) cmd_buf.buf+1, path, dirlen, params, crypto_secretbox_KEYBYTES)!=0) {
       usb_write((unsigned char*) "err: no key", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
@@ -1060,19 +1073,16 @@ static void handle_cmd(void) {
     break;
   }
 
-  case PITCHFORK_CMD_AX_RECEIVE: { // expects hnonce, headers, mnonce, peer
+  case PITCHFORK_CMD_AX_RECEIVE: { // expects ekid, hnonce, headers, mnonce
     if(query_user("ax decrypt")==0) {
       return;
     }
-    const int fixsize=PADDEDHCRYPTLEN-16+crypto_secretbox_NONCEBYTES*2+1;
-    if(cmd_buf.size>fixsize+PEER_NAME_MAX || cmd_buf.size<fixsize+1) {
+    const int fixsize=EKID_SIZE+PADDEDHCRYPTLEN-16+crypto_secretbox_NONCEBYTES*2+1;
+    if(cmd_buf.size!=fixsize) {
       usb_write((unsigned char*) "err: bad params", 16, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
-    memcpy(nonce, cmd_buf.buf+1+PADDEDHCRYPTLEN-16+crypto_secretbox_NONCEBYTES, crypto_secretbox_NONCEBYTES);
-    params[0]=cmd_buf.size-fixsize;
-    memcpy(params+1, cmd_buf.buf+fixsize, cmd_buf.size-fixsize);
 
     oled_print_inv(40,56, " ax decrypt", Font_8x8);
     modus = PITCHFORK_CMD_AX_RECEIVE;
@@ -1165,7 +1175,7 @@ static void handle_cmd(void) {
         cmd_clear();
         return;
       }
-      memset(kp.sk,0,32);
+      sodium_memzero(kp.sk,32);
       usb_write(kp.pk, 32, 32,USB_CRYPTO_EP_DATA_OUT);
     } else if(cmd_buf.buf[1]==1) {
       uint8_t sk[PQCRYPTO_SECRETKEYBYTES];
@@ -1177,7 +1187,7 @@ static void handle_cmd(void) {
       }
       uint8_t pk[PQCRYPTO_PUBLICKEYBYTES];
       pqcrypto_sign_public_key(pk, sk);
-      memset(sk,0,sizeof(sk));
+      sodium_memzero(sk,sizeof(sk));
       modus = PITCHFORK_CMD_DUMP_PUB;
       pf_send(pk,sizeof(pk),PITCHFORK_CMD_DUMP_PUB);
     } else {
