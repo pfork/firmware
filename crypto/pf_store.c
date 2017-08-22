@@ -448,7 +448,7 @@ int ekid2key(uint8_t *ekid, uint8_t* path, const int dirlen, uint8_t* key, const
         // fail invalid hex digit in filename, ignore and skip
         continue;
       }
-      unsigned char _ekid[EKID_LEN+EKID_NONCE_LEN];
+      unsigned char _ekid[EKID_LEN];
       crypto_generichash(_ekid, EKID_LEN,                // output
                          ekid+EKID_LEN, EKID_NONCE_LEN, // nonce
                          keyid, STORAGE_ID_LEN);         // key
