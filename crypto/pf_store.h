@@ -22,7 +22,7 @@ int save_seed(unsigned char *seed, unsigned char* peer, unsigned char len);
 int load_key(uint8_t *path, int sep, uint8_t *buf, int buflen);
 int peerbykeyid(uint8_t *keyid, uint8_t *path, uint8_t *peer);
 unsigned char peer2seed(unsigned char* key, unsigned char* peer, const unsigned char len);
-int ekid2key(uint8_t* key, uint8_t *ekid );
+int ekid2key(uint8_t *ekid, uint8_t* path, const int dirlen,  uint8_t* key, const int keysize);
 int topeerid(uint8_t *peerid, const uint8_t *peer, const int len);
 int load_ltkeypair(Axolotl_KeyPair *kp);
 int get_owner(uint8_t *name);
@@ -32,6 +32,7 @@ void calc_verifier(uint8_t *out, int outlen, uint8_t *k1, uint8_t *k2);
 int write_enc(uint8_t *path, const uint8_t *key, const int keylen);
 int pf_store_init(void);
 int peer2pub(uint8_t *pub, uint8_t *peer, int peerlen);
+void get_ekid(unsigned char* keyid, unsigned char* nonce, unsigned char* ekid);
 
 int unhex(uint8_t *out, const uint8_t *hex, const int hexlen);
 void stohex(uint8_t* d, const uint8_t *s, const uint32_t len);

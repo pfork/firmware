@@ -356,7 +356,7 @@ int load_key(uint8_t *path, int sep, uint8_t *buf, int buflen) {
   * @param  ekid: pointer to buffer receiving ekid
   * @retval None
   */
-static void get_ekid(unsigned char* keyid,
+void get_ekid(unsigned char* keyid,
               unsigned char* nonce,
               unsigned char* ekid) {
   randombytes_buf((void *) nonce, (size_t) EKID_NONCE_LEN);
@@ -416,30 +416,29 @@ int peer2pub(uint8_t *pub, uint8_t *peer, int peerlen) {
   return 1;
 }
 
-int ekid2key(uint8_t* key, uint8_t *ekid ) {
+int ekid2key(uint8_t *ekid, uint8_t* path, const int dirlen, uint8_t* key, const int keysize) {
   //crypto_generichash(ekid, EKID_LEN,                                     // output
   //                   keyid+EKID_LEN, EKID_NONCE_LEN,                     // nonce
   //                   (unsigned char*) seedrec->keyid, STORAGE_ID_LEN);   // key
   //if(sodium_memcmp(ekid,keyid,EKID_LEN) == 0)
   //  return seedrec;
-  uint8_t path[]="/keys/                                /                                ";
 
+  path[dirlen]=0;
   ReaddirCTX pctx, kctx;
-  path[5]=0;
   if(stfs_opendir(path, &pctx)!=0) {
     // fail
     return -1;
   }
-  path[5]='/';
+  path[dirlen]='/';
   const Inode_t *inode;
   while((inode=stfs_readdir(&pctx))!=0) {
     if(inode->name_len>32 || inode->name_len<1) {
       continue; // todo flag error?
     }
-    memcpy(path+6,inode->name, inode->name_len);
-    path[5+33]=0;
+    memcpy(path+dirlen+1,inode->name, inode->name_len);
+    path[dirlen+33]=0;
     stfs_opendir(path, &kctx);
-    path[5+33]='/';
+    path[dirlen+33]='/';
     while((inode=stfs_readdir(&kctx))!=0) {
       if(inode->name_len>32 || inode->name_len<1) {
         continue; // todo flag error?
@@ -455,8 +454,9 @@ int ekid2key(uint8_t* key, uint8_t *ekid ) {
                          keyid, STORAGE_ID_LEN);         // key
       if(sodium_memcmp(_ekid,ekid,EKID_LEN) == 0) {
         // found key
-        memcpy(path+5+33+1, inode->name, inode->name_len);
-        if(cread(path, key, crypto_secretbox_KEYBYTES)==crypto_secretbox_KEYBYTES) {
+        memcpy(path+dirlen+33+1, inode->name, inode->name_len);
+        path[dirlen+2*33]=0;
+        if(cread(path, key, keysize)==keysize) {
           return 0;
         }
       }
