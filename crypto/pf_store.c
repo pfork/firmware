@@ -400,22 +400,6 @@ unsigned char peer2seed(unsigned char* key, unsigned char* peer, const unsigned 
   return 1;
 }
 
-int peer2pub(uint8_t *pub, uint8_t *peer, int peerlen) {
-  if( peerlen < 1 || peerlen > PEER_NAME_MAX) {
-    usb_write((unsigned char*) "err: bad name", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
-    return 0;
-  }
-  uint8_t peerid[STORAGE_ID_LEN];
-  topeerid((unsigned char*) peerid, peer, peerlen);
-
-  uint8_t keypath[]="/pub/                                ";
-  stohex(keypath+5,peerid, sizeof(peerid));
-  if(cread(keypath, pub, crypto_secretbox_KEYBYTES)==-1) {
-    return 0;
-  }
-  return 1;
-}
-
 int ekid2key(uint8_t *ekid, uint8_t* path, const int dirlen, uint8_t* key, const int keysize) {
   //crypto_generichash(ekid, EKID_LEN,                                     // output
   //                   keyid+EKID_LEN, EKID_NONCE_LEN,                     // nonce
