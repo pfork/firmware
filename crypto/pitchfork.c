@@ -563,7 +563,7 @@ static void verify_msg(void) {
   path[dirlen]=0;
   const int keysize=32;
   uint8_t key[keysize];
-  uint8_t owner[33], olen=sizeof(owner)-1;
+  uint8_t owner[34], olen=sizeof(owner)-2;
 
   ReaddirCTX ctx;
   if(stfs_opendir(path, &ctx)==0) {
@@ -584,6 +584,9 @@ static void verify_msg(void) {
           if((olen=cread(peerpath, owner+1, olen))>0 && olen<=32) {
             owner[0]='1';
             usb_write((unsigned char*) owner, olen+1, 32,USB_CRYPTO_EP_DATA_OUT);
+            owner[olen+1]=0;
+            oled_print(0,41,"     from", Font_8x8);
+            oled_print(0,50,(char*) owner+1, Font_8x8);
           } // todo fail: could not map key back to peer name
           return;
         } // cread failed - ask for master key again?
@@ -600,6 +603,9 @@ static void verify_msg(void) {
       olen = get_owner(owner+1);
       owner[0]='1';
       usb_write((unsigned char*) owner, olen+1, 32,USB_CRYPTO_EP_DATA_OUT);
+      owner[olen+1]=0;
+      oled_print(0,41,"     from", Font_8x8);
+      oled_print(0,50,(char*) owner+1, Font_8x8);
       return;
     }
   }
