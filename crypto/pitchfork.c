@@ -550,17 +550,62 @@ static void sign_msg(void) {
 static void verify_msg(void) {
   uint8_t h[32];
 
+  gui_refresh=0;
   crypto_generichash_final(&hash_state, h, 32);
-  // verify with xeddsa, send bool
+
+  // verify with xeddsa, send bool + signers name
   oled_clear();
   oled_print(0,23,"     message", Font_8x8);
-  if(0!=xed25519_verify(params /* 64 bytes */, params+64 /* 32 bytes */, h, sizeof(h))) {
-    oled_print(0,32,"     invalid", Font_8x8);
-    usb_write((unsigned char*) "0", 1, 32,USB_CRYPTO_EP_DATA_OUT);
-  } else {
-    oled_print(0,32,"       ok", Font_8x8);
-    usb_write((unsigned char*) "1", 1, 32,USB_CRYPTO_EP_DATA_OUT);
+
+  // iterate through all pubkeys
+  const int dirlen=4;
+  uint8_t path[]="/pub/                                ";
+  path[dirlen]=0;
+  const int keysize=32;
+  uint8_t key[keysize];
+  uint8_t owner[33], olen=sizeof(owner)-1;
+
+  ReaddirCTX ctx;
+  if(stfs_opendir(path, &ctx)==0) {
+    path[dirlen]='/';
+    const Inode_t *inode;
+    while((inode=stfs_readdir(&ctx))!=0) {
+      if(inode->name_len>32 || inode->name_len<1) {
+        continue; // todo flag error?
+      }
+      memcpy(path+dirlen+1,inode->name, inode->name_len);
+      path[dirlen+33]=0;
+      if(cread(path, key, keysize)==keysize) {
+        if(0==xed25519_verify(params /* 64 bytes */, key, h, sizeof(h))) {
+          oled_print(0,32,"       ok", Font_8x8);
+          // todo recover peer name and send it back also
+          uint8_t peerpath[]="/peers/                                ";
+          memcpy(peerpath+7,inode->name,inode->name_len);
+          if((olen=cread(peerpath, owner+1, olen))>0 && olen<=32) {
+            owner[0]='1';
+            usb_write((unsigned char*) owner, olen+1, 32,USB_CRYPTO_EP_DATA_OUT);
+          } // todo fail: could not map key back to peer name
+          return;
+        } // cread failed - ask for master key again?
+      }
+    }
   }
+
+  // nothing found in /pub, try own longterm
+  Axolotl_KeyPair kp;
+  if(load_ltkeypair(&kp)==1) {
+    sodium_memzero(kp.sk,32); // we don't need the secret key
+    if(0==xed25519_verify(params /* 64 bytes */, kp.pk, h, sizeof(h))) {
+      oled_print(0,32,"       ok", Font_8x8);
+      olen = get_owner(owner+1);
+      owner[0]='1';
+      usb_write((unsigned char*) owner, olen+1, 32,USB_CRYPTO_EP_DATA_OUT);
+      return;
+    }
+  }
+
+  oled_print(0,32,"     invalid", Font_8x8);
+  usb_write((unsigned char*) "0", 1, 32,USB_CRYPTO_EP_DATA_OUT);
 }
 
 /**
@@ -707,7 +752,15 @@ static void listkeys(const PF_KeyType type, const unsigned char *peer) {
   unsigned char *outptr = outbuf, *tptr;
 
   if(haspeer==0) { // simplest case _listkeys for path
-      outptr+=_listkeys(path, pathlen, keysize, outptr);
+    uint8_t owner[33], olen=0;
+    olen = get_owner(owner);
+    if(olen<=32) {
+      *outptr++=0; // known user
+      *outptr++=olen;
+      memcpy(outptr,owner,olen); // username
+      outptr+=olen;
+    } else goto exit;
+    outptr+=_listkeys(path, pathlen, keysize, outptr);
   } else if(peer!=NULL) {
     // easy case, we have a peer, and a type,
     // lets compose the path and list all keyids for the peer
@@ -1033,10 +1086,12 @@ static void handle_cmd(void) {
       return;
     }
     if(0!=crypto_scalarmult_curve25519(params, kp.sk, cmd_buf.buf+1+crypto_secretbox_NONCEBYTES)) {
+      sodium_memzero(kp.sk,32);
       usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
+    sodium_memzero(kp.sk,32);
     modus = PITCHFORK_CMD_DECRYPT;
     if(query_user("anon decrypt")==0) {
       return;
@@ -1098,6 +1153,7 @@ static void handle_cmd(void) {
     }
     modus = PITCHFORK_CMD_SIGN;
     oled_print_inv(40,56, "       sign", Font_8x8);
+    usb_write((unsigned char*) "go", 2, 32,USB_CRYPTO_EP_CTRL_OUT);
     break;
   }
 
@@ -1112,26 +1168,21 @@ static void handle_cmd(void) {
     break;
   }
 
-  case PITCHFORK_CMD_VERIFY: { // expects signature || peer
+  case PITCHFORK_CMD_VERIFY: { // expects signature
     if(query_user("verify")==0) {
       return;
     }
-    if(cmd_buf.size>PEER_NAME_MAX+1+64 || cmd_buf.size<2+64) {
-      usb_write((unsigned char*) "err: bad name", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
+    if(cmd_buf.size!=1+64) {
+      usb_write((unsigned char*) "err: bad sig", 14, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
     }
     memcpy(params, cmd_buf.buf+1, 64); // copy sig
-    // get pubkey aftersig
-    if(1!=peer2pub(params+64,cmd_buf.buf+64+1, cmd_buf.size-65)) {
-      usb_write((unsigned char*) "err: no pub", 12, 32,USB_CRYPTO_EP_CTRL_OUT);
-      cmd_clear();
-      return;
-    }
     gui_refresh=0;
     crypto_generichash_init(&hash_state, NULL, 0, 32);
     modus = PITCHFORK_CMD_VERIFY;
     oled_print_inv(40,56, "     verify", Font_8x8);
+    usb_write((unsigned char*) "go", 2, 32,USB_CRYPTO_EP_CTRL_OUT);
     break;
   }
 
@@ -1139,9 +1190,10 @@ static void handle_cmd(void) {
     if(query_user("list keys")==0) {
       return;
     }
-    uint8_t peerid[PEER_NAME_MAX];
     if(cmd_buf.size>2 && cmd_buf.size<PEER_NAME_MAX+2) {
       PF_KeyType type=cmd_buf.buf[1];
+      uint8_t peerid[PEER_NAME_MAX];
+      memcpy(peerid,cmd_buf.buf+2, cmd_buf.size-2);
       listkeys(type, peerid); // list keys
     } else if(cmd_buf.size==2) {
       PF_KeyType type=cmd_buf.buf[1];
