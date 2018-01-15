@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stddef.h>
 #include "delay.h"
-#include "oled.h"
+#include "display.h"
 #include "widgets.h"
 #include "keys.h"
 #include "randombytes_pitchfork.h"
@@ -62,8 +62,8 @@ static void accept_secret(char ignored) {
     getstr("pls name key", peer, &peer_len);
 
   if(0!=save_ax(&ctx, peerpub, peer, peer_len)) {
-    oled_clear();
-    oled_print(0,16,"ctx store fail", Font_8x8);
+    disp_clear();
+    disp_print(0,16,"ctx store fail");
     show_verifier=0;
     return;
   }
@@ -146,13 +146,13 @@ static void pqx3dh(char menuidx) {
   }
   menuidx = i;
 
-  oled_clear();
+  disp_clear();
   statusline();
 
   // load lt private key and derive pubkey from it
   Axolotl_KeyPair kp;
   if(load_ltkeypair(&kp)==0) {
-    oled_print(0,16, (char*) "fail load ltkey" , Font_8x8);
+    disp_print(0,16, "fail load ltkey");
     return;
   }
 
@@ -166,7 +166,7 @@ static void pqx3dh(char menuidx) {
 
   // copy username to the end of prekey, so we can send it off
   if((sendbuf[sizeof(Axolotl_PreKey)]=get_owner(sendbuf+sizeof(Axolotl_PreKey)+1))<1) {
-    oled_print(0,16, (char*) "no owner" , Font_8x8);
+    disp_print(0,16, "no owner");
     return;
     }
 
@@ -302,15 +302,15 @@ static void discover() {
 
   // copy username to the end of sendbuf, so we can send it off with our prekey
   if((sendbuf[sizeof(Axolotl_Resp)]=get_owner(sendbuf+sizeof(Axolotl_Resp)+1))<1) {
-    oled_print(0,16, (char*) "no owner" , Font_8x8);
+    disp_print(0,16, "no owner");
     return;
     }
 
   // load lt private key and derive pubkey from it
   Axolotl_KeyPair kp;
   if(load_ltkeypair(&kp)==0) {
-    oled_clear();
-    oled_print(0,16, (char*) "fail load ltkey" , Font_8x8);
+    disp_clear();
+    disp_print(0,16, "fail load ltkey");
     return;
   }
 
@@ -319,7 +319,7 @@ static void discover() {
 
   if(axolotl_handshake(&ctx, my_pk, o_pk, &my_sk)!=0) {
     // fail, try again
-    //oled_print_inv(0,32,"failed",Font_8x8);
+    //disp_print_inv(0,32,"failed");
     return;
   }
 
@@ -363,7 +363,7 @@ int kex_menu_init(void) {
     memcpy(msgs[0].name, userec->name, namelen);
     msgs[0].name[namelen]=0;
   } else {
-    oled_print(0,16, (char*) "uninitialized :/" , Font_8x8);
+    disp_print(0,16, "uninitialized :/");
     return 0;
   }
   // set random address

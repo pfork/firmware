@@ -24,8 +24,14 @@ LIBS = -Wl,--just-symbols=main.syms \
 
 LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-sections -Wl,-z,relro
 
-objs = iap.o $(BP)/core/oled.o $(BP)/utils/itoa.o \
-	$(BP)/core/smallfonts.o $(BP)/core/delay.o $(BP)/utils/abort.o
+objs = iap.o $(BP)/utils/itoa.o $(BP)/utils/lzg/decode.o $(BP)/utils/lzg/checksum.o \
+	$(BP)/core/display.o $(BP)/core/delay.o $(BP)/utils/abort.o
+
+ifeq ($(origin DISPLAY), undefined)
+$(error "Please specify display type: DISPLAY=<NOKIA|OLED> make")
+else
+CFLAGS += -DDISPLAY_$(DISPLAY)
+endif
 
 all : fwupdater.bin fwupdater.elf fwupdater.lzg.o
 

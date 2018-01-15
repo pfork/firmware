@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <string.h>
-#include "oled.h"
+#include "display.h"
 #include "irq.h"
 #include "libopencm3/stm32/flash.h"
 
@@ -14,8 +14,8 @@ const unsigned char pk[]= {0xe2,0x97,0x55,0x21,0x53,0x9f,0xb2,0xa3, 0xfd,0x49,0x
                            0x4d,0x2f,0x18,0x47,0x8d,0x93,0x21,0x44, 0x9c,0xca,0x4d,0x75,0x27,0x18,0x12,0xd6 };
 
 void store_key(void) {
-  oled_clear();
-  oled_print(0,0,"burning key", Font_8x8);
+  disp_clear();
+  disp_print(0,0,"burning key");
   int block=0; // only write in the 1st block
   int i;
 
@@ -30,7 +30,7 @@ void store_key(void) {
   // lock the 1st block
   flash_program_byte(OTP_LOCK_ADDR + block, 0x00);
   flash_lock();
-  oled_print(0,9,"ok", Font_8x8);
-  oled_print(0,18,"pls reboot", Font_8x8);
+  disp_print(0,9,"ok");
+  disp_print(0,18,"pls reboot");
   while(1);
 }

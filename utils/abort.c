@@ -1,20 +1,20 @@
-#include "oled.h"
+#include "display.h"
 #include "itoa.h"
 #include <string.h>
 
 void bsod(char* file, int line) {
-   oled_clear();
-   oled_print(0,0,"something died",Font_8x8);
+   disp_clear();
+   disp_print(0,0,"something died");
 
    int len=strlen(file);
    if(len>16) file+=(len-16);
-   oled_print(0,9,file,Font_8x8);
+   disp_print(0,9,file);
 
    char tmp[16];
    itos(tmp,line);
-   oled_print(0,18,"line: ",Font_8x8);
-   oled_print(6*8, 18, tmp, Font_8x8);
+   disp_print(0,18,"line: ");
+   disp_print(6*8, 18, tmp);
 
-   oled_print_inv(18,45,"  HALT :/  ",Font_8x8);
+   disp_print_inv(18,DISPLAY_HEIGHT-8,"  HALT :/  ");
    while(1);
 }

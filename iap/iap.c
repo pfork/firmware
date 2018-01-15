@@ -13,7 +13,7 @@
 #include "stm32f.h"
 #include "usb.h"
 #include "delay.h"
-#include "oled.h"
+#include "display.h"
 
 // important note usbd_dev must be in a region from the firmware which is not overwritten by iap!!!
 // otherwise strange usb errors, when switching modes, and no usb device working at the end.
@@ -46,11 +46,11 @@ static char itos(char *d, uint32_t x) {
 
 static void invalid_sig(void) {
   // failed to verify master signature: aborting
-  oled_clear();
-  oled_print(0,9,"Invalid",Font_8x8);
-  oled_print(0,18,"master",Font_8x8);
-  oled_print(0,27,"signature",Font_8x8);
-  oled_print(0,36,"pls reset",Font_8x8);
+  disp_clear();
+  disp_print(0,9,"Invalid");
+  disp_print(0,18,"master");
+  disp_print(0,27,"signature");
+  disp_print(0,36,"pls reset");
   while(1);
 }
 
@@ -121,14 +121,14 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
     ptr=bufstart; // reset output ptr and hashstate
     crypto_generichash_init(&hashstate, NULL, 0, 64);
     state++;
-    oled_print(0,9,"verifying sig...", Font_8x8);
+    disp_print(0,9,"verifying sig...");
   }
   case 1: { // collect hashes and verify signature
     plen=usb_read(ptr);
     if(plen<64) { // should never happen
-      oled_clear();
-      oled_print(0,9,"short usb packet.",Font_8x8);
-      oled_print(0,18,"abort.",Font_8x8);
+      disp_clear();
+      disp_print(0,9,"short usb packet.");
+      disp_print(0,18,"abort.");
       while(1);
     }
     ptr+=plen;
@@ -136,11 +136,11 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
     if(total>=32*1024) {
       if(sector==7) {
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
-        oled_print(0,18,"hashing block 7",Font_8x8);
+        disp_print(0,18,"hashing block 7");
         crypto_generichash_update(&hashstate, bufstart, (total-crypto_sign_BYTES));
         crypto_generichash_final(&hashstate, sectorhashes[sector], 64);
 
-        oled_print(0,27,"verifying sig",Font_8x8);
+        disp_print(0,27,"verifying sig");
         if ((crypto_sign_verify_detached((void*) bufstart+total-crypto_sign_BYTES,
                                          sectorhashes[sector],
                                          64,
@@ -151,13 +151,13 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
                                          (uint8_t*) (OTP_START_ADDR + 1 * OTP_BYTES_IN_BLOCK)) != 0)) {
           invalid_sig();
         }
-        oled_print(0,27,"correct sig     ",Font_8x8);
-        oled_print(0,36,"erasing 256KB   ",Font_8x8);
+        disp_print(0,9,"correct sig     ");
+        disp_print(0,18,"erasing 256KB   ");
         // todo erase 256KB of flash for the new firmware
         for(i=0;i<6;i++) {
           clear_flash(i);
         }
-        oled_print(0,36,"erased 256KB    ",Font_8x8);
+        disp_print(0,18,"erased 256KB    ");
         state++;
         ptr=bufstart; // reset output ptr
         crypto_generichash_init(&hashstate, NULL, 0, 64); // reset hash state
@@ -165,10 +165,10 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
       } else {
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
-        oled_print(0,18,"hashing block",Font_8x8);
+        disp_print(0,18,"hashing block");
         char tmp[16];
         itos(tmp,sector);
-        oled_print(14*8, 18, tmp, Font_8x8);
+        disp_print(14*8, 18, tmp);
         crypto_generichash_update(&hashstate, bufstart, total);
         memcpy(&tmpstate,&hashstate,sizeof(hashstate));
         crypto_generichash_final(&tmpstate, sectorhashes[sector], 64);
@@ -183,9 +183,9 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
   case 2: { // 2nd run, now flash until hashes are the same
     plen=usb_read(ptr);
     if(plen<64) { // should never happen
-      oled_clear();
-      oled_print(0,45,"short usb packet.",Font_8x8);
-      oled_print(0,54,"abort.",Font_8x8);
+      disp_clear();
+      disp_print(0,DISPLAY_HEIGHT/2-9,"short usb packet.");
+      disp_print(0,DISPLAY_HEIGHT/2,"abort.");
       while(1);
     }
     ptr+=plen;
@@ -194,16 +194,15 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
       unsigned char hash[64];
       if(sector==7) {
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
-        oled_print(0,45,"hashing block 7",Font_8x8);
+        disp_print(0,27,"hashing block 7");
         crypto_generichash_update(&hashstate, bufstart, (total-crypto_sign_BYTES));
         crypto_generichash_final(&hashstate, hash, 64);
         if(memcmp(hash,sectorhashes[sector],sizeof(hash))!=0 ) {
           invalid_sig();
         }
-        oled_print(0,45,"writing block 7",Font_8x8);
-        // todo write block
+        disp_print(0,36,"writing block 7");
         write_block(0x08000000 + 32*1024*sector, bufstart, total);
-        oled_print(0,45,"writing done    ",Font_8x8);
+        disp_print(0,36,"writing done    ");
         state++;
         ptr=bufstart; // reset output ptr
         crypto_generichash_init(&hashstate, NULL, 0, 64); // reset hash state
@@ -213,17 +212,16 @@ void new_handle_data(usbd_device *usbd_dev, uint8_t ep) {
         usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
         char tmp[16];
         itos(tmp,sector);
-        oled_print(0,45,"hashing block",Font_8x8);
-        oled_print(14*8, 45, tmp, Font_8x8);
+        disp_print(0,27,"hashing block");
+        disp_print(14*8, 45, tmp);
         crypto_generichash_update(&hashstate, bufstart, total);
         memcpy(&tmpstate,&hashstate,sizeof(hashstate));
         crypto_generichash_final(&tmpstate, hash, 64);
         if(memcmp(hash,sectorhashes[sector],sizeof(hash))!=0 ) {
           invalid_sig();
         }
-        oled_print(0,45,"writing block",Font_8x8);
-        oled_print(14*8, 45, tmp, Font_8x8);
-        // todo write block
+        disp_print(0,36,"writing block");
+        disp_print(14*8, 45, tmp);
         write_block(0x08000000 + 32*1024*sector, bufstart, total);
         sector++;
         ptr=bufstart; // reset output ptr
@@ -390,8 +388,8 @@ void firmware_updater(usbd_device *usbddev) {
   state=0;
   sector=0;
   bufstart=((void*) &_load_addr+(48*1024)); //bufs[0].buf;
-  oled_clear();
-  oled_print(0,0,"Firmware updater", Font_8x8);
+  disp_clear();
+  disp_print(0,0,"Firmware updater");
   // move nvic
   move_nvic_table(nvic_table);
   // disable mpu
@@ -400,10 +398,10 @@ void firmware_updater(usbd_device *usbddev) {
   nvic_table[83]=(uint32_t) usb_irqhandler;
   while(1) {
     if(state==3) { // successfully verified full image
-      oled_clear();
-      oled_print(0,0,"Firmware update", Font_8x8);
-      oled_print(0,18,"successful \\o/", Font_8x8);
-      oled_print(0,36,"pls reboot", Font_8x8);
+      disp_clear();
+      disp_print(0,0,"Firmware update");
+      disp_print(0,18,"successful \\o/");
+      disp_print(0,36,"pls reboot");
       while(1); //softreset();
     }
   }

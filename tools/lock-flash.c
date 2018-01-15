@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <string.h>
-#include "oled.h"
+#include "display.h"
 #include "irq.h"
 #include "libopencm3/stm32/flash.h"
 
@@ -41,15 +41,15 @@ void opt_write_rdp(unsigned char rdp) {
 }
 
 void ramload(void) {
-  oled_clear();
-  oled_print(0,0,"locking flash", Font_8x8);
+  disp_clear();
+  disp_print(0,0,"locking flash");
 
   disable_irqs();
   opt_unlock();
   flash_clear_status_flags();
   opt_write_rdp(0x55); // farthest away (hamming) from level0
   opt_lock();
-  oled_print(0,9,"ok", Font_8x8);
-  oled_print(0,18,"pls reboot", Font_8x8);
+  disp_print(0,9,"ok");
+  disp_print(0,18,"pls reboot");
   while(1);
 }

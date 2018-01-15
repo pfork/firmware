@@ -2,7 +2,7 @@
 #include <string.h>
 #include "dual.h"
 #include "nrf.h"
-#include "oled.h"
+#include "display.h"
 #include "keys.h"
 #include "delay.h"
 #include "dma.h"
@@ -15,34 +15,35 @@ void getstr(char *prompt, uint8_t *name, int *len) {
   short cur=32;
 
   while(1) {
-    oled_clear();
-    oled_print(0,0,(char*) prompt,Font_8x8);
-    oled_print(0,8,(char*) "enter select",Font_8x8);
-    oled_print(0,16,(char*) "enter+< delete",Font_8x8);
-    oled_print(0,24,(char*) "enter+> submit",Font_8x8);
-    oled_print(0,40,(char*) "press any key",Font_8x8);
-    oled_print(0,48,(char*) "to continue..",Font_8x8);
+    disp_clear();
+    disp_print(0,0, prompt);
+    disp_print(0,8, "enter select");
+    disp_print(0,16, "enter+< delete");
+    disp_print(0,24, "enter+> submit");
+    disp_print(0,40, "press any key");
+    disp_print(0,48, "to continue..");
     while((keys=keys_pressed())==0);
     while(1) {
       mDelay(100);
-      oled_clear();
+      disp_clear();
 
       // write name
       for(i=0;i<=32;i++) {
         if(i<*len) {
-          oled_drawchar((i%16)*8,(i/16)*8, name[i], Font_8x8, 0);
+          disp_drawchar((i%16)*8,(i/16)*8, name[i], 0);
         } else if(i==*len) {
-          oled_drawchar((i%16)*8,(i/16)*8, '_', Font_8x8, 1 );
+          disp_drawchar((i%16)*8,(i/16)*8, '_', 1 );
         } else {
-          oled_drawchar((i%16)*8,(i/16)*8, '_', Font_8x8, 0);
+          disp_drawchar((i%16)*8,(i/16)*8, '_', 0);
         }
       }
 
       // write char table
       for(i=32;i<=128;i++) {
-        oled_drawchar((i%16)*8,(i/16)*8, i, Font_8x8, i==cur);
+        // todo does not work on NOKIA display, it has only 6 rows :/
+        disp_drawchar((i%16)*8,(i/16)*8, i, i==cur);
       }
-      oled_refresh();
+      disp_refresh();
 
       while(keys_pressed()==0);
       mDelay(10);
@@ -74,12 +75,12 @@ void getstr(char *prompt, uint8_t *name, int *len) {
         cur=cur-128+32;
       }
     }
-    oled_clear();
+    disp_clear();
     name[*len]=0;
-    oled_print(0,0,(char*) name,Font_8x8);
-    oled_print(0,8,(char*) "< cancel",Font_8x8);
-    oled_print(0,16,(char*) "> ok",Font_8x8);
-    oled_print(0,24,(char*) "j/k edit",Font_8x8);
+    disp_print(0,0,(char*) name);
+    disp_print(0,8, "< cancel");
+    disp_print(0,16, "> ok");
+    disp_print(0,24, "j/k edit");
     mDelay(500);
     while((keys=keys_pressed())==0);
     if(keys & BUTTON_LEFT) {
@@ -148,38 +149,38 @@ void statusline(void) {
 
   if(pitchfork_hot!=0) {
     if(blinker++ & 0x80) {
-      oled_print_inv(0,0, (char*) " PITCHFORK!!5!  ", Font_8x8);
+      disp_print_inv(0,0,  " PITCHFORK!!5!  ");
     } else {
-      oled_print(0,0, (char*) " PITCHFORK!!5!  ", Font_8x8);
+      disp_print(0,0,  " PITCHFORK!!5!  ");
     }
   }
 
   if(refresh) {
     if(rf) {
-      oled_print(0,56, (char*) "R", Font_8x8);
+      disp_print(0,56,  "R");
     } else {
-      oled_print(0,56, (char*) "r", Font_8x8);
+      disp_print(0,56,  "r");
     }
     if(chrg) {
-      oled_print(8,56, (char*) "d", Font_8x8);
+      disp_print(8,56,  "d");
     } else {
-      oled_print(8,56, (char*) "c", Font_8x8);
+      disp_print(8,56,  "c");
     }
     if(sdcd) {
-      oled_print(16,56, (char*) "s", Font_8x8);
+      disp_print(16,56,  "s");
     } else {
-      oled_print(16,56, (char*) "S", Font_8x8);
+      disp_print(16,56,  "S");
     }
     if(mode==CRYPTO) {
-      oled_print(24,56, (char*) "C", Font_8x8);
+      disp_print(24,56,  "C");
     } else {
-      oled_print(24,56, (char*) "D", Font_8x8);
+      disp_print(24,56,  "D");
     }
     if(pitchfork_hot==0) {
-      oled_print_inv(0,0, (char*) " PITCHFORK!!5!  ", Font_8x8);
+      disp_print_inv(0,0,  " PITCHFORK!!5!  ");
     }
     if(have_user) {
-      oled_print_inv(128-(userrec->len)*8,8, (char*) &userrec->name, Font_8x8);
+      disp_print_inv(128-(userrec->len)*8,8, (char*) &userrec->name);
     }
   }
 }
@@ -207,20 +208,21 @@ int menu(MenuCtx *ctx, const uint8_t *menuitems[], const size_t menulen, void fn
     return 1;
   }
   if(keys & BUTTON_LEFT) {
-    oled_clear();
+    disp_clear();
     gui_refresh=1;
     return 0;
   }
 
   if(gui_refresh) {
-    oled_clear();
+    disp_clear();
     statusline();
+    // todo does not work on NOKIA display, it has only 6 rows :/
     for(i=ctx->top;i<ctx->top+4 && i<menulen;i++) {
-      oled_print(12,8*(i-ctx->top)+16, (char*) menuitems[i], Font_8x8);
+      disp_print(12,8*(i-ctx->top)+16, (char*) menuitems[i]);
       if(i==ctx->idx) {
-        oled_print_inv(0,8*(i-ctx->top)+16, (char*) ">", Font_8x8);
+        disp_print_inv(0,8*(i-ctx->top)+16,  ">");
       } else {
-        oled_print(0,8*(i-ctx->top)+16, (char*) " ", Font_8x8);
+        disp_print(0,8*(i-ctx->top)+16,  " ");
       }
     }
     gui_refresh=0;

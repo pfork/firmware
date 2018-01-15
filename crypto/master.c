@@ -16,7 +16,7 @@
 #include "usb.h"
 #include "keys.h"
 #include "delay.h"
-#include "oled.h"
+#include "display.h"
 #include "itoa.h"
 #include "stm32f.h"
 #include "widgets.h"
@@ -63,7 +63,7 @@ static int chord(uint8_t *dst) {
       i++;
       char tmp[16];
       itos(tmp,i);
-      oled_print(7*8,32,tmp,Font_8x8);
+      disp_print(7*8,DISPLAY_HEIGHT/2-4,tmp);
       mDelay(200);
     }
     prev=keys;
@@ -86,14 +86,14 @@ unsigned char* get_master_key(char *msg) {
     if(!blocked) usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
   }
 
-  oled_clear();
-  oled_print_inv(0,0,"unlock key", Font_8x8);
-  oled_print(0,56,msg, Font_8x8);
-  oled_print(0,0,"unlock key", Font_8x8);
+  disp_clear();
+  disp_print_inv(0,0,"unlock key");
+  disp_print(0,DISPLAY_HEIGHT-8,msg);
+  disp_print(0,0,"unlock key");
   // todo get and display keyid/
   memset(passcode,0,sizeof(passcode));
   passlen=chord(passcode); // read passcode
-  oled_print(0,9,"deriving key", Font_8x8);
+  disp_print(0,9,"deriving key");
 
   // derive key from chords + unique device random
   // todo generichash is not a kdf per se
@@ -101,10 +101,10 @@ unsigned char* get_master_key(char *msg) {
   uint8_t userbuf[sizeof(UserRecord)+PEER_NAME_MAX];
   UserRecord *userdata=(UserRecord*) userbuf;
   if(get_user(userdata)==-1) {
-    oled_clear();
-    oled_print(0,0,"uninitalized",Font_8x8);
-    oled_print(0,9,"pls reboot and", Font_8x8);
-    oled_print(0,18,"initialize",Font_8x8);
+    disp_clear();
+    disp_print(0,0,"uninitalized");
+    disp_print(0,9,"pls reboot and");
+    disp_print(0,18,"initialize");
     while(1);
   }
 
@@ -120,7 +120,7 @@ unsigned char* get_master_key(char *msg) {
                      passcode, passlen,
                      salt);
 
-  oled_print(0,9,"derived key  ", Font_8x8);
+  disp_print(0,9,"derived key  ");
   memset(passcode,0,sizeof(passcode));
   pitchfork_hot=1;
   gui_refresh=1;

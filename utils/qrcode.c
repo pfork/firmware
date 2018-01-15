@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <string.h>
-#include <oled.h>
+#include <display.h>
 #include "utils/lzg/lzg.h"
 
 // ecc::low ordianl=0, formatbits=1
@@ -42,20 +42,24 @@ static unsigned char modules_bin_lzg[] = {
 static unsigned int modules_bin_lzg_len = 148;
 
 static void print(uint8_t *modules) {
-  memset(frame_buffer, 0x00, 1024);
+  memset(frame_buffer, 0x00, sizeof(frame_buffer));
   int y, x;
   for(y=1;y<size;y++) {
     for(x=0;x<size;x++) {
       if(modules[y*size+x]==0) {
-        //oled_delpixel((128-33)/2+x, y+(64-33)/2);
-        oled_setpixel((128-66)/2+x*2, y*2);
-        oled_setpixel((128-66)/2+x*2+1, y*2);
-        oled_setpixel((128-66)/2+x*2, y*2+1);
-        oled_setpixel((128-66)/2+x*2+1, y*2+1);
+        //disp_delpixel((128-33)/2+x, y+(DISPLAY_HEIGHT-33)/2);
+#ifdef DISPLAY_NOKIA
+        disp_setpixel((128-33)/2+x, y+(DISPLAY_HEIGHT-33)/2);
+#else
+        disp_setpixel((DISPLAY_WIDTH-66)/2+x*2, y*2);
+        disp_setpixel((DISPLAY_WIDTH-66)/2+x*2+1, y*2);
+        disp_setpixel((DISPLAY_WIDTH-66)/2+x*2, y*2+1);
+        disp_setpixel((DISPLAY_WIDTH-66)/2+x*2+1, y*2+1);
+#endif
       }
     }
   }
-  oled_refresh();
+  disp_refresh();
 }
 
 static uint8_t multiply(uint8_t x, uint8_t y) {

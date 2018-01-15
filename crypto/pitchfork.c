@@ -23,7 +23,7 @@
 #include "stfs.h"
 #include "dma.h"
 #include "master.h"
-#include "oled.h"
+#include "display.h"
 #include "keys.h"
 #include "delay.h"
 #include "widgets.h"
@@ -145,26 +145,26 @@ static void pf_reset(void) {
   for (i=0;i<(sizeof(params)>>2);i++) ((unsigned int*) params)[i]=0;
   usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 0);
   cmd_clear();
-  oled_print(40,56, "           ", Font_8x8);
+  disp_print(40,DISPLAY_HEIGHT-8, "           ");
 }
 
 static int query_user(char* op) {
   int res=0, retries=16384, samples;
   usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_CTRL_IN, 1);
   usbd_ep_nak_set(usbd_dev, USB_CRYPTO_EP_DATA_IN, 1);
-  oled_clear();
-  oled_print_inv(0,18,op, Font_8x8);
-  oled_print_inv(0,36,"<", Font_8x8);
-  oled_print(16,36,"reject", Font_8x8);
-  oled_print_inv(0,45,">", Font_8x8);
-  oled_print(16,45,"allow", Font_8x8);
+  disp_clear();
+  disp_print_inv(0,12,op);
+  disp_print_inv(0,22,"<");
+  disp_print(16,22,"reject");
+  disp_print_inv(0,29,">");
+  disp_print(16,29,"allow");
   uint8_t keys;
   while(retries>0) {
     if((retries%128)==0) {
       if((retries%256)==0) {
-        oled_print(0,0,"client wants to", Font_8x8);
+        disp_print(0,0,"client wants to");
       } else {
-        oled_print_inv(0,0,"client wants to", Font_8x8);
+        disp_print_inv(0,0,"client wants to");
       }
     }
     //while((keys=keys_pressed())==0);
@@ -554,8 +554,8 @@ static void verify_msg(void) {
   crypto_generichash_final(&hash_state, h, 32);
 
   // verify with xeddsa, send bool + signers name
-  oled_clear();
-  oled_print(0,23,"     message", Font_8x8);
+  disp_clear();
+  disp_print(0,DISPLAY_HEIGHT/2-4,"     message");
 
   // iterate through all pubkeys
   const int dirlen=4;
@@ -577,7 +577,7 @@ static void verify_msg(void) {
       path[dirlen+33]=0;
       if(cread(path, key, keysize)==keysize) {
         if(0==xed25519_verify(params /* 64 bytes */, key, h, sizeof(h))) {
-          oled_print(0,32,"       ok", Font_8x8);
+          disp_print(0,DISPLAY_HEIGHT/2+5,"       ok");
           // todo recover peer name and send it back also
           uint8_t peerpath[]="/peers/                                ";
           memcpy(peerpath+7,inode->name,inode->name_len);
@@ -585,8 +585,8 @@ static void verify_msg(void) {
             owner[0]='1';
             usb_write((unsigned char*) owner, olen+1, 32,USB_CRYPTO_EP_DATA_OUT);
             owner[olen+1]=0;
-            oled_print(0,41,"     from", Font_8x8);
-            oled_print(0,50,(char*) owner+1, Font_8x8);
+            disp_print(0,DISPLAY_HEIGHT/2+5," ok, from");
+            disp_print(0,DISPLAY_HEIGHT+14,(char*) owner+1);
           } // todo fail: could not map key back to peer name
           return;
         } // cread failed - ask for master key again?
@@ -599,18 +599,18 @@ static void verify_msg(void) {
   if(load_ltkeypair(&kp)==1) {
     sodium_memzero(kp.sk,32); // we don't need the secret key
     if(0==xed25519_verify(params /* 64 bytes */, kp.pk, h, sizeof(h))) {
-      oled_print(0,32,"       ok", Font_8x8);
+      disp_print(0,DISPLAY_HEIGHT/2+5,"       ok");
       olen = get_owner(owner+1);
       owner[0]='1';
       usb_write((unsigned char*) owner, olen+1, 32,USB_CRYPTO_EP_DATA_OUT);
       owner[olen+1]=0;
-      oled_print(0,41,"     from", Font_8x8);
-      oled_print(0,50,(char*) owner+1, Font_8x8);
+      disp_print(0,DISPLAY_HEIGHT/2+5,"     from");
+      disp_print(0,DISPLAY_HEIGHT/2+14,(char*) owner+1);
       return;
     }
   }
 
-  oled_print(0,32,"     invalid", Font_8x8);
+  disp_print(0,DISPLAY_HEIGHT/2-4,"     invalid");
   usb_write((unsigned char*) "0", 1, 32,USB_CRYPTO_EP_DATA_OUT);
 }
 
@@ -633,9 +633,9 @@ static void pqsign_msg(void) {
     return;
   }
 
-  oled_clear();
-  oled_print(0,23,"Please Wait", Font_8x8);
-  oled_print(0,32," doing pq magic ", Font_8x8);
+  disp_clear();
+  disp_print(0,DISPLAY_HEIGHT/2-8,"Please Wait");
+  disp_print(0,DISPLAY_HEIGHT/2," doing pq magic ");
   // save bufs
   uint8_t* olds1 = bufs[0].start, *olds2=bufs[1].start;
   // sign with sphincs, send back sig
@@ -661,7 +661,7 @@ static void rng_handler(void) {
           (modus == PITCHFORK_CMD_RNG))
       usbd_poll(usbd_dev); // todo why do we poll here? is this some artifact?
   }
-  oled_print(40,56, "           ", Font_8x8);
+  disp_print(40,DISPLAY_HEIGHT-8, "           ");
 }
 
 /**
@@ -959,14 +959,14 @@ static void handle_cmd(void) {
     // stop whatever we're doing
     pf_reset();
     cmd_clear();
-    oled_print(40,56, "           ",Font_8x8);
+    disp_print(40,DISPLAY_HEIGHT-8, "           ");
     return;
   }
 
   if(modus!=PITCHFORK_CMD_STOP) {
     // we are already in a mode, ignore the cmd;
     usb_write((unsigned char*) "err: mode", 10, 32,USB_CRYPTO_EP_CTRL_OUT);
-    oled_print_inv(40,56, "    bad cmd", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "    bad cmd");
     cmd_clear();
     return;
   }
@@ -996,7 +996,7 @@ static void handle_cmd(void) {
     usb_write(nonce, sizeof(nonce), 32, USB_CRYPTO_EP_DATA_OUT);
     modus = PITCHFORK_CMD_ENCRYPT;
 
-    oled_print_inv(40,56, "    encrypt", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "    encrypt");
     break;
   }
 
@@ -1021,7 +1021,7 @@ static void handle_cmd(void) {
     }
     // get nonce
     memcpy(nonce, cmd_buf.buf+1+EKID_SIZE, crypto_secretbox_NONCEBYTES);
-    oled_print_inv(40,56, "    decrypt", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "    decrypt");
     modus = PITCHFORK_CMD_DECRYPT;
     usb_write((unsigned char*) "go", 2, 32,USB_CRYPTO_EP_CTRL_OUT);
     break;
@@ -1049,7 +1049,7 @@ static void handle_cmd(void) {
       return;
     }
     modus = PITCHFORK_CMD_KEX_RESPOND;
-    oled_print_inv(40,56, "   kex resp", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "   kex resp");
     params[0]=cmd_buf.size-1;
     memcpy(params+1,cmd_buf.buf+1,cmd_buf.size-1);
     params[cmd_buf.size]=0;
@@ -1066,7 +1066,7 @@ static void handle_cmd(void) {
       cmd_clear();
       return;
     }
-    oled_print_inv(40,56, "    kex end", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "    kex end");
     params[0]=cmd_buf.size-1;
     memcpy(params+1,cmd_buf.buf+1,cmd_buf.size-1);
     params[cmd_buf.size]=0;
@@ -1102,7 +1102,7 @@ static void handle_cmd(void) {
     if(query_user("anon decrypt")==0) {
       return;
     }
-    oled_print_inv(40,56, "    decrypt", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "    decrypt");
     break;
   }
 
@@ -1116,7 +1116,7 @@ static void handle_cmd(void) {
       return;
     }
 
-    oled_print_inv(40,56, " ax encrypt", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, " ax encrypt");
     modus = PITCHFORK_CMD_AX_SEND;
     //if(peer_to_seed(params, (unsigned char*) cmd_buf.buf+1, cmd_buf.size-1)==0) {
     //if(ax_send_init(params, (unsigned char*) cmd_buf.buf+1, cmd_buf.size-1)==0) {
@@ -1145,7 +1145,7 @@ static void handle_cmd(void) {
       return;
     }
 
-    oled_print_inv(40,56, " ax decrypt", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, " ax decrypt");
     modus = PITCHFORK_CMD_AX_RECEIVE;
 
     usb_write((unsigned char*) "go", 2, 32,USB_CRYPTO_EP_CTRL_OUT);
@@ -1158,7 +1158,7 @@ static void handle_cmd(void) {
       return;
     }
     modus = PITCHFORK_CMD_SIGN;
-    oled_print_inv(40,56, "       sign", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "       sign");
     usb_write((unsigned char*) "go", 2, 32,USB_CRYPTO_EP_CTRL_OUT);
     break;
   }
@@ -1169,7 +1169,7 @@ static void handle_cmd(void) {
     }
     crypto_generichash_init(&hash_state, NULL, 0, 32);
     modus = PITCHFORK_CMD_PQSIGN;
-    oled_print_inv(40,56, "     pqsign", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "     pqsign");
     usb_write((unsigned char*) "go", 2, 32,USB_CRYPTO_EP_CTRL_OUT);
     break;
   }
@@ -1187,7 +1187,7 @@ static void handle_cmd(void) {
     gui_refresh=0;
     crypto_generichash_init(&hash_state, NULL, 0, 32);
     modus = PITCHFORK_CMD_VERIFY;
-    oled_print_inv(40,56, "     verify", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "     verify");
     usb_write((unsigned char*) "go", 2, 32,USB_CRYPTO_EP_CTRL_OUT);
     break;
   }
@@ -1212,7 +1212,7 @@ static void handle_cmd(void) {
 
   case PITCHFORK_CMD_RNG: {
     modus = PITCHFORK_CMD_RNG;
-    oled_print_inv(40,56, "        rng", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "        rng");
     break;
   }
 
@@ -1258,7 +1258,7 @@ static void handle_cmd(void) {
 
   default: {
     usb_write((unsigned char*) "err: bad cmd", 13, 32,USB_CRYPTO_EP_CTRL_OUT);
-    oled_print_inv(40,56, "    bad cmd", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "    bad cmd");
   }
   }
 
@@ -1274,9 +1274,9 @@ static void handle_cmd(void) {
 static void handle_buf(void) {
   Buffer *buf = 0;
   if(modus == PITCHFORK_CMD_STOP) return; // nothing to process
-  oled_print_inv(40,56, "*", Font_8x8);
+  disp_print_inv(40,DISPLAY_HEIGHT-8, "*");
   if(modus == PITCHFORK_CMD_RNG) {
-    oled_print_inv(40,56, "        rng", Font_8x8);
+    disp_print_inv(40,DISPLAY_HEIGHT-8, "        rng");
     rng_handler(); // produce rng pkts
     return;
   }
@@ -1317,53 +1317,53 @@ static void handle_buf(void) {
   if(buf->size>0) {
      switch(modus) {
         /* case PITCHFORK_CMD_AX_SEND: { */
-        /*   oled_print_inv(40,56, " ax encrypt", Font_8x8); */
+        /*   disp_print_inv(40,DISPLAY_HEIGHT-8, " ax encrypt"); */
         /*   // todo implement ax_send here */
         /*   encrypt_block(buf); */
         /*   break; */
         /* } */
         case PITCHFORK_CMD_ENCRYPT: {
-          oled_print_inv(40,56, "    encrypt", Font_8x8);
+          disp_print_inv(40,DISPLAY_HEIGHT-8, "    encrypt");
           encrypt_block(buf);
           break;
         }
         case PITCHFORK_CMD_AX_RECEIVE: {
-          oled_print_inv(40,56, " ax decrypt", Font_8x8);
+          disp_print_inv(40,DISPLAY_HEIGHT-8, " ax decrypt");
           ax_recv_init(buf);
           break;
         }
         case PITCHFORK_CMD_DECRYPT_ANON: {
-          oled_print_inv(40,56, " an decrypt", Font_8x8);
+          disp_print_inv(40,DISPLAY_HEIGHT-8, " an decrypt");
           decrypt_block(buf);
           break;
         }
         case PITCHFORK_CMD_DECRYPT: {
-          oled_print_inv(40,56, "    decrypt", Font_8x8);
+          disp_print_inv(40,DISPLAY_HEIGHT-8, "    decrypt");
           decrypt_block(buf);
           break;
         }
         case PITCHFORK_CMD_KEX_RESPOND: {
-          oled_print_inv(40,56, "   kex resp", Font_8x8);
+          disp_print_inv(40,DISPLAY_HEIGHT-8, "   kex resp");
           kex_resp(buf);
           break;
         }
         case PITCHFORK_CMD_KEX_END: {
-          oled_print_inv(40,56, "    kex end", Font_8x8);
+          disp_print_inv(40,DISPLAY_HEIGHT-8, "    kex end");
           kex_end(buf);
           break;
         }
         case PITCHFORK_CMD_SIGN: {
-          oled_print_inv(40,56, "     sign", Font_8x8);
+          disp_print_inv(40,DISPLAY_HEIGHT-8, "     sign");
           hash_block(buf);
           break;
         }
         case PITCHFORK_CMD_PQSIGN: {
-          oled_print_inv(40,56, "     pqsign", Font_8x8);
+          disp_print_inv(40,DISPLAY_HEIGHT-8, "     pqsign");
           hash_block(buf);
           break;
         }
         case PITCHFORK_CMD_VERIFY: {
-          oled_print_inv(40,56, "   verify", Font_8x8);
+          disp_print_inv(40,DISPLAY_HEIGHT-8, "   verify");
           hash_block(buf);
           break;
         }
@@ -1375,7 +1375,7 @@ static void handle_buf(void) {
     if(modus == PITCHFORK_CMD_SIGN) sign_msg();
     else if(modus == PITCHFORK_CMD_PQSIGN) pqsign_msg();
     else if(modus == PITCHFORK_CMD_VERIFY) verify_msg();
-    oled_print(40,56, "           ", Font_8x8);
+    disp_print(40,DISPLAY_HEIGHT-8, "           ");
     pf_reset();
   } else { // buf->state == OUTPUT
     buf->size=0;

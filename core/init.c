@@ -20,7 +20,7 @@
 #endif // HAVE_MSC
 #include "led.h"
 #include "keys.h"
-#include "oled.h"
+#include "display.h"
 #include "mpu.h"
 
 /**
@@ -42,5 +42,5 @@ void init(void) {
 #endif // HAVE_MSC
   usb_init();
   keys_init();
-  oled_init();
+  disp_init();
 }

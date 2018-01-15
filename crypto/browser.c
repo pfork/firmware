@@ -1,5 +1,5 @@
 #include "stfs.h"
-#include "oled.h"
+#include "display.h"
 #include "delay.h"
 #include "keys.h"
 #include "widgets.h"
@@ -113,17 +113,17 @@ static void parentdir() {
   // go back to parent dir
   int plen=strlen((char*) outbuf);
   if(plen<2) {
-    oled_clear();
-    oled_print(0,0, "strange parent", Font_8x8);
-    oled_print(0,9, "pls reboot", Font_8x8);
+    disp_clear();
+    disp_print(0,0, "strange parent");
+    disp_print(0,9, "pls reboot");
     while(1);
   }
   uint8_t *ptr;
   ptr=outbuf+plen;
   if(*ptr=='/') {
-    oled_clear();
-    oled_print(0,0, "strange file", Font_8x8);
-    oled_print(0,9, "pls reboot", Font_8x8);
+    disp_clear();
+    disp_print(0,0, "strange file");
+    disp_print(0,9, "pls reboot");
     while(1);
   }
   for(;ptr>outbuf;ptr--) {
@@ -208,9 +208,9 @@ static void setup_keymenu(Dirmode dmode) {
 }
 
 static void unimplemented(void) {
-  oled_clear();
-  oled_print(0,23,"Unimplemented", Font_8x8);
-  oled_print(7*8,33,":/", Font_8x8);
+  disp_clear();
+  disp_print(0,DISPLAY_HEIGHT/2-8,"Unimplemented");
+  disp_print(7*8,DISPLAY_HEIGHT/2,":/");
 }
 
 /**
@@ -222,8 +222,8 @@ static void unimplemented(void) {
 static int sendbuf(uint8_t *dst, uint8_t *buf, uint32_t size) {
   // try to send 1st pkt
   int i, retries;
-  oled_clear();
-  oled_print(0,23,"sending",Font_8x8);
+  disp_clear();
+  disp_print(0,DISPLAY_HEIGHT/2-4,"sending");
   for(retries=0;retries<5;retries++) {
     if(nrf_send(dst,buf,size<=32?size:32)==0) {
       mDelay(10);
@@ -263,10 +263,10 @@ static void broadcast() {
   Dirmode dmode=dirmode(outbuf);
   if(i<plen) outbuf[i]='/';
   else {
-    oled_clear();
-    oled_print(0,9, "Something went", Font_8x8);
-    oled_print(0,18, "horribly wrong", Font_8x8);
-    oled_print(0,36, "pls reboot", Font_8x8);
+    disp_clear();
+    disp_print(0,9, "Something went");
+    disp_print(0,18, "horribly wrong");
+    disp_print(0,36, "pls reboot");
     while(1); }; // how did we get here anyway?
 
   switch(dmode) {
@@ -279,8 +279,8 @@ static void broadcast() {
     gui_refresh=1;
     if(retries<0 || len!=PQCRYPTO_SECRETKEYBYTES) {
       //fail
-      oled_clear();
-      oled_print(0,23,"load key fail", Font_8x8);
+      disp_clear();
+      disp_print(0,DISPLAY_HEIGHT/2-4,"load key fail");
       mDelay(200);
       return;
     }
@@ -304,8 +304,8 @@ static void broadcast() {
     gui_refresh=1;
     if(retries<0 || len!=crypto_scalarmult_curve25519_BYTES) {
       //fail
-      oled_clear();
-      oled_print(0,23,"load key fail", Font_8x8);
+      disp_clear();
+      disp_print(0,DISPLAY_HEIGHT/2-4,"load key fail");
       mDelay(200);
       return;
     }
@@ -330,8 +330,8 @@ static void broadcast() {
     gui_refresh=1;
     if(retries<0 || len!=crypto_scalarmult_curve25519_BYTES) {
       //fail
-      oled_clear();
-      oled_print(0,23,"load key fail", Font_8x8);
+      disp_clear();
+      disp_print(0,DISPLAY_HEIGHT/2-4,"load key fail");
       mDelay(200);
       return;
     }
@@ -347,11 +347,11 @@ static void broadcast() {
   }
   default: {
     // fail - wrong file type to operate a verify op on
-    oled_clear();
-    oled_print(0,0,"how did you", Font_8x8);
-    oled_print(0,9,"get here?", Font_8x8);
-    oled_print(0,18,"how will you", Font_8x8);
-    oled_print(0,27,"get out of here?", Font_8x8);
+    disp_clear();
+    disp_print(0,0,"how did you");
+    disp_print(0,9,"get here?");
+    disp_print(0,18,"how will you");
+    disp_print(0,27,"get out of here?");
     mDelay(5000);
     return;
   }
@@ -386,10 +386,10 @@ static void verify() {
   Dirmode dmode=dirmode(outbuf);
   if(i<plen) outbuf[i]='/';
   else {
-    oled_clear();
-    oled_print(0,9, "Something went", Font_8x8);
-    oled_print(0,18, "horribly wrong", Font_8x8);
-    oled_print(0,36, "pls reboot", Font_8x8);
+    disp_clear();
+    disp_print(0,9, "Something went");
+    disp_print(0,18, "horribly wrong");
+    disp_print(0,36, "pls reboot");
     while(1); }; // how did we get here anyway?
 
   switch(dmode) {
@@ -402,8 +402,8 @@ static void verify() {
     gui_refresh=1;
     if(retries<0 || len!=PQCRYPTO_SECRETKEYBYTES) {
       //fail
-      oled_clear();
-      oled_print(0,23,"load key fail", Font_8x8);
+      disp_clear();
+      disp_print(0,DISPLAY_HEIGHT/2-4,"load key fail");
       mDelay(200);
       return;
     }
@@ -426,8 +426,8 @@ static void verify() {
     gui_refresh=1;
     if(retries<0 || len!=crypto_scalarmult_curve25519_BYTES) {
       //fail
-      oled_clear();
-      oled_print(0,23,"load key fail", Font_8x8);
+      disp_clear();
+      disp_print(0,DISPLAY_HEIGHT/2-4,"load key fail");
       mDelay(200);
       return;
     }
@@ -451,8 +451,8 @@ static void verify() {
     gui_refresh=1;
     if(retries<0 || len!=crypto_scalarmult_curve25519_BYTES) {
       //fail
-      oled_clear();
-      oled_print(0,23,"load key fail", Font_8x8);
+      disp_clear();
+      disp_print(0,DISPLAY_HEIGHT/2-4,"load key fail");
       mDelay(200);
       return;
     }
@@ -467,11 +467,11 @@ static void verify() {
   }
   default: {
     // fail - wrong file type to operate a verify op on
-    oled_clear();
-    oled_print(0,0,"how did you", Font_8x8);
-    oled_print(0,9,"get here?", Font_8x8);
-    oled_print(0,18,"how will you", Font_8x8);
-    oled_print(0,27,"get out of here?", Font_8x8);
+    disp_clear();
+    disp_print(0,0,"how did you");
+    disp_print(0,9,"get here?");
+    disp_print(0,18,"how will you");
+    disp_print(0,27,"get out of here?");
     mDelay(5000);
     return;
   }
@@ -501,8 +501,8 @@ static void ltqr(uint8_t *verifier) {
   gui_refresh=1;
   if(retries<0 || len!=crypto_scalarmult_curve25519_BYTES) {
     //fail
-    oled_clear();
-    oled_print(0,23,"load key fail", Font_8x8);
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-4,"load key fail");
     mDelay(200);
     return;
   }
@@ -540,8 +540,8 @@ static void pubqr(uint8_t *verifier) {
   gui_refresh=1;
   if(retries<0 || len!=crypto_scalarmult_curve25519_BYTES) {
     //fail
-    oled_clear();
-    oled_print(0,23,"load key fail", Font_8x8);
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-4,"load key fail");
     mDelay(200);
     return;
   }
@@ -558,8 +558,8 @@ static void pubqr(uint8_t *verifier) {
     get_master_key("bad key");
   }
   if(len<1) {
-    oled_clear();
-    oled_print(0,0,"No name found", Font_8x8);
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-4,"No name found");
     mDelay(500);
     return;
   }
@@ -585,10 +585,10 @@ static void show(void) {
   Dirmode dmode=dirmode(outbuf);
   if(i<plen) outbuf[i]='/';
   else {
-    oled_clear();
-    oled_print(0,9, "Something went", Font_8x8);
-    oled_print(0,18, "horribly wrong", Font_8x8);
-    oled_print(0,36, "pls reboot", Font_8x8);
+    disp_clear();
+    disp_print(0,9, "Something went");
+    disp_print(0,18, "horribly wrong");
+    disp_print(0,36, "pls reboot");
     while(1); }; // how did we get here anyway?
 
   switch(dmode) {
@@ -597,22 +597,18 @@ static void show(void) {
   case BrPeers: {unimplemented(); return;}
   default: {
     // fail - wrong file type to operate a verify op on
-    oled_clear();
-    oled_print(0,0,"how did you", Font_8x8);
-    oled_print(0,9,"get here?", Font_8x8);
-    oled_print(0,18,"how will you", Font_8x8);
-    oled_print(0,27,"get out of here?", Font_8x8);
+    disp_clear();
+    disp_print(0,0,"how did you");
+    disp_print(0,9,"get here?");
+    disp_print(0,18,"how will you");
+    disp_print(0,27,"get out of here?");
     mDelay(5000);
     return;
   }
   }
 
-  oled_cmd(0x81);//--set contrast control register
-  oled_cmd(0xff);
   while(keys_pressed()==0);
   while(keys_pressed()!=0);
-  oled_cmd(0x81);//--set contrast control register
-  oled_cmd(0x7f);
 
   MenuCtx *ctx=((void*) outbuf)+plen+1;
   char *menulen=((void*) ctx)+sizeof(MenuCtx);
@@ -639,17 +635,17 @@ static void changepass() {
   gui_refresh=1;
   if(retries<0 || len>PEER_NAME_MAX || len<1) {
     //fail
-    oled_clear();
-    oled_print(0,23,"load peer fail", Font_8x8);
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-4,"load peer fail");
     mDelay(200);
     return;
   }
 }
 
 static void delete() {
-  oled_clear();
+  disp_clear();
   if(0!=stfs_unlink(outbuf)) {
-    oled_print(0,23,"delete failed", Font_8x8);
+    disp_print(0,DISPLAY_HEIGHT/2-4,"delete failed");
     mDelay(200);
   }
 
@@ -733,10 +729,10 @@ void browse_cb(char idx) {
       Dirmode d2mode=dirmode(path);
       if(i<p2len) path[i]='/';
       else {
-        oled_clear();
-        oled_print(0,9, "Something went", Font_8x8);
-        oled_print(0,18, "horribly wrong", Font_8x8);
-        oled_print(0,36, "pls reboot", Font_8x8);
+        disp_clear();
+        disp_print(0,9, "Something went");
+        disp_print(0,18, "horribly wrong");
+        disp_print(0,36, "pls reboot");
         while(1); }; // how did we get here anyway?
       memcpy(outbuf,path,p2len+1);
       setup_keymenu(d2mode);
@@ -744,19 +740,19 @@ void browse_cb(char idx) {
       return;
     }
     // todo fail somehow
-    oled_clear();
-    oled_print(0,23,"bad file",Font_8x8);
-    oled_print(0,33,(char*) path+strlen((char*) path)-16,Font_8x8);
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-8,"bad file");
+    disp_print(0,DISPLAY_HEIGHT/2,(char*) path+strlen((char*) path)-16);
     mDelay(200);
     return;
   } else {
     // yup path is a directory
     if(0!=getdents(path)) {
-        oled_clear();
-        oled_print(0,9, "Something went", Font_8x8);
-        oled_print(0,18, "horribly wrong", Font_8x8);
-        oled_print(0,36, "pls reboot", Font_8x8);
-        oled_print(0,56, "getdents toctou", Font_8x8);
+        disp_clear();
+        disp_print(0,9, "Something went");
+        disp_print(0,18, "horribly wrong");
+        disp_print(0,36, "pls reboot");
+        disp_print(0,56, "getdents toctou");
         while(1); // how did we get here anyway?
     }
     gui_refresh=1;
