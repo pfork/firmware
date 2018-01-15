@@ -16,6 +16,12 @@ CFLAGS += -mno-unaligned-access -DNDEBUG -g -Wall -Werror -Os \
 	-fomit-frame-pointer -mthumb -mcpu=cortex-m3 $(INCLUDES) -DSTM32F2 -DHAVE_MSC \
 	-fstack-protector --param=ssp-buffer-size=4 -DRAMLOAD -DCHACHA_ASM
 
+ifeq ($(origin DISPLAY), undefined)
+$(error "Please specify display type: DISPLAY=<NOKIA|OLED> make")
+else
+CFLAGS += -DDISPLAY_$(DISPLAY)
+endif
+
 LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-sections -Wl,-z,relro
 
 xeddsa_objs = lib/xeddsa/elligator.o lib/xeddsa/vxeddsa.o lib/xeddsa/xeddsa.o \
@@ -48,11 +54,11 @@ util_objs = utils/memmove.o utils/strlen.o utils/memcpy.o utils/memset.o utils/m
 	utils/pgpwords_data.o utils/pgpwords.o utils/lzg/decode.o utils/lzg/checksum.o \
 	utils/abort.o utils/qrcode.o utils/widgets.o utils/itoa.o utils/ntohex.o utils/utils.o
 
-objs = core/oled.o crypto/kex.o main.o core/rng.o core/adc.o core/ssp.o \
+objs = core/display.o crypto/kex.o main.o core/rng.o core/adc.o core/ssp.o \
 	core/clock.o core/systimer.o core/mpu.o core/init.o core/usb.o core/irq.o \
 	core/dma.o sdio/sdio.o sdio/sd.o core/led.o core/keys.o core/delay.o core/xentropy.o \
 	core/startup.o usb/dual.o crypto/mixer.o crypto/master.o crypto/randombytes_pitchfork.o \
-	crypto/pbkdf2_generichash.o crypto/axolotl.o core/smallfonts.o core/stfs.o core/user.o \
+	crypto/pbkdf2_generichash.o crypto/axolotl.o core/stfs.o core/user.o \
 	crypto/fwsig.o crypto/browser.o core/nrf.o crypto/pf_store.o \
 	$(usb_objs) $(xeddsa_objs) $(curve_objs) $(newhope_objs) $(sphincs_objs)\
 	$(util_objs) \
@@ -90,11 +96,11 @@ main.list: main.elf
 	$(OD) -Dl main.elf > main.list
 
 iap/fwupdater.lzg.o:
-	cd iap; make
+	cd iap; DISPLAY=$(DISPLAY) make
 
 tools/store-master-key.bin: tools/store-key.c main.syms
 	$(CC) -mthumb -mcpu=cortex-m3 -fno-common -Ttools/store-key-memmap \
-			-DSTM32F2 -Wl,--just-symbols=main.syms \
+			-DSTM32F2 -Wl,--just-symbols=main.syms -DDISPLAY_$(DISPLAY) \
 	      -Icore -Ilib/libopencm3/include -nostartfiles -Wl,--gc-sections -Wl,-z,relro \
 	      -o tools/store-key.elf tools/store-key.c lib/libopencm3/lib/libopencm3_stm32f2.a
 	$(OC) --gap-fill 0xff tools/store-key.elf tools/store-master-key.bin -O binary
@@ -102,7 +108,7 @@ tools/store-master-key.bin: tools/store-key.c main.syms
 
 tools/lock-flash.elf: tools/lock-flash.c main.syms
 	$(CC) -mthumb -mcpu=cortex-m3 -fno-common -Ttools/memmap \
-			-DSTM32F2 -Wl,--just-symbols=main.syms \
+			-DSTM32F2 -Wl,--just-symbols=main.syms -DDISPLAY_$(DISPLAY) \
 	      -Icore -Ilib/libopencm3/include -nostartfiles -Wl,--gc-sections -Wl,-z,relro \
 	      -o tools/lock-flash.elf tools/lock-flash.c lib/libopencm3/lib/libopencm3_stm32f2.a
 	#$(OC) --gap-fill 0xff tools/lock-flash.elf tools/lock-flash.bin -O binary
