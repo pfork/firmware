@@ -2,18 +2,21 @@
 #define OLED_H
 
 #include <stdint.h>
-#include "smallfonts.h"
 
-extern uint8_t frame_buffer[];
+#define DISPLAY_WIDTH 128
+#define DISPLAY_HEIGHT 64
 
-void oled_init(void);
-void oled_clear(void);
-void oled_refresh(void);
-void oled_setpixel(uint8_t x, uint8_t y);
-void oled_delpixel(uint8_t x, uint8_t y);
-void oled_drawchar(uint8_t x, uint8_t y, uint8_t c, struct FONT_DEF font, char inverted);
-void oled_print(uint8_t x, uint8_t y, char* text, struct FONT_DEF font);
-void oled_print_inv(uint8_t x, uint8_t y, char* text, struct FONT_DEF font);
-void oled_cmd(uint8_t reg);
+#define FONT_START  0x20
+#define FONT_END    0x80
+#define FONT_WIDTH  8
+#define FONT_HEIGHT 8
+
+extern uint8_t frame_buffer[128 * 64 / 8];
+
+void disp_init(void);
+void disp_refresh(void);
+void disp_show_logo(void);
+void disp_invert(void);
+void disp_normal(void);
 
 #endif //OLED_H

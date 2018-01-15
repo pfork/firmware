@@ -1,8 +1,6 @@
-/* Partially based on original code for the KS0108 by Stephane Rey */
-
 /**************************************************************************/
-/*!
-    @file     smallfonts.c
+/*! 
+    @file     font8x8.h
     @author   K. Townsend (microBuilder.eu)
     @date     22 March 2010
     @version  0.10
@@ -37,14 +35,17 @@
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /**************************************************************************/
-#include <stdint.h>
-#include "smallfonts.h"
+#ifndef __FONT8x8_H_
+#define __FONT8x8_H_
 
-/* Global variables */
-const struct FONT_DEF Font_8x8          = {8, 8, 32, 128, au8Font8x8};
+/* Partially based on original code for the KS0108 by Stephane Rey */
+/* Current version by Kevin Townsend */
+/* Last Updated: 12 May 2009 */
+
+#include <stdint.h>
 
 /* 8x8 Normal */
-const uint8_t au8Font8x8[]= {
+const uint8_t Font[]= {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,       // ASCII -  32
     0x00,0x00,0x00,0x5F,0x5F,0x00,0x00,0x00,       // ASCII -  33
     0x00,0x00,0x03,0x07,0x00,0x07,0x03,0x00,       // ASCII -  34
@@ -144,3 +145,5 @@ const uint8_t au8Font8x8[]= {
     0x00,0x1C,0x3E,0x23,0x41,0x41,0x42,0x27,       // ASCII - 128
     0x00,0x3D,0x7D,0x40,0x41,0x3D,0x7C,0x40,       // ASCII - 129
 };
+
+#endif // FONT8x8_H
