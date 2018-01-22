@@ -104,7 +104,7 @@ static const struct usb_config_descriptor config = {
 };
 
 static const char *usb_strings[] = {
-	"stf (c) 2013-2017",
+	"stf (c) 2013-2018",
 	"PITCHFORK " VERSION,
 	"0x01729a",
 };
