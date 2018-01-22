@@ -2,7 +2,7 @@
 #include "stm32f.h"
 #include "delay.h"
 #include "display.h"
-#include "font5x7.h"
+#include "font5x5.h"
 
 #define GPIO_BASE GPIOB_BASE
 #define DCPIN 4
@@ -54,13 +54,13 @@ static void lcd_cmd(uint8_t reg) {
   CS(1);
 }
 
-static void lcd_data(uint8_t data) {
-  CS(1);
-  DC(1);
-  CS(0);
-  send(data);
-  CS(1);
-}
+//static void lcd_data(uint8_t data) {
+//  CS(1);
+//  DC(1);
+//  CS(0);
+//  send(data);
+//  CS(1);
+//}
 
 static void lcd_reset(void) {
   /* Toggle RST low to reset. Minimum pulse 100ns on datasheet. */
@@ -76,9 +76,9 @@ static void lcd_PCD8544_init(void) {
 	/* Get into the EXTENDED mode! */
 	lcd_cmd(PCD8544_FUNCTION_SET | PCD8544_EXTENDED_INSTRUCTION);
 	/* LCD bias select (4 is optimal?) */
-	lcd_cmd(PCD8544_SET_BIAS | 0x2);
+	lcd_cmd(PCD8544_SET_BIAS | 0x0);
 	/* Set VOP (affects contrast) */
-	lcd_cmd(PCD8544_SET_VOP | 0x7f); /* 0x0-0x7f, but doesn't seem to change anything */
+	lcd_cmd(PCD8544_SET_VOP | 80); /* 0x0-0x7f, but doesn't seem to change anything */
 	/* switch back to standard instructions */
 	lcd_cmd(PCD8544_FUNCTION_SET);
 	/* Normal mode */
@@ -121,15 +121,15 @@ void disp_init(void) {
                     );
   greg->PUPDR |=   ((GPIO_PuPd_UP << (DCPIN    << 1))   |
                     (GPIO_PuPd_UP << (RSTPIN   << 1))   |
-                    (GPIO_PuPd_DOWN << (CSPIN    << 1)) |
+                    (GPIO_PuPd_UP << (CSPIN    << 1)) |
                     (GPIO_PuPd_DOWN << (SDCLKPIN << 1)) |
                     (GPIO_PuPd_DOWN << (SDINPIN  << 1))
                     );
   greg->OSPEEDR |= ((GPIO_Speed_100MHz << (DCPIN    << 1))  |
                     (GPIO_Speed_100MHz << (RSTPIN   << 1))  |
                     (GPIO_Speed_100MHz << (CSPIN    << 1))  |
-                    (GPIO_Speed_2MHz << (SDCLKPIN << 1))    |
-                    (GPIO_Speed_2MHz << (SDINPIN  << 1))
+                    (GPIO_Speed_100MHz << (SDCLKPIN << 1))    |
+                    (GPIO_Speed_100MHz << (SDINPIN  << 1))
                     );
   CS(1);
   RST(1);
@@ -140,7 +140,7 @@ void disp_init(void) {
   sreg->CR1 |= (unsigned short)(SPI_Direction_1Line_Tx | SPI_Mode_Master |
                                 SPI_DataSize_8b | SPI_CPOL_Low  |
                                 SPI_CPHA_1Edge | SPI_NSS_Soft |
-                                SPI_BaudRatePrescaler_256 | SPI_FirstBit_MSB);
+                                SPI_BaudRatePrescaler_64 | SPI_FirstBit_MSB);
 
   /* Activate the SPI mode (Reset I2SMOD bit in I2SCFGR register) */
   sreg->I2SCFGR &= (unsigned short)~((unsigned short)SPI_I2SCFGR_I2SMOD);
@@ -156,17 +156,32 @@ void disp_init(void) {
 
 void disp_refresh(void) {
 	uint8_t bank;
-	for (bank = 0; bank < PCD8544_MAX_BANKS; bank++) {
-		/* Each bank is a single row 8 bits tall */
-		uint8_t column;
+   uint8_t column;
 
-		lcd_cmd(PCD8544_SET_Y_ADDRESS | bank);
-		lcd_cmd(PCD8544_SET_X_ADDRESS | 0);
+   CS(0);
+   for (bank = 0; bank < PCD8544_MAX_BANKS; bank++) {
+		/* Each bank is a single row 8 bits tall */
+
+      //lcd_cmd(PCD8544_SET_Y_ADDRESS | bank);
+      //lcd_cmd(PCD8544_SET_X_ADDRESS | 0);
+      DC(0);
+      while(spi_status_txe(SPIx) == 0);
+      spi_send(SPIx,PCD8544_SET_Y_ADDRESS | bank);
+      while(spi_status_txe(SPIx) == 0);
+      uDelay(5);
+      spi_send(SPIx,PCD8544_SET_X_ADDRESS | 0);
+      while(spi_status_txe(SPIx) == 0);
+      uDelay(5);
+      DC(1);
 
 		for (column = 0; column <= PCD8544_MAX_COLS; column++) {
-        lcd_data(frame_buffer[PCD8544_MAX_COLS * bank + column]);
+        //lcd_data(frame_buffer[PCD8544_MAX_COLS * bank + column]);
+        while(spi_status_txe(SPIx) == 0);
+        spi_send(SPIx, frame_buffer[PCD8544_MAX_COLS * bank + column]);
+        uDelay(5);
 		}
 	}
+   CS(1);
 }
 
 static const char logo[]="\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xdf\x3f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x7f\x3f\x9f\xdf\xdf\xcf\xdf\xdf\x9f\x3f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x0f\x1f\xff\xff\xff\xff\xff\xff\xff\xff" \
