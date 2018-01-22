@@ -14,10 +14,8 @@
 #include "crypto_generichash.h"
 #include "dual.h"
 #include "usb.h"
-#include "keys.h"
 #include "delay.h"
 #include "display.h"
-#include "itoa.h"
 #include "stm32f.h"
 #include "widgets.h"
 #include "pitchfork.h"
@@ -32,50 +30,11 @@ static unsigned long long ts; // when was last accessed, for auto-expiry
 
 // todo store unique device random into OTP[2] in init user (or in user record)
 
-// reads in max 64 digits composing a 32 byte string.
-// reads the next digit on pressing the enter button
-// premature exiting can be achieved by pressing enter button longer for the last digit
-static int chord(uint8_t *dst) {
-  uint8_t keys, lastbyte=0;
-  int n=0, i=0;
-  char prev=0;
-  while(i<64) {
-    keys = keys_pressed();
-    if(keys & BUTTON_ENTER) {
-      n++;
-      if(n>400) {
-        if(i>0)
-            dst[(i-1)/2]=lastbyte; // undo the last enter-ed digit
-        return i/2;
-      }
-    } else {
-      n=0;
-    }
-
-    if(keys & BUTTON_ENTER && prev!=keys) {
-      lastbyte=dst[i/2]; // in case this is the enter for finishing the chords
-      // accept entry
-      if(i%2==0) {
-        dst[i/2] = (dst[i/2] & 0xf) | ((keys&0xf) << 4);
-      } else {
-        dst[i/2] = (dst[i/2] & 0xf0) | (keys&0xf);
-      }
-      i++;
-      char tmp[16];
-      itos(tmp,i);
-      disp_print(7*8,DISPLAY_HEIGHT/2-4,tmp);
-      mDelay(200);
-    }
-    prev=keys;
-  }
-  return i/2;
-}
-
 unsigned char* get_master_key(char *msg) {
   ts=sysctr; // update last used timestamp
   if(pitchfork_hot!=0) // unlocked, use key in store
     return masterkey;
-  uint8_t passcode[crypto_secretbox_KEYBYTES];
+  uint8_t passcode[65];
   int passlen=0;
 
   if(dual_usb_mode == DISK) {
@@ -92,11 +51,10 @@ unsigned char* get_master_key(char *msg) {
   disp_print(0,0,"unlock key");
   // todo get and display keyid/
   memset(passcode,0,sizeof(passcode));
-  passlen=chord(passcode); // read passcode
+  passlen=get_passcode(passcode, sizeof(passcode)); // read passcode
   disp_print(0,9,"deriving key");
 
   // derive key from chords + unique device random
-  // todo generichash is not a kdf per se
 
   uint8_t userbuf[sizeof(UserRecord)+PEER_NAME_MAX];
   UserRecord *userdata=(UserRecord*) userbuf;
