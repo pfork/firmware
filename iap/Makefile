@@ -27,10 +27,10 @@ LDFLAGS = -mthumb -mcpu=cortex-m3 -fno-common -Tmemmap -nostartfiles -Wl,--gc-se
 objs = iap.o $(BP)/utils/itoa.o $(BP)/utils/lzg/decode.o $(BP)/utils/lzg/checksum.o \
 	$(BP)/core/display.o $(BP)/core/delay.o $(BP)/utils/abort.o
 
-ifeq ($(origin DISPLAY), undefined)
-$(error "Please specify display type: DISPLAY=<NOKIA|OLED> make")
+ifeq ($(origin DEVICE), undefined)
+$(error "Please specify device type: DEVICE=<3310|GH> make")
 else
-CFLAGS += -DDISPLAY_$(DISPLAY)
+CFLAGS += -DDEVICE_$(DEVICE)
 endif
 
 all : fwupdater.bin fwupdater.elf fwupdater.lzg.o
