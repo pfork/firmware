@@ -15,7 +15,7 @@
 #endif // HAVE_MSC
 #include "init.h"
 #include "led.h"
-#include "keys.h"
+#include "buttons.h"
 #include "randombytes_pitchfork.h"
 #include "mixer.h"
 #include "pitchfork.h"
@@ -105,16 +105,21 @@ MenuCtx menuctx={0,0};
 MenuCtx appctx={0,0};
 
 static void init_pf_user(void) {
-  uint8_t keys;
+  uint8_t buttons;
   disp_clear();
-  disp_print_inv(0,0, (char*) " PITCHFORK!!5!  ");
-  disp_print(0,8, (char*) "This is an" );
-  disp_print(0,16, (char*) "uninitialized");
-  disp_print(0,24, (char*) "pitchfork");
-  disp_print(0,32, (char*) "initialize?");
-  disp_print(0,40, (char*) "yes >");
-  while((keys = key_handler())==0);
-  if(!(keys & BUTTON_RIGHT)) {
+  disp_print_inv(0,0, " PITCHFORK!!5!  ");
+  disp_print(0,(FONT_HEIGHT+1), "This is an" );
+  disp_print(0,(FONT_HEIGHT+1)*2, "uninitialized");
+  disp_print(0,(FONT_HEIGHT+1)*3, "pitchfork");
+  disp_print(0,(FONT_HEIGHT+1)*4, "initialize?");
+  disp_print(0,(FONT_HEIGHT+1)*5, "yes >");
+
+  while((buttons = button_handler())==0);
+#ifdef DEVICE_GH
+  if(!(buttons & BUTTON_RIGHT)) {
+#else // assume DEVICE_3310
+  if(!(buttons == BUTTON_RIGHT)) {
+#endif // DEVICE_GH
     disp_clear();
     return;
   }
@@ -211,7 +216,12 @@ static void menu_cb(char menuidx) {
   }
   case MENU_DEL_RAM: { softreset(); break; }
   case MENU_DEL_KEYS: {
-    disp_print_inv(40,40, "     format");
+#ifdef DEVICE_GH
+    disp_print_inv(40,DISPLAY_WIDTH - 11*FONT_WIDTH, "     format");
+#else // assume DEVICE_3310 
+    // add one more pixel to account for the proportional 'm'
+    disp_print_inv(40,DISPLAY_WIDTH - 11*FONT_WIDTH+1, "     format");
+#endif // DEVICE_GH
     stfs_format();
     softreset();
     break;
