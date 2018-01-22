@@ -11,6 +11,7 @@
 
 #include <sys/types.h>
 #include "stm32f.h"
+#include <display.h>
 
 unsigned int rng_last;
 
@@ -34,22 +35,33 @@ unsigned int next_rand ( void ) {
 
   while(1) {
     ra=RNG_SR;
-    if(ra&1) break;
-    if(ra&0x66) {
-      while(1) {
-      }
+    // see chapter 20.3.2 Error management in stm32f2xx ref manual
+    if(ra&0x44) {
+      // 0x40 not enough entropy, clear this bit, reset&set the rnggen in rng_cr to restart
+      RNG_SR&=~0x40; // clear SEIS bit
+      RNG_CR&=~0x04; // clear RNGGEN bit
+      RNG_CR|=0x04; // set RNGGEN bit again.
+      continue;
     }
-  }
-  if(ra&0x66) {
-    while(1) {
-    } // repeating sequence in rng
+    if(ra&0x22) {
+      // 0x20 == clock error, no more rng from here
+      disp_clear();
+      disp_print(0, DISPLAY_HEIGHT/2 - FONT_HEIGHT, "RNG Clock Error");
+      disp_print(0, DISPLAY_HEIGHT/2 + FONT_HEIGHT, "please reboot");
+      while(1);
+    }
+    if(ra&1) break; // we got enough entropy
   }
 
   ra = RNG_DR;
-  if(ra==rng_last) {
+  if(ra==rng_last) { // repeating sequence in rng
+    disp_clear();
+    disp_print(0, DISPLAY_HEIGHT/2 - FONT_HEIGHT, "RNG Repeat Error");
+    disp_print(0, DISPLAY_HEIGHT/2 + FONT_HEIGHT, "please reboot");
     while(1) {
-    } // repeating sequence in rng
+    }
   }
+
   rng_last=ra;
   return(ra);
 }
