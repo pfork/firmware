@@ -24,7 +24,7 @@
 #include "dma.h"
 #include "master.h"
 #include "display.h"
-#include "keys.h"
+#include "buttons.h"
 #include "delay.h"
 #include "widgets.h"
 #include "pitchfork.h"
@@ -158,7 +158,7 @@ static int query_user(char* op) {
   disp_print(16,22,"reject");
   disp_print_inv(0,29,">");
   disp_print(16,29,"allow");
-  uint8_t keys;
+  uint8_t buttons;
   while(retries>0) {
     if((retries%128)==0) {
       if((retries%256)==0) {
@@ -167,13 +167,11 @@ static int query_user(char* op) {
         disp_print_inv(0,0,"client wants to");
       }
     }
-    //while((keys=keys_pressed())==0);
-    //keys=keys_pressed();
-    for(samples=32,keys=0;samples>0 && keys==0;keys=keys_pressed(), samples--);
-    if(keys & BUTTON_LEFT) {
+    for(samples=32,buttons=0;samples>0 && buttons==0;buttons=button_handler(), samples--);
+    if(buttons & BUTTON_LEFT) {
       res=0;
       break;
-    } else if(keys & BUTTON_RIGHT) {
+    } else if(buttons & BUTTON_RIGHT) {
       res=1;
       usb_write((unsigned char*) "ok", 2, 32,USB_CRYPTO_EP_CTRL_OUT);
       break;

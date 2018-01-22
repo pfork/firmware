@@ -19,7 +19,7 @@
 #include "sd.h"
 #endif // HAVE_MSC
 #include "led.h"
-#include "keys.h"
+#include "buttons.h"
 #include "display.h"
 #include "mpu.h"
 
@@ -41,6 +41,6 @@ void init(void) {
   SD_Init();
 #endif // HAVE_MSC
   usb_init();
-  keys_init();
+  buttons_init();
   disp_init();
 }

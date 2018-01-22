@@ -1,7 +1,7 @@
 #include "stfs.h"
 #include "display.h"
 #include "delay.h"
-#include "keys.h"
+#include "buttons.h"
 #include "widgets.h"
 #include "nrf.h"
 #include "pitchfork.h"
@@ -607,8 +607,7 @@ static void show(void) {
   }
   }
 
-  while(keys_pressed()==0);
-  while(keys_pressed()!=0);
+  while(button_handler()==0);
 
   MenuCtx *ctx=((void*) outbuf)+plen+1;
   char *menulen=((void*) ctx)+sizeof(MenuCtx);

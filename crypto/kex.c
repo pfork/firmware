@@ -8,7 +8,7 @@
 #include "delay.h"
 #include "display.h"
 #include "widgets.h"
-#include "keys.h"
+#include "buttons.h"
 #include "randombytes_pitchfork.h"
 #include "axolotl.h"
 #include "crypto_scalarmult_curve25519.h"
@@ -172,7 +172,7 @@ static void pqx3dh(char menuidx) {
 
   int _sending=1;
   while(1) {
-    if(keys_pressed() & BUTTON_LEFT) {
+    if(button_handler() & BUTTON_LEFT) {
       // user abort
       gui_refresh=1;
       return;
@@ -324,7 +324,7 @@ static void discover() {
   }
 
   while(send_buf((uint8_t*) msgs, sendbuf,sizeof(sendbuf))==0) {
-    if(keys_pressed() & BUTTON_LEFT) {
+    if(button_handler() & BUTTON_LEFT) {
       // fail
       return;
     }
