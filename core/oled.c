@@ -3,6 +3,7 @@
 #include "delay.h"
 #include "display.h"
 #include "utils/lzg/lzg.h"
+#include "font8x8.h"
 
 #include <string.h>
 
