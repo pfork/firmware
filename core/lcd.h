@@ -10,9 +10,9 @@
 #define DISPLAY_HEIGHT (PCD8544_MAX_BANKS*8)
 
 #define FONT_START 0x20
-#define FONT_END  0x7f
+#define FONT_END  0x7e
 #define FONT_WIDTH  5
-#define FONT_HEIGHT 7
+#define FONT_HEIGHT 5
 
 extern uint8_t frame_buffer[48 * 84 / 8];
 
