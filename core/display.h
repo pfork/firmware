@@ -4,14 +4,14 @@
 #include <stdint.h>
 
 // device layer
-#ifdef DISPLAY_NOKIA
+#ifdef DEVICE_3310
   #include "lcd.h"
 #else
-  #ifdef DISPLAY_OLED
+  #ifdef DEVICE_GH
     #include "oled.h"
   #else
-    #error "no display device specified"
-  #endif // DISPLAY_OLED
+    #error "no device specified"
+  #endif // DEVICE_GH
 #endif
 
 // display layer
