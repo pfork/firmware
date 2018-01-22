@@ -2,11 +2,9 @@
 #include <string.h>
 #include "display.h"
 
-#ifdef DISPLAY_NOKIA
-  #include "font5x7.h"
+#ifdef DEVICE_3310
   #include "lcd.c"
-#else // defined(DISPLAY_OLED)
-  #include "font8x8.h"
+#else // defined(DEVICE_GH)
   #include "oled.c"
 #endif
 
@@ -64,8 +62,30 @@ void disp_drawchar(uint8_t x, uint8_t y, uint8_t c, char inverted) {
 }
 
 static void _disp_print(uint8_t x, uint8_t y, char* text, char inv) {
-  uint8_t l;
-  for (l = 0; l < strlen(text); l++) {
+  int l;
+  const int text_len=strlen(text);
+  for (l = 0; l < text_len && x+(l*(FONT_WIDTH))<DISPLAY_WIDTH; l++) {
+#if(defined(DEVICE_3310) && FONT_WIDTH==5)
+    // do some semi-proportional rendering of certain characters
+    switch(text[l]) {
+    case '#':
+    case '$':
+    case '%':
+    case '&':
+    case '0':
+    case '@':
+    case 'M':
+    case 'V':
+    case 'W':
+    case 'm':
+    case 'w':
+      if((x+(l*(FONT_WIDTH))) % FONT_WIDTH < DISPLAY_WIDTH % FONT_WIDTH &&
+         (l > 1)) {
+        x++;
+      }
+    default: break;
+    }
+#endif // FONT_WIDTH==5
     disp_drawchar(x + (l * (FONT_WIDTH)), y, text[l], inv);
   }
   disp_refresh();
