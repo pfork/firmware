@@ -150,7 +150,7 @@ utils/pgpwords_data.o: tools/pgpwords.py
 	$(OC) --gap-fill 0xff $< $@ -O binary
 
 clean:
-	rm -f *.bin $(objs) *.elf *.list signer/signer signer/*.o tools/*.bin tools/*.elf tools/*.list || true
+	rm -f main.bin main.unsigned.bin signature.bin $(objs) main.elf unsigned.main.elf *.list signer/signer signer/*.o tools/*.bin tools/*.elf tools/*.list || true
 	cd iap; make clean
 
 clean-all: clean
