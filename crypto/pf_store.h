@@ -28,7 +28,7 @@ int load_ltkeypair(Axolotl_KeyPair *kp);
 int get_owner(uint8_t *name);
 int store_key(const uint8_t* key, const int keylen, const char *type, const uint8_t *keyid, uint8_t* peer, const uint8_t peer_len);
 int save_ax(Axolotl_ctx *ctx, uint8_t *peerpub, uint8_t *peer, uint8_t peer_len);
-void calc_verifier(uint8_t *out, int outlen, uint8_t *k1, uint8_t *k2);
+void calc_verifier(uint8_t *out, int outlen, uint8_t *k1, uint8_t *k2, uint8_t *rk);
 int write_enc(uint8_t *path, const uint8_t *key, const int keylen);
 int pf_store_init(void);
 void get_ekid(unsigned char* keyid, unsigned char* nonce, unsigned char* ekid);

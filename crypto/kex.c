@@ -224,7 +224,7 @@ static void pqx3dh(char menuidx) {
   uint8_t verifier[VERIFIER_SIZE];
   // we hash(idkey1|idkey2) and have the users compare those.
   // one fingerprint instead of two.
-  calc_verifier(verifier, VERIFIER_SIZE, my_pk->identitykey, o_pk->identitykey);
+  calc_verifier(verifier, VERIFIER_SIZE, my_pk->identitykey, o_pk->identitykey, ctx.rk);
 
   to_pgpwords(menuitems, bufs[0].buf, verifier, VERIFIER_SIZE);
   gui_refresh=1;
@@ -335,7 +335,7 @@ static void discover() {
   uint8_t verifier[VERIFIER_SIZE];
   // we hash(idkey1|idkey2) and have the users compare those.
   // one fingerprint instead of two.
-  calc_verifier(verifier, VERIFIER_SIZE, my_pk->identitykey, o_pk->identitykey);
+  calc_verifier(verifier, VERIFIER_SIZE, my_pk->identitykey, o_pk->identitykey, ctx.rk);
 
   // set peer and peer_len from recvbuf
   peer_len=recvbuf[sizeof(Axolotl_PreKey)];

@@ -284,13 +284,18 @@ int save_seed(unsigned char *seed, unsigned char* peer, unsigned char len) {
   return store_key(seed, crypto_secretbox_KEYBYTES, "/keys/", keyid, peer, len);
 }
 
-// todo tba: maybe also add ctx->rk into the verifier?
-void calc_verifier(uint8_t *out, int outlen, uint8_t *k1, uint8_t *k2) {
+void calc_verifier(uint8_t *out, int outlen, uint8_t *k1, uint8_t *k2, uint8_t *rk) {
+  crypto_generichash_state state;
+  crypto_generichash_init(&state, rk, 32, outlen);
+
   if(memcmp(k1,k2,crypto_scalarmult_curve25519_BYTES)<=0) {
-    crypto_generichash(out, outlen, k1, 32, k2, 32);
+    crypto_generichash_update(&state, k1, 32);
+    crypto_generichash_update(&state, k2, 32);
   } else {
-    crypto_generichash(out, outlen, k2, 32, k1, 32);
+    crypto_generichash_update(&state, k2, 32);
+    crypto_generichash_update(&state, k1, 32);
   }
+  crypto_generichash_final(&state, out, outlen);
 }
 
 int save_ax(Axolotl_ctx *ctx, uint8_t *peerpub, uint8_t *peer, uint8_t peer_len) {
@@ -298,7 +303,7 @@ int save_ax(Axolotl_ctx *ctx, uint8_t *peerpub, uint8_t *peer, uint8_t peer_len)
   uint8_t keyid[STORAGE_ID_LEN];
   // todo use something else than ctx.hk[sr] for the session id?
   // save ax session from ctx for sessionid=hash(sorted(ctx.hks,ctx.hkr)) into /ax/peerid/sessionid
-  calc_verifier(keyid, STORAGE_ID_LEN, ctx->hkr, ctx->hks);
+  calc_verifier(keyid, STORAGE_ID_LEN, ctx->hkr, ctx->hks, ctx->rk);
 
   // store ctx
   if(0!=store_key((uint8_t*) ctx, sizeof(Axolotl_ctx), "/ax/", keyid, peer, peer_len)) {
