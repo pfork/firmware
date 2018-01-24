@@ -170,7 +170,7 @@ static void pqx3dh(char menuidx) {
     return;
     }
 
-  int _sending=1;
+  // send out prekey
   while(1) {
     if(button_handler() & BUTTON_LEFT) {
       // user abort
@@ -178,19 +178,26 @@ static void pqx3dh(char menuidx) {
       return;
     }
     // send out prekey
-    if(_sending) {
-      if(send_buf((uint8_t*) (&msgs[(int) menuidx]), sendbuf,sizeof(sendbuf))==0) {
-        // fail
-        uDelay(10);
-        continue;
-      }
-      _sending=0;
+    if(send_buf((uint8_t*) (&msgs[(int) menuidx]), sendbuf,sizeof(sendbuf))==0) {
+      // fail
+      uDelay(10);
+      continue;
     }
-    // sleep a bit to allow for computations on peer
-    // uDelay(1);
-    // sent prekey successfully wait for response
-    // listen for incoming prekeys
-    if(_sending || recv_buf((uint8_t*) (&msgs[(int) menuidx]), resp, sizeof(resp))==0) {
+    break;
+  }
+
+  // sleep a bit to allow for computations on peer
+  // uDelay(1);
+  // sent prekey successfully wait for response
+  // listen for incoming prekeys
+  while(1) {
+    if(button_handler() & BUTTON_LEFT) {
+      // user abort
+      gui_refresh=1;
+      return;
+    }
+
+    if(recv_buf((uint8_t*) (&msgs[(int) menuidx]), resp, sizeof(resp))==0) {
       // fail
       continue;
     }
@@ -354,6 +361,7 @@ static void discover() {
 int kex_menu_init(void) {
   msgs=(PeerCandidate*) ((((uint32_t) outbuf)+3) & 0xfffffffc);
   menuitems = (uint8_t **) bufs[1].buf;
+  prevpeers=0;
   // add self
   uint8_t userbuf[sizeof(UserRecord)+PEER_NAME_MAX];
   UserRecord *userec=(UserRecord*) userbuf;
