@@ -332,7 +332,7 @@ static void discover() {
     return;
   }
 
-  mDelay(10);
+  mDelay(10); // this is ugly, but seems to work
   while(send_buf((uint8_t*) msgs, sendbuf,sizeof(sendbuf))==0) {
     if(button_handler() & BUTTON_LEFT) {
       // fail
