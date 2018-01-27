@@ -190,36 +190,38 @@ static void pqx3dh(char menuidx) {
   // uDelay(1);
   // sent prekey successfully wait for response
   // listen for incoming prekeys
-  while(1) {
+  while(recv_buf((uint8_t*) (&msgs[(int) menuidx]), resp, sizeof(resp))==0) {
     if(button_handler() & BUTTON_LEFT) {
       // user abort
       gui_refresh=1;
       return;
     }
+  }
 
-    if(recv_buf((uint8_t*) (&msgs[(int) menuidx]), resp, sizeof(resp))==0) {
-      // fail
-      continue;
-    }
-    int plen=resp[sizeof(Axolotl_Resp)];
-    if(plen<1 || plen>32) {
-      // fail invalid peername length
-      continue;
-    }
-    // compare peer_names
-    int pplen=strlen(((char*) (&msgs[(int) menuidx]))+5);
-    pplen=pplen>32-5?32-5:pplen;
-    if(memcmp(((char*) (&msgs[(int) menuidx]))+5,
-              resp+sizeof(Axolotl_Resp)+1,
-              pplen)!=0) {
-      // prekey
-      continue;
-    }
+  int plen=resp[sizeof(Axolotl_Resp)];
+  if(plen<1 || plen>32) {
+    // fail invalid peername length
+    disp_clear();
+    disp_print(0,16, "failed: bad name");
+    return;
+  }
+  // compare peer_names
+  int pplen=strlen(((char*) (&msgs[(int) menuidx]))+5);
+  pplen=pplen>32-5?32-5:pplen;
+  if(memcmp(((char*) (&msgs[(int) menuidx]))+5,
+            resp+sizeof(Axolotl_Resp)+1,
+            pplen)!=0) {
+    // prekey
+    disp_clear();
+    disp_print(0,16, "failed: bad peer");
+    return;
+  }
 
-    peer_len=plen;
-    if(axolotl_handshake_resp(&ctx, o_pk, &my_sk)==0) {
-      break;
-    }
+  peer_len=plen;
+  if(axolotl_handshake_resp(&ctx, o_pk, &my_sk)!=0) {
+    disp_clear();
+    disp_print(0,16, "failed: bad data");
+    return;
   }
 
   // remember peers pubkey for storing later
@@ -330,9 +332,11 @@ static void discover() {
     return;
   }
 
+  mDelay(10);
   while(send_buf((uint8_t*) msgs, sendbuf,sizeof(sendbuf))==0) {
     if(button_handler() & BUTTON_LEFT) {
       // fail
+      gui_refresh=1;
       return;
     }
   }
