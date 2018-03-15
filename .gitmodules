@@ -10,3 +10,7 @@
 [submodule "lib/newhope"]
 	path = lib/newhope
 	url = https://pitchfork.ist/git/newhope-cm3.git
+[submodule "lib/goldilocks"]
+	path = lib/goldilocks
+	url = https://github.com/stef/ed448goldilocks.git
+	branch = pitchfork

@@ -9,8 +9,11 @@ AS=$(PREFIX)-as
 
 INCLUDES = -I. -Icore/ -Iusb/ -Iusb/msc -Isdio/ -Ilib/ -Icrypto/ -Iutils/ -Iiap/ \
 			  -Ilib/sphincs -Ilib/newhope -Ilib/chacha20 -Ilib/xeddsa \
-			  -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include
-LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a lib/libopencm3/lib/libopencm3_stm32f2.a
+			  -Ilib/libsodium/src/libsodium/include/sodium/ -Ilib/libopencm3/include \
+			  -Ilib/goldilocks/src/GENERATED/include
+LIBS = lib/libsodium/src/libsodium/.libs/libsodium.a \
+		 lib/libopencm3/lib/libopencm3_stm32f2.a \
+		 lib/goldilocks/libdecaf.a
 CFLAGS += -mno-unaligned-access -DNDEBUG -g -Wall -Werror -Os \
 	-mfix-cortex-m3-ldrd -msoft-float -mthumb -Wno-strict-aliasing \
 	-fomit-frame-pointer -mthumb -mcpu=cortex-m3 $(INCLUDES) -DSTM32F2 -DHAVE_MSC \
@@ -50,6 +53,8 @@ sphincs_objs = lib/sphincs/crypto_stream_chacha20.o lib/sphincs/chacha.o \
 	lib/sphincs/wots.o lib/sphincs/prg.o lib/sphincs/hash.o \
 	lib/sphincs/horst.o lib/sphincs/sign.o
 
+sphinx_objs = crypto/sphinx_ops.o
+
 util_objs = utils/memmove.o utils/strlen.o utils/memcpy.o utils/memset.o utils/memcmp.o \
 	utils/pgpwords_data.o utils/pgpwords.o utils/lzg/decode.o utils/lzg/checksum.o \
 	utils/abort.o utils/qrcode.o utils/widgets.o utils/itoa.o utils/ntohex.o utils/utils.o
@@ -61,7 +66,7 @@ objs = core/display.o crypto/kex.o main.o core/rng.o core/adc.o core/ssp.o \
 	crypto/pbkdf2_generichash.o crypto/axolotl.o core/stfs.o core/user.o \
 	crypto/fwsig.o crypto/browser.o core/nrf.o crypto/pf_store.o \
 	$(usb_objs) $(xeddsa_objs) $(curve_objs) $(newhope_objs) $(sphincs_objs)\
-	$(util_objs) \
+	$(util_objs) $(sphinx_objs) \
 	iap/fwupdater.lzg.o crypto/pitchfork.o # keep these last
 
 all : main.bin signer/signer tools/store-master-key.bin tools/lock-flash.bin
@@ -127,6 +132,9 @@ main.check:
 	cppcheck --enable=all $(objs:.o=.c) $(INCLUDES) 2>main.check
 	flawfinder --quiet $(objs:.o=.c) >>main.check
 
+lib/goldilocks/libdecaf.a:
+	   cd lib/goldilocks; FIELD_ARCH=arch_32 make arm
+
 #%.bin: %.elf
 #	$(OC) -Obinary --gap-fill 0xff $(*).elf $(*).bin
 #
@@ -154,8 +162,9 @@ clean:
 	cd iap; make clean
 
 clean-all: clean
-	rm -rf doc/latex doc/html || true
-	rm -f GPATH GRTAGS GSYMS GTAGS || true
+	rm -rf doc/latex doc/html
+	rm -f GPATH GRTAGS GSYMS GTAGS
+	cd lib/goldilocks; make clean_generated
 
 unsigned.main.clean:
 	rm $(objs)

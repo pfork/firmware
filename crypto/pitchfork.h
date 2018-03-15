@@ -24,6 +24,13 @@ typedef enum {
   // dumping pubkeys
   PITCHFORK_CMD_DUMP_PUB,
 
+  // SPHINX ops
+  PITCHFORK_CMD_SPHINX_CREATE,
+  PITCHFORK_CMD_SPHINX_GET,
+  PITCHFORK_CMD_SPHINX_CHANGE,
+  PITCHFORK_CMD_SPHINX_COMMIT,
+  PITCHFORK_CMD_SPHINX_DELETE,
+
   // ops needing double input buffers, starting at 0x10
   // so we can test for them like (modus & PITCHFORK_CMD_BUFFERED)
   PITCHFORK_CMD_BUFFERED = 16,

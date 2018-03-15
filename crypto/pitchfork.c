@@ -38,6 +38,7 @@
 #include "crypto_scalarmult_curve25519.h"
 
 #include "pqcrypto_sign.h"
+#include "sphinx_ops.h"
 
 #define outstart32 (outbuf+crypto_secretbox_ZEROBYTES)
 
@@ -1250,6 +1251,102 @@ static void handle_cmd(void) {
       usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
       cmd_clear();
       return;
+    }
+    break;
+  }
+
+  // SPHINX functions
+  case PITCHFORK_CMD_SPHINX_CREATE: {
+    if(cmd_buf.size!=1+16+32) {
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
+      cmd_clear();
+      return;
+    }
+    if(query_user("sphinx create")==0) {
+      return;
+    }
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-FONT_HEIGHT,"sphinx create");
+    if(-1!=pf_sphinx_create(cmd_buf.buf+1, cmd_buf.buf+17)) {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH,DISPLAY_HEIGHT/2+FONT_HEIGHT,"ok");
+    } else {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH*2,DISPLAY_HEIGHT/2+FONT_HEIGHT,"fail");
+    }
+    break;
+  }
+
+  case PITCHFORK_CMD_SPHINX_GET: {
+    if(cmd_buf.size!=1+16+32) {
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
+      cmd_clear();
+      return;
+    }
+    if(query_user("sphinx get")==0) {
+      return;
+    }
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-FONT_HEIGHT,"   sphinx get");
+    if(-1==pf_sphinx_respond(cmd_buf.buf+1, cmd_buf.buf+17)) {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH,DISPLAY_HEIGHT/2+FONT_HEIGHT,"ok");
+    } else {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH*2,DISPLAY_HEIGHT/2+FONT_HEIGHT,"fail");
+    }
+    break;
+  }
+
+  case PITCHFORK_CMD_SPHINX_CHANGE: {
+    if(cmd_buf.size!=1+16+32) {
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
+      cmd_clear();
+      return;
+    }
+    if(query_user("sphinx change")==0) {
+      return;
+    }
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-FONT_HEIGHT,"sphinx change");
+    if(-1==pf_sphinx_change(cmd_buf.buf+1, cmd_buf.buf+17)) {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH,DISPLAY_HEIGHT/2+FONT_HEIGHT,"ok");
+    } else {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH*2,DISPLAY_HEIGHT/2+FONT_HEIGHT,"fail");
+    }
+    break;
+  }
+
+  case PITCHFORK_CMD_SPHINX_COMMIT: {
+    if(cmd_buf.size!=1+16) {
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
+      cmd_clear();
+      return;
+    }
+    if(query_user("sphinx commit")==0) {
+      return;
+    }
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-FONT_HEIGHT,"sphinx commit");
+    if(-1==pf_sphinx_commit(cmd_buf.buf+1)) {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH,DISPLAY_HEIGHT/2+FONT_HEIGHT,"ok");
+    } else {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH*2,DISPLAY_HEIGHT/2+FONT_HEIGHT,"fail");
+    }
+    break;
+  }
+
+  case PITCHFORK_CMD_SPHINX_DELETE: {
+    if(cmd_buf.size!=1+16) {
+      usb_write((unsigned char*) "err: inv param", 15, 32,USB_CRYPTO_EP_CTRL_OUT);
+      cmd_clear();
+      return;
+    }
+    if(query_user("sphinx delete")==0) {
+      return;
+    }
+    disp_clear();
+    disp_print(0,DISPLAY_HEIGHT/2-FONT_HEIGHT,"sphinx delete");
+    if(-1==pf_sphinx_delete(cmd_buf.buf+1)) {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH,DISPLAY_HEIGHT/2+FONT_HEIGHT,"ok");
+    } else {
+      disp_print(DISPLAY_WIDTH/2-FONT_WIDTH*2,DISPLAY_HEIGHT/2+FONT_HEIGHT,"fail");
     }
     break;
   }
